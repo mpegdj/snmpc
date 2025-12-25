@@ -100,8 +100,7 @@ public partial class DiscoveryPollingAgentsDialog : Window
         // 설정 로드
         LoadConfig();
         
-        // 기본 에이전트 추가
-        Agents.Add(new PollingAgent { Address = "localhost", Status = "connected" });
+        // 기본 에이전트는 추가하지 않음 (SNMP를 지원하지 않을 수 있음)
         lstAgents.ItemsSource = Agents;
         lstSeeds.ItemsSource = Seeds;
         lstCommunities.ItemsSource = Communities;
@@ -264,7 +263,8 @@ public partial class DiscoveryPollingAgentsDialog : Window
                         Community = device.Community,
                         Version = version,
                         Timeout = 3000,
-                        Retries = 1
+                        Retries = 1,
+                        PollingProtocol = PollingProtocol.SNMP // Discovery로 찾은 디바이스는 기본적으로 SNMP
                     };
 
                     _mainViewModel.AddDeviceToSubnet(target);

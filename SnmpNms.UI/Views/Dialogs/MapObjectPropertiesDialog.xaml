@@ -192,23 +192,33 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Poll Interval (sec):" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" Margin="0,2,8,6"
-                             Text="{Binding PollIntervalSec, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Grid.Row="0" Grid.Column="2" Text="sec" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Polling Protocol:" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="cmbPollingProtocol" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
+                              SelectedIndex="0">
+                        <ComboBoxItem Content="SNMP"/>
+                        <ComboBoxItem Content="Ping"/>
+                        <ComboBoxItem Content="ARP"/>
+                        <ComboBoxItem Content="None"/>
+                    </ComboBox>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Poll Timeout (ms):" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Poll Interval (sec):" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,2,8,6"
+                             Text="{Binding PollIntervalSec, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="sec" VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Poll Timeout (ms):" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
                              Text="{Binding PollTimeoutMs, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Poll Retries:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Poll Retries:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
                              Text="{Binding PollRetries, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <GroupBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Header="Notes">
+                    <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Header="Notes">
                         <TextBlock Margin="8" TextWrapping="Wrap"
                                    Text="현재 엔진은 Poll Interval을 전역 타이머로 사용합니다. (타겟별 주기/그룹 폴링은 다음 단계에서 반영)"/>
                     </GroupBox>

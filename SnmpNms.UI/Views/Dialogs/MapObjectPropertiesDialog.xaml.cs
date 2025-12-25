@@ -9,6 +9,7 @@ using SnmpNms.Core.Models;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using SnmpNms.UI.Models;
 
 namespace SnmpNms.UI.Views.Dialogs;
 
@@ -40,6 +41,52 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
         {
             SyncAddressToInputs();
         }
+    }
+
+    public MapObjectPropertiesDialog(MapObjectType type, UiSnmpTarget target, ISnmpClient? snmpClient = null) : this(type, snmpClient)
+    {
+        // 기존 UiSnmpTarget의 값으로 다이얼로그 초기화
+        Alias = target.Alias ?? "";
+        Device = target.Device ?? "";
+        Address = $"{target.IpAddress}:{target.Port}";
+        ReadCommunity = target.Community ?? "public";
+        ReadWriteCommunity = target.Community ?? "private";
+        ReadAccessMode = target.Version switch
+        {
+            SnmpVersion.V1 => "SNMP V1",
+            SnmpVersion.V3 => "SNMP V3",
+            _ => "SNMP V2c"
+        };
+        ReadWriteAccessMode = ReadAccessMode;
+        PollTimeoutMs = target.Timeout.ToString();
+        PollRetries = target.Retries.ToString();
+        PollIntervalSec = "3"; // UiSnmpTarget에 없으므로 기본값 사용
+        
+        // PollingProtocol 설정
+        var protocolStr = target.PollingProtocol switch
+        {
+            Core.Models.PollingProtocol.Ping => "Ping",
+            Core.Models.PollingProtocol.ARP => "ARP",
+            Core.Models.PollingProtocol.None => "None",
+            _ => "SNMP"
+        };
+        PollingProtocol = protocolStr;
+        
+        // ComboBox 초기화
+        if (ObjectType == MapObjectType.Device && cmbPollingProtocol != null)
+        {
+            for (int i = 0; i < cmbPollingProtocol.Items.Count; i++)
+            {
+                if (cmbPollingProtocol.Items[i] is System.Windows.Controls.ComboBoxItem item &&
+                    item.Content?.ToString() == protocolStr)
+                {
+                    cmbPollingProtocol.SelectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        SyncAddressToInputs();
     }
     
     private void SyncAddressToInputs()
@@ -236,6 +283,7 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
     public string ReadCommunity { get; set; } = "public";
     public string ReadWriteCommunity { get; set; } = "private";
 
+    public string PollingProtocol { get; set; } = "SNMP";
     public string PollIntervalSec { get; set; } = "3";
     public string PollTimeoutMs { get; set; } = "3000";
     public string PollRetries { get; set; } = "1";
@@ -272,6 +320,7 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
         public SnmpVersion SnmpVersion { get; init; } = SnmpVersion.V2c;
         public string ReadCommunity { get; init; } = "public";
         public string ReadWriteCommunity { get; init; } = "private";
+        public PollingProtocol PollingProtocol { get; init; } = PollingProtocol.SNMP;
         public int TimeoutMs { get; init; } = 3000;
         public int Retries { get; init; } = 1;
         public int PollIntervalSec { get; init; } = 3;
@@ -328,6 +377,7 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
                 SnmpVersion = ParseSnmpVersion(ReadAccessMode),
                 ReadCommunity = (ReadCommunity ?? "public").Trim(),
                 ReadWriteCommunity = (ReadWriteCommunity ?? "private").Trim(),
+                PollingProtocol = ParsePollingProtocol(cmbPollingProtocol.SelectedItem is System.Windows.Controls.ComboBoxItem item ? item.Content?.ToString() : "SNMP"),
                 TimeoutMs = timeoutMs,
                 Retries = retries,
                 PollIntervalSec = pollIntervalSec,
@@ -610,6 +660,15 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
         if (m.Contains("V1")) return SnmpVersion.V1;
         if (m.Contains("V3")) return SnmpVersion.V3;
         return SnmpVersion.V2c;
+    }
+
+    private static Core.Models.PollingProtocol ParsePollingProtocol(string? protocolStr)
+    {
+        var p = (protocolStr ?? "").ToUpperInvariant();
+        if (p.Contains("PING")) return Core.Models.PollingProtocol.Ping;
+        if (p.Contains("ARP")) return Core.Models.PollingProtocol.ARP;
+        if (p.Contains("NONE")) return Core.Models.PollingProtocol.None;
+        return Core.Models.PollingProtocol.SNMP;
     }
 
     private static (string host, int port) ParseHostPort(string input)

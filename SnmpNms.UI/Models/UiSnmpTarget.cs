@@ -64,6 +64,7 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
     public SnmpVersion Version { get; set; } = SnmpVersion.V2c;
     public int Timeout { get; set; } = 3000;
     public int Retries { get; set; } = 1;
+    public PollingProtocol PollingProtocol { get; set; } = PollingProtocol.SNMP;
 
     // Unique key for correlation (events/polling/status updates)
     public string EndpointKey => $"{IpAddress}:{Port}";

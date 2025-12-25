@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Net.NetworkInformation;
 using System.Timers;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
@@ -75,23 +76,70 @@ public class PollingService : IPollingService
     {
         try
         {
-            // sysUpTime을 조회하여 Alive 체크
-            var result = await _snmpClient.GetAsync(target, SysUpTimeOid);
-            
+            // PollingProtocol 확인
+            var pollingProtocol = target.PollingProtocol;
+
             DeviceStatus status;
             string message;
-            long responseTime = result.ResponseTime;
+            long responseTime = 0;
 
-            if (result.IsSuccess && result.Variables.Count > 0)
+            switch (pollingProtocol)
             {
-                status = DeviceStatus.Up;
-                message = $"Alive ({result.Variables[0].Value})";
-            }
-            else
-            {
-                status = DeviceStatus.Down;
-                message = result.ErrorMessage ?? "No Response";
-                responseTime = 0;
+                case PollingProtocol.Ping:
+                    // Ping으로 체크
+                    try
+                    {
+                        using var ping = new Ping();
+                        var reply = await ping.SendPingAsync(target.IpAddress, 1000);
+                        responseTime = reply.RoundtripTime;
+                        if (reply.Status == IPStatus.Success)
+                        {
+                            status = DeviceStatus.Up;
+                            message = $"Ping OK ({responseTime}ms)";
+                        }
+                        else
+                        {
+                            status = DeviceStatus.Down;
+                            message = $"Ping Failed ({reply.Status})";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        status = DeviceStatus.Down;
+                        message = $"Ping Error: {ex.Message}";
+                    }
+                    break;
+
+                case PollingProtocol.ARP:
+                    // ARP는 현재 구현하지 않음 (향후 확장 가능)
+                    status = DeviceStatus.Unknown;
+                    message = "ARP polling not implemented";
+                    break;
+
+                case PollingProtocol.None:
+                    // Polling 안 함
+                    status = DeviceStatus.Unknown;
+                    message = "Polling disabled";
+                    break;
+
+                case PollingProtocol.SNMP:
+                default:
+                    // SNMP로 체크 (기본)
+                    var result = await _snmpClient.GetAsync(target, SysUpTimeOid);
+                    responseTime = result.ResponseTime;
+
+                    if (result.IsSuccess && result.Variables.Count > 0)
+                    {
+                        status = DeviceStatus.Up;
+                        message = $"Alive ({result.Variables[0].Value})";
+                    }
+                    else
+                    {
+                        status = DeviceStatus.Down;
+                        message = result.ErrorMessage ?? "No Response";
+                        responseTime = 0;
+                    }
+                    break;
             }
 
             // 결과 이벤트 발생

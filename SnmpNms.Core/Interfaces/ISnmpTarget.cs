@@ -10,5 +10,6 @@ public interface ISnmpTarget
     SnmpVersion Version { get; }
     int Timeout { get; }
     int Retries { get; }
+    PollingProtocol PollingProtocol { get; }
 }
 

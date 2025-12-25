@@ -71,23 +71,18 @@ public partial class MainWindow : Window
     private void EditAddSubnet_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Subnet);
     private void EditAddGoto_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Goto);
 
-    // Edit Object Properties 버튼 - Graph 그리기 기능 연결
+    // Edit Object Properties 버튼 - Map Node 속성 편집
     private void EditObjectProperties_Click(object sender, RoutedEventArgs e)
     {
-        // MIB Graph 탭으로 전환
-        tabMain.SelectedIndex = 6; // MIB Graph 탭 인덱스 (현재 순서 기준)
-        
-        // 선택된 MIB 노드가 있으면 Graph 표시
-        var selectedMibNode = GetSelectedMibNode();
-        if (selectedMibNode != null && !string.IsNullOrEmpty(selectedMibNode.Oid))
+        // 선택된 Map Node 찾기
+        var selectedNode = _vm.SelectedMapNodes.FirstOrDefault();
+        if (selectedNode == null)
         {
-            // MIB Graph 탭에 데이터 표시 (구현 필요)
-            _vm.AddSystemInfo($"[Graph] Opening graph for {selectedMibNode.Name} ({selectedMibNode.Oid})");
+            _vm.AddEvent(EventSeverity.Info, null, "Please select a map object to edit properties");
+            return;
         }
-        else
-        {
-            _vm.AddEvent(EventSeverity.Info, null, "Please select a MIB node to view graph");
-        }
+
+        ShowEditMapObjectDialog(selectedNode);
     }
 
     private void ShowAddMapObjectDialog(MapObjectType type)
@@ -130,7 +125,8 @@ public partial class MainWindow : Window
                     Community = dlg.Result.ReadCommunity,
                     Version = dlg.Result.SnmpVersion,
                     Timeout = dlg.Result.TimeoutMs,
-                    Retries = dlg.Result.Retries
+                    Retries = dlg.Result.Retries,
+                    PollingProtocol = dlg.Result.PollingProtocol
                 };
                 _vm.AddDeviceToSubnet(target, parent);
                 _vm.AddEvent(EventSeverity.Info, target.EndpointKey, $"[Map] Device added: {target.DisplayName} ({target.EndpointKey})");
@@ -152,6 +148,49 @@ public partial class MainWindow : Window
 
         parent.IsExpanded = true;
         _vm.RootSubnet.RecomputeEffectiveStatus();
+    }
+
+    private void ShowEditMapObjectDialog(MapNode node)
+    {
+        if (node.NodeType == MapNodeType.Device && node.Target != null)
+        {
+            // Device인 경우 기존 Target 정보로 다이얼로그 열기
+            var dlg = new MapObjectPropertiesDialog(MapObjectType.Device, node.Target, _snmpClient) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+
+            // 기존 Target 업데이트
+            node.Target.IpAddress = dlg.Result.IpOrHost;
+            node.Target.Port = dlg.Result.Port;
+            node.Target.Alias = dlg.Result.Alias;
+            node.Target.Device = dlg.Result.Device;
+            node.Target.Community = dlg.Result.ReadCommunity;
+            node.Target.Version = dlg.Result.SnmpVersion;
+            node.Target.Timeout = dlg.Result.TimeoutMs;
+            node.Target.Retries = dlg.Result.Retries;
+            node.Target.PollingProtocol = dlg.Result.PollingProtocol;
+
+            _vm.AddEvent(EventSeverity.Info, node.Target.EndpointKey, $"[Map] Device updated: {node.Target.DisplayName} ({node.Target.EndpointKey})");
+        }
+        else if (node.NodeType == MapNodeType.Subnet || node.NodeType == MapNodeType.RootSubnet)
+        {
+            // Subnet인 경우 이름만 편집 가능 (간단한 입력 다이얼로그 또는 기존 다이얼로그 사용)
+            var dlg = new MapObjectPropertiesDialog(MapObjectType.Subnet, _snmpClient) { Owner = this };
+            dlg.Alias = node.Name;
+            if (dlg.ShowDialog() != true) return;
+
+            node.Name = dlg.Result.Alias;
+            _vm.AddSystemInfo($"[Map] Subnet updated: {node.Name}");
+        }
+        else if (node.NodeType == MapNodeType.Goto)
+        {
+            // Goto인 경우
+            var dlg = new MapObjectPropertiesDialog(MapObjectType.Goto, _snmpClient) { Owner = this };
+            dlg.Alias = node.Name;
+            if (dlg.ShowDialog() != true) return;
+
+            node.Name = dlg.Result.Alias;
+            _vm.AddSystemInfo($"[Map] Goto updated: {node.Name}");
+        }
     }
 
     private MapNode GetSelectedSubnetOrDefault()
@@ -492,7 +531,7 @@ public partial class MainWindow : Window
     private void CmdMapProperties_Executed(object sender, ExecutedRoutedEventArgs e)
     {
         if (e.Parameter is not MapNode node) return;
-        _vm.AddSystemInfo($"[Map] Properties (Todo): {node.DisplayName}");
+        ShowEditMapObjectDialog(node);
     }
 
     private void CmdMapQuickPoll_Executed(object sender, ExecutedRoutedEventArgs e)
