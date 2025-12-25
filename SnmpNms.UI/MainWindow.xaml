@@ -175,6 +175,67 @@
                                                 </ContextMenu>
                                             </Setter.Value>
                                         </Setter>
+                                        <!-- Expander 클릭 영역 확대 (사각형 영역, 삼각형 아이콘) -->
+                                        <Style.Resources>
+                                            <Style TargetType="ToggleButton">
+                                                <Setter Property="Width" Value="20"/>
+                                                <Setter Property="Height" Value="20"/>
+                                                <Setter Property="Margin" Value="0"/>
+                                                <Setter Property="Padding" Value="0"/>
+                                                <Setter Property="Background" Value="Transparent"/>
+                                                <Setter Property="Foreground" Value="Black"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ToggleButton">
+                                                            <Border x:Name="border" 
+                                                                    Background="{TemplateBinding Background}"
+                                                                    BorderThickness="0"
+                                                                    Width="20" Height="20"
+                                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <ContentPresenter x:Name="contentPresenter"
+                                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <!-- 기본 상태: 투명 배경 -->
+                                                                <Trigger Property="IsMouseOver" Value="False">
+                                                                    <Setter TargetName="border" Property="Background" Value="Transparent"/>
+                                                                </Trigger>
+                                                                <!-- 호버 시 배경색 파란색으로 변경 -->
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter TargetName="border" Property="Background" Value="#0078D4"/>
+                                                                </Trigger>
+                                                                <!-- 접혔을 때: Fill을 검정색으로 강제 (기본이 하얀색이므로) -->
+                                                                <Trigger Property="IsChecked" Value="False">
+                                                                    <Setter Property="Foreground" Value="Black"/>
+                                                                </Trigger>
+                                                                <!-- 펴졌을 때: Fill을 검정색으로 강제 -->
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Setter Property="Foreground" Value="Black"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <!-- 기본 상태: 투명 배경 -->
+                                                    <Trigger Property="IsMouseOver" Value="False">
+                                                        <Setter Property="Background" Value="Transparent"/>
+                                                    </Trigger>
+                                                    <!-- 호버 시 배경색 파란색으로 변경 -->
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#0078D4"/>
+                                                    </Trigger>
+                                                    <!-- 접혔을 때와 펴졌을 때 모두 Foreground를 검정색으로 강제 -->
+                                                    <Trigger Property="IsChecked" Value="False">
+                                                        <Setter Property="Foreground" Value="Black"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter Property="Foreground" Value="Black"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Style.Resources>
                                     </Style>
                                 </TreeView.ItemContainerStyle>
                             </TreeView>

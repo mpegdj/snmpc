@@ -322,3 +322,26 @@
   - `SnmpNms.UI/Views/Dialogs/MapObjectPropertiesDialog.xaml.cs` : (SNMP 실패 시에만 Ping 진단 추가)
   - `SnmpNms.UI/Views/Dialogs/PingLogWindow.xaml` : (Close 버튼 추가)
   - `SnmpNms.UI/Views/Dialogs/PingLogWindow.xaml.cs` : (Close_Click 추가)
+
+---
+
+## 2025-12-26 (시간 미확인) — Map Object Properties UI 개선 및 Map Tree Expander 개선
+
+- **작업내용**
+  - Map Object Properties Dialog: Address 입력창을 IP 주소 형식에 맞게 4개 입력창으로 분리 (192.168.0.100:161 형식, 자동 포커스 이동, 점(.) 키 지원)
+  - Map Object Properties Dialog: Name 필드를 Alias와 Device로 분리, Lookup 시 sysName을 읽어서 Alias와 Device에 자동 채움
+  - Device 탭: Alias와 Device 컬럼 추가, 컬럼 폭을 220 → 110으로 축소
+  - Map Object Properties Dialog: Description 창 높이 제한(MaxHeight=80), Node Groups 입력창 1개로 축소, 레이아웃 정리
+  - Map Tree Expander: 클릭 영역을 20x20 사각형으로 확대, 호버 색상 파란색 설정 시도 (작동 미확인, 다음 작업 필요)
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/Views/Dialogs/MapObjectPropertiesDialog.xaml` : (Address 4개 입력창 분리, Alias/Device 필드 추가, Description 높이 제한, Node Groups 1개로 축소)
+  - `SnmpNms.UI/Views/Dialogs/MapObjectPropertiesDialog.xaml.cs` : (Address 입력창 동기화 로직, Alias/Device 속성 추가, Lookup 시 sysName을 Alias/Device에 채움)
+  - `SnmpNms.UI/Models/UiSnmpTarget.cs` : (Device 속성 추가)
+  - `SnmpNms.UI/MainWindow.xaml` : (Device 탭 Alias/Device 컬럼 추가 및 폭 조정, Expander 클릭 영역 확대 및 호버 색상 설정)
+  - `SnmpNms.UI/MainWindow.xaml.cs` : (Alias/Device 저장 로직 수정, Expander 클릭 처리)
+
+- **미완료 작업 (다음 작업 필요)**
+  - Map Tree Expander 호버 색상이 파란색으로 제대로 적용되지 않음 (현재 설정했으나 작동 미확인)
+  - 접힘 상태에서 삼각형 Fill이 흰색으로 보이는 문제 (Foreground를 Black으로 강제했으나 해결 안 됨)
+  - 해결 방안: WPF TreeViewItem의 기본 expander Path를 직접 제어하거나 커스텀 Path로 삼각형을 직접 그려서 Fill/Stroke를 완전히 제어 필요

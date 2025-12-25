@@ -37,7 +37,8 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Address:" VerticalAlignment="Center"/>
@@ -107,29 +108,22 @@
                     </ComboBox>
                     <Button Grid.Row="4" Grid.Column="2" Content="Browse..." IsEnabled="False" Margin="0,2,0,6"/>
 
-                    <GroupBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Header="Node Groups" Margin="0,4,0,8">
+                    <GroupBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Header="Node Groups" Margin="0,4,0,12">
                         <Grid Margin="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="100"/>
                             </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <ComboBox Grid.Row="0" Grid.Column="0" Margin="0,0,8,6"
+                            <ComboBox Grid.Row="0" Grid.Column="0" Margin="0,0,8,0"
                                       IsEditable="True"
                                       Text="{Binding NodeGroup1, UpdateSourceTrigger=PropertyChanged}"/>
-                            <Button Grid.Row="0" Grid.Column="1" Content="Edit..." IsEnabled="False" Margin="0,0,0,6"/>
-
-                            <ComboBox Grid.Row="1" Grid.Column="0" Margin="0,0,8,0"
-                                      IsEditable="True"
-                                      Text="{Binding NodeGroup2, UpdateSourceTrigger=PropertyChanged}"/>
+                            <Button Grid.Row="0" Grid.Column="1" Content="Edit..." IsEnabled="False" Margin="0,0,0,0"/>
                         </Grid>
                     </GroupBox>
 
-                    <GroupBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Header="Description">
+                    <GroupBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Header="Description" Margin="0,0,0,0">
                         <TextBox Margin="8" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                 MaxHeight="80"
                                  Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"/>
                     </GroupBox>
                 </Grid>
