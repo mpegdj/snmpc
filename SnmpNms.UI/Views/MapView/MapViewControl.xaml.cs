@@ -191,11 +191,11 @@ public partial class MapViewControl : UserControl
         // Z-order: 클릭된 창을 앞으로
         windowBorder.MouseLeftButtonDown += (_, _) =>
         {
-            var maxZ = _windows.Count == 0 ? 0 : _windows.Select(Panel.GetZIndex).Max();
-            Panel.SetZIndex(windowBorder, maxZ + 1);
+            var maxZ = _windows.Count == 0 ? 0 : _windows.Select(System.Windows.Controls.Panel.GetZIndex).Max();
+            System.Windows.Controls.Panel.SetZIndex(windowBorder, maxZ + 1);
         };
 
-        Panel.SetZIndex(windowBorder, _windows.Count + 1);
+        System.Windows.Controls.Panel.SetZIndex(windowBorder, _windows.Count + 1);
         _windows.Add(windowBorder);
         MdiCanvas.Children.Add(windowBorder);
         return windowBorder;

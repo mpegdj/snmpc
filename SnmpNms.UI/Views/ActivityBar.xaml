@@ -1,0 +1,44 @@
+<UserControl x:Class="SnmpNms.UI.Views.ActivityBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="48"
+             Width="48"
+             Background="{StaticResource VSCodeActivityBarBackground}">
+    <StackPanel Orientation="Vertical">
+        <!-- Map/Explorer -->
+        <Button x:Name="btnMap" 
+                Style="{StaticResource ActivityBarButtonActiveStyle}"
+                Click="BtnMap_Click"
+                ToolTip="Map">
+            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE700;"/>
+        </Button>
+        
+        <!-- Search -->
+        <Button x:Name="btnSearch" 
+                Style="{StaticResource ActivityBarButtonStyle}"
+                Click="BtnSearch_Click"
+                ToolTip="Search">
+            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;"/>
+        </Button>
+        
+        <!-- Event Log -->
+        <Button x:Name="btnEventLog" 
+                Style="{StaticResource ActivityBarButtonStyle}"
+                Click="BtnEventLog_Click"
+                ToolTip="Event Log">
+            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;"/>
+        </Button>
+        
+        <!-- Settings -->
+        <Button x:Name="btnSettings" 
+                Style="{StaticResource ActivityBarButtonStyle}"
+                Click="BtnSettings_Click"
+                ToolTip="Settings">
+            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;"/>
+        </Button>
+    </StackPanel>
+</UserControl>
+
