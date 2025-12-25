@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -41,6 +43,9 @@ public partial class MainWindow : Window
 
         // MIB 파일 로드 (Mib 폴더가 실행 파일 위치 또는 상위에 있다고 가정)
         LoadMibs();
+        
+        // MIB 트리 초기화
+        InitializeMibTree();
 
         // 기본 디바이스(샘플) 추가
         var defaultDevice = new UiSnmpTarget
@@ -56,9 +61,34 @@ public partial class MainWindow : Window
     }
 
     // --- Edit Button Bar: Add Map Objects (SNMPc style) ---
+    private void FindMapObjects_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new DiscoveryPollingAgentsDialog(_snmpClient, _vm) { Owner = this };
+        dialog.ShowDialog();
+    }
+
     private void EditAddDeviceObject_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Device);
     private void EditAddSubnet_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Subnet);
     private void EditAddGoto_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Goto);
+
+    // Edit Object Properties 버튼 - Graph 그리기 기능 연결
+    private void EditObjectProperties_Click(object sender, RoutedEventArgs e)
+    {
+        // MIB Graph 탭으로 전환
+        tabMain.SelectedIndex = 6; // MIB Graph 탭 인덱스 (현재 순서 기준)
+        
+        // 선택된 MIB 노드가 있으면 Graph 표시
+        var selectedMibNode = GetSelectedMibNode();
+        if (selectedMibNode != null && !string.IsNullOrEmpty(selectedMibNode.Oid))
+        {
+            // MIB Graph 탭에 데이터 표시 (구현 필요)
+            _vm.AddSystemInfo($"[Graph] Opening graph for {selectedMibNode.Name} ({selectedMibNode.Oid})");
+        }
+        else
+        {
+            _vm.AddEvent(EventSeverity.Info, null, "Please select a MIB node to view graph");
+        }
+    }
 
     private void ShowAddMapObjectDialog(MapObjectType type)
     {
@@ -514,6 +544,21 @@ public partial class MainWindow : Window
                 _vm.SelectedDeviceNode = node;
                 txtIp.Text = node.Target.IpAddress;
                 txtCommunity.Text = node.Target.Community;
+                
+                // MIB Table 탭이 활성화되어 있고 MIB 노드가 선택되어 있으면 자동으로 테이블 로드
+                if (tabMain.SelectedIndex == 5) // MIB Table 탭
+                {
+                    var selectedMibNode = GetSelectedMibNode();
+                    if (selectedMibNode != null && !string.IsNullOrEmpty(selectedMibNode.Oid))
+                    {
+                        txtMibTableDevice.Text = node.Target.DisplayName;
+                        _ = LoadMibTableData(selectedMibNode.Oid);
+                    }
+                    else
+                    {
+                        txtMibTableDevice.Text = node.Target.DisplayName;
+                    }
+                }
             }
         }
         else
@@ -599,11 +644,627 @@ public partial class MainWindow : Window
         _vm.ClearEvents();
     }
 
+    // MIB Tree Methods
+    private void InitializeMibTree()
+    {
+        try
+        {
+            var rootTree = _mibService.GetMibTree();
+            treeMib.ItemsSource = new[] { rootTree };
+            
+            // 디버깅: 트리 노드 개수 확인
+            var totalNodes = CountNodes(rootTree);
+            _vm.AddSystemInfo($"[System] MIB Tree initialized: {totalNodes} nodes");
+            System.Diagnostics.Debug.WriteLine($"InitializeMibTree: Total nodes in tree: {totalNodes}");
+            
+            // UI가 로드된 후 기본 MIB 노드 선택 (Dispatcher 사용)
+            Loaded += (s, e) =>
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    SelectDefaultMibNode(rootTree);
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
+            };
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, $"[System] Failed to initialize MIB tree: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"InitializeMibTree Error: {ex}");
+        }
+    }
+
+    private void SelectDefaultMibNode(MibTreeNode rootNode)
+    {
+        // 기본적으로 sysDescr 노드를 찾아서 선택
+        var defaultNode = FindMibNodeByName(rootNode, "sysDescr");
+        
+        // sysDescr가 없으면 mgmt 노드의 첫 번째 자식 선택
+        if (defaultNode == null)
+        {
+            var mgmtNode = rootNode.Children.FirstOrDefault(c => c.Name == "mgmt");
+            if (mgmtNode != null && mgmtNode.Children.Count > 0)
+            {
+                var systemNode = mgmtNode.Children.FirstOrDefault(c => c.Oid == "1.3.6.1.2.1.1");
+                if (systemNode != null && systemNode.Children.Count > 0)
+                {
+                    defaultNode = systemNode.Children.FirstOrDefault(c => !string.IsNullOrEmpty(c.Oid));
+                }
+            }
+        }
+        
+        // 노드를 찾았으면 선택하고 트리 확장
+        if (defaultNode != null)
+        {
+            // 부모 노드들을 모두 확장
+            ExpandParentNodes(defaultNode, rootNode);
+            
+            // TreeViewItem을 찾아서 선택
+            var treeViewItem = FindTreeViewItem(treeMib, defaultNode);
+            if (treeViewItem != null)
+            {
+                treeViewItem.IsSelected = true;
+                treeViewItem.BringIntoView();
+            }
+            
+            // MIB Table 탭도 기본으로 설정하고 데이터 로드
+            if (_vm.SelectedDevice != null)
+            {
+                tabMain.SelectedIndex = 5; // MIB Table 탭
+                txtMibTableOid.Text = $"{defaultNode.Name} ({defaultNode.Oid})";
+                txtMibTableDevice.Text = _vm.SelectedDevice?.DisplayName ?? "-";
+                _ = LoadMibTableData(defaultNode.Oid);
+            }
+        }
+    }
+
+    private TreeViewItem? FindTreeViewItem(ItemsControl parent, MibTreeNode targetNode)
+    {
+        foreach (var item in parent.Items)
+        {
+            var container = parent.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
+            if (container != null)
+            {
+                if (container.DataContext == targetNode)
+                    return container;
+                
+                var found = FindTreeViewItem(container, targetNode);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private MibTreeNode? FindMibNodeByName(MibTreeNode node, string name)
+    {
+        if (node.Name == name) return node;
+        
+        foreach (var child in node.Children)
+        {
+            var found = FindMibNodeByName(child, name);
+            if (found != null) return found;
+        }
+        
+        return null;
+    }
+
+    private void ExpandParentNodes(MibTreeNode targetNode, MibTreeNode rootNode)
+    {
+        // 루트부터 타겟까지의 경로를 찾아서 확장
+        var path = FindPath(rootNode, targetNode);
+        foreach (var node in path)
+        {
+            node.IsExpanded = true;
+        }
+    }
+
+    private List<MibTreeNode> FindPath(MibTreeNode current, MibTreeNode target)
+    {
+        var path = new List<MibTreeNode> { current };
+        
+        if (current == target) return path;
+        
+        foreach (var child in current.Children)
+        {
+            var childPath = FindPath(child, target);
+            if (childPath.Count > 0 && childPath.Last() == target)
+            {
+                path.AddRange(childPath);
+                return path;
+            }
+        }
+        
+        return new List<MibTreeNode>(); // 경로를 찾지 못함
+    }
+
+    private int CountNodes(MibTreeNode node)
+    {
+        int count = 1;
+        foreach (var child in node.Children)
+        {
+            count += CountNodes(child);
+        }
+        return count;
+    }
+
+    private MibTreeNode? GetSelectedMibNode()
+    {
+        return treeMib.SelectedItem as MibTreeNode;
+    }
+
+    private void treeMib_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        var node = e.NewValue as MibTreeNode;
+        if (node == null) return;
+
+        txtMibName.Text = node.Name;
+        txtMibOid.Text = node.Oid;
+        txtMibType.Text = node.NodeType.ToString();
+        txtMibDescription.Text = node.Description ?? "-";
+
+        // MIB Table 탭에도 자동으로 정보 업데이트
+        if (!string.IsNullOrEmpty(node.Oid))
+        {
+            txtMibTableOid.Text = $"{node.Name} ({node.Oid})";
+            
+            // 디바이스가 선택되어 있고, 테이블 노드이거나 리프 노드인 경우 자동으로 데이터 로드
+            if (_vm.SelectedDevice != null && tabMain.SelectedIndex == 5) // MIB Table 탭이 활성화되어 있으면
+            {
+                _ = LoadMibTableData(node.Oid);
+            }
+        }
+    }
+
+    // MIB Tree Context Menu Handlers
+    private void MibTreeGet_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        if (_vm.SelectedDevice == null)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, "Please select a device first");
+            return;
+        }
+
+        // Get 요청 실행
+        _ = ExecuteSnmpGet(node.Oid);
+    }
+
+    private void MibTreeGetNext_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        if (_vm.SelectedDevice == null)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, "Please select a device first");
+            return;
+        }
+
+        // GetNext 요청 실행
+        _ = ExecuteSnmpGetNext(node.Oid);
+    }
+
+    private void MibTreeWalk_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        if (_vm.SelectedDevice == null)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, "Please select a device first");
+            return;
+        }
+
+        // Walk 요청 실행
+        _ = ExecuteSnmpWalk(node.Oid);
+    }
+
+    private void MibTreeViewTable_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        if (_vm.SelectedDevice == null)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, "Please select a device first");
+            return;
+        }
+
+        // MIB Table 탭으로 전환하고 테이블 표시
+        ShowMibTable(node.Oid, node.Name);
+    }
+
+    private void ShowMibTable(string tableOid, string tableName)
+    {
+        // MIB Table 탭 활성화
+        tabMain.SelectedIndex = 5; // MIB Table 탭 인덱스 (현재 순서 기준)
+        
+        // 테이블 정보 표시
+        txtMibTableOid.Text = $"{tableName} ({tableOid})";
+        txtMibTableDevice.Text = _vm.SelectedDevice?.DisplayName ?? "-";
+        
+        // 테이블 데이터 로드
+        _ = LoadMibTableData(tableOid);
+    }
+
+    // TabControl의 탭 선택 변경 이벤트 핸들러
+    private void TabMain_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // MIB Table 탭이 선택되었는지 확인
+        if (tabMain.SelectedIndex == 5) // MIB Table 탭 인덱스
+        {
+            // MIB 트리에서 선택된 노드가 있으면 자동으로 테이블 표시
+            var selectedMibNode = GetSelectedMibNode();
+            if (selectedMibNode != null && !string.IsNullOrEmpty(selectedMibNode.Oid))
+            {
+                txtMibTableOid.Text = $"{selectedMibNode.Name} ({selectedMibNode.Oid})";
+                txtMibTableDevice.Text = _vm.SelectedDevice?.DisplayName ?? "-";
+                
+                // 디바이스가 선택되어 있으면 자동으로 데이터 로드
+                if (_vm.SelectedDevice != null)
+                {
+                    _ = LoadMibTableData(selectedMibNode.Oid);
+                }
+            }
+        }
+    }
+
+    private async Task LoadMibTableData(string tableOid)
+    {
+        if (_vm.SelectedDevice == null) return;
+
+        try
+        {
+            txtMibTableStatus.Text = $"Loading MIB table data from {_vm.SelectedDevice.IpAddress}...";
+            dataGridMibTable.ItemsSource = null;
+            dataGridMibTable.Columns.Clear();
+
+            // SNMP WALK으로 테이블 데이터 가져오기
+            var result = await _snmpClient.WalkAsync(_vm.SelectedDevice, tableOid);
+            
+            if (!result.IsSuccess)
+            {
+                txtMibTableStatus.Text = $"Failed to load table data: {result.ErrorMessage ?? "Unknown error"}";
+                _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice.IpAddress, $"MIB Table Walk failed: {result.ErrorMessage}");
+                return;
+            }
+
+            if (result.Variables.Count == 0)
+            {
+                txtMibTableStatus.Text = "No data returned from device.";
+                return;
+            }
+
+            // 디버깅: 받은 변수 개수 확인
+            System.Diagnostics.Debug.WriteLine($"LoadMibTableData: Received {result.Variables.Count} variables for OID {tableOid}");
+            
+            // 테이블 데이터 파싱 및 구조화
+            var tableData = ParseWalkResultToTable(result.Variables, tableOid);
+            
+            System.Diagnostics.Debug.WriteLine($"LoadMibTableData: Parsed into {tableData.Count} rows");
+            
+            if (tableData.Count == 0)
+            {
+                txtMibTableStatus.Text = $"No table data found. Received {result.Variables.Count} variables but could not parse into table format.";
+                // 디버깅: 첫 번째 변수 출력
+                if (result.Variables.Count > 0)
+                {
+                    var firstVar = result.Variables[0];
+                    System.Diagnostics.Debug.WriteLine($"First variable: OID={firstVar.Oid}, Value={firstVar.Value}");
+                }
+                return;
+            }
+
+            // DataGrid 컬럼 생성
+            CreateMibTableColumns(tableData);
+
+            // DataGrid에 데이터 바인딩
+            dataGridMibTable.ItemsSource = tableData;
+            
+            // 디버깅: 컬럼 개수 확인
+            System.Diagnostics.Debug.WriteLine($"LoadMibTableData: Created {dataGridMibTable.Columns.Count} columns");
+            
+            txtMibTableStatus.Text = $"Loaded {tableData.Count} row(s), {dataGridMibTable.Columns.Count} column(s) from MIB table.";
+            _vm.AddSystemInfo($"[MIB Table] Loaded {tableData.Count} row(s) for {tableOid}");
+        }
+        catch (Exception ex)
+        {
+            txtMibTableStatus.Text = $"Error loading table data: {ex.Message}";
+            _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice?.IpAddress, $"MIB Table error: {ex.Message}");
+        }
+    }
+
+    private List<Dictionary<string, object>> ParseWalkResultToTable(List<SnmpVariable> variables, string baseOid)
+    {
+        var tableData = new List<Dictionary<string, object>>();
+        
+        if (variables.Count == 0) return tableData;
+        
+        // OID를 분석하여 인스턴스와 컬럼 분리
+        // 예: 1.3.6.1.2.1.2.2.1.2.1 -> baseOid: 1.3.6.1.2.1.2.2.1.2, instance: 1
+        var baseOidParts = baseOid.Split('.');
+        var baseOidLength = baseOidParts.Length;
+        
+        // 변수들을 그룹화 (같은 인스턴스끼리)
+        var instanceGroups = new Dictionary<string, Dictionary<string, string>>();
+        
+        foreach (var variable in variables)
+        {
+            var oidParts = variable.Oid.Split('.');
+            
+            // baseOid보다 긴 경우에만 처리
+            if (oidParts.Length <= baseOidLength) continue;
+            
+            // 컬럼 OID 찾기: baseOid에서 시작하는 가장 긴 매칭 OID
+            // 예: baseOid가 1.3.6.1.2.1.2.2.1이고 실제 OID가 1.3.6.1.2.1.2.2.1.2.1이면
+            // 컬럼 OID는 1.3.6.1.2.1.2.2.1.2 (baseOid + 다음 숫자)
+            string columnOid;
+            string instanceKey;
+            
+            if (oidParts.Length == baseOidLength + 1)
+            {
+                // 간단한 경우: baseOid.숫자
+                columnOid = variable.Oid;
+                instanceKey = oidParts[baseOidLength];
+            }
+            else
+            {
+                // 복잡한 경우: baseOid.컬럼번호.인스턴스...
+                // 컬럼 번호는 baseOid 직후의 숫자
+                columnOid = string.Join(".", oidParts.Take(baseOidLength + 1));
+                instanceKey = string.Join(".", oidParts.Skip(baseOidLength + 1));
+            }
+            
+            var columnName = _mibService.GetOidName(columnOid);
+            if (string.IsNullOrEmpty(columnName) || columnName == columnOid)
+            {
+                // 이름을 찾지 못한 경우 OID 사용
+                columnName = columnOid;
+            }
+            
+            if (!instanceGroups.ContainsKey(instanceKey))
+            {
+                instanceGroups[instanceKey] = new Dictionary<string, string>();
+            }
+            
+            instanceGroups[instanceKey][columnName] = variable.Value;
+        }
+        
+        // Dictionary를 List로 변환
+        foreach (var instance in instanceGroups.OrderBy(i => i.Key))
+        {
+            var row = new Dictionary<string, object> { ["Instance"] = instance.Key };
+            foreach (var column in instance.Value)
+            {
+                row[column.Key] = column.Value;
+            }
+            tableData.Add(row);
+        }
+        
+        return tableData;
+    }
+
+    private void CreateMibTableColumns(List<Dictionary<string, object>> tableData)
+    {
+        dataGridMibTable.Columns.Clear();
+        
+        if (tableData.Count == 0) return;
+        
+        // 모든 컬럼 이름 수집
+        var allColumns = new HashSet<string>();
+        foreach (var row in tableData)
+        {
+            foreach (var key in row.Keys)
+            {
+                allColumns.Add(key);
+            }
+        }
+        
+        // Instance 컬럼을 첫 번째로 추가
+        if (allColumns.Contains("Instance"))
+        {
+            dataGridMibTable.Columns.Add(new System.Windows.Controls.DataGridTextColumn
+            {
+                Header = "Instance",
+                Binding = new System.Windows.Data.Binding("[Instance]") { Mode = System.Windows.Data.BindingMode.OneWay },
+                Width = 150,
+                IsReadOnly = true
+            });
+            allColumns.Remove("Instance");
+        }
+        
+        // 나머지 컬럼 추가
+        foreach (var columnName in allColumns.OrderBy(c => c))
+        {
+            dataGridMibTable.Columns.Add(new System.Windows.Controls.DataGridTextColumn
+            {
+                Header = columnName,
+                Binding = new System.Windows.Data.Binding($"[{columnName}]") { Mode = System.Windows.Data.BindingMode.OneWay },
+                Width = 150,
+                IsReadOnly = true
+            });
+        }
+    }
+
+    private void BtnMibTableRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        var currentOid = txtMibTableOid.Text;
+        if (string.IsNullOrEmpty(currentOid) || currentOid == "-") return;
+        
+        // OID 추출 (괄호 안의 OID)
+        var match = System.Text.RegularExpressions.Regex.Match(currentOid, @"\(([0-9.]+)\)");
+        if (match.Success)
+        {
+            _ = LoadMibTableData(match.Groups[1].Value);
+        }
+    }
+
+    private void MibTreeCopyOid_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        Clipboard.SetText(node.Oid);
+        _vm.AddSystemInfo($"[System] Copied OID: {node.Oid}");
+    }
+
+    private void MibTreeCopyName_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Name)) return;
+        
+        Clipboard.SetText(node.Name);
+        _vm.AddSystemInfo($"[System] Copied Name: {node.Name}");
+    }
+
+    // MIB Details Panel Button Handlers
+    private void BtnMibGet_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        if (_vm.SelectedDevice == null)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, "Please select a device first");
+            return;
+        }
+
+        _ = ExecuteSnmpGet(node.Oid);
+    }
+
+    private void BtnMibGetNext_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        if (_vm.SelectedDevice == null)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, "Please select a device first");
+            return;
+        }
+
+        _ = ExecuteSnmpGetNext(node.Oid);
+    }
+
+    private void BtnMibWalk_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetSelectedMibNode();
+        if (node == null || string.IsNullOrEmpty(node.Oid)) return;
+        
+        if (_vm.SelectedDevice == null)
+        {
+            _vm.AddEvent(EventSeverity.Warning, null, "Please select a device first");
+            return;
+        }
+
+        _ = ExecuteSnmpWalk(node.Oid);
+    }
+
+    private async Task ExecuteSnmpGet(string oid)
+    {
+        if (_vm.SelectedDevice == null) return;
+
+        try
+        {
+            _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"GET {oid} ({_mibService.GetOidName(oid)})");
+            var result = await _snmpClient.GetAsync(_vm.SelectedDevice, oid);
+            
+            if (result.IsSuccess && result.Variables.Count > 0)
+            {
+                foreach (var variable in result.Variables)
+                {
+                    var displayOid = _mibService.GetOidName(variable.Oid);
+                    _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"{displayOid} = {variable.Value}");
+                }
+            }
+            else
+            {
+                _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice.IpAddress, $"GET failed: {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice.IpAddress, $"GET error: {ex.Message}");
+        }
+    }
+
+    private async Task ExecuteSnmpGetNext(string oid)
+    {
+        if (_vm.SelectedDevice == null) return;
+
+        try
+        {
+            _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"GET-NEXT {oid} ({_mibService.GetOidName(oid)})");
+            var result = await _snmpClient.GetNextAsync(_vm.SelectedDevice, oid);
+            
+            if (result.IsSuccess && result.Variables.Count > 0)
+            {
+                foreach (var variable in result.Variables)
+                {
+                    var displayOid = _mibService.GetOidName(variable.Oid);
+                    _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"{displayOid} = {variable.Value}");
+                }
+            }
+            else
+            {
+                _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice.IpAddress, $"GET-NEXT failed: {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice.IpAddress, $"GET-NEXT error: {ex.Message}");
+        }
+    }
+
+    private async Task ExecuteSnmpWalk(string oid)
+    {
+        if (_vm.SelectedDevice == null) return;
+
+        try
+        {
+            _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"WALK {oid} ({_mibService.GetOidName(oid)})");
+            var result = await _snmpClient.WalkAsync(_vm.SelectedDevice, oid);
+            
+            if (result.IsSuccess && result.Variables.Count > 0)
+            {
+                _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"Walk completed: {result.Variables.Count} values");
+                foreach (var variable in result.Variables.Take(20)) // 처음 20개만 표시
+                {
+                    var displayOid = _mibService.GetOidName(variable.Oid);
+                    _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"{displayOid} = {variable.Value}");
+                }
+                if (result.Variables.Count > 20)
+                {
+                    _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"... and {result.Variables.Count - 20} more values");
+                }
+            }
+            else
+            {
+                _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice.IpAddress, $"WALK failed: {result.ErrorMessage}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Error, _vm.SelectedDevice.IpAddress, $"WALK error: {ex.Message}");
+        }
+    }
+
     private void MenuExit_Click(object sender, RoutedEventArgs e) => Close();
 
     private void MenuRefresh_Click(object sender, RoutedEventArgs e)
     {
         _vm.AddSystemInfo("[System] Refresh requested");
+    }
+
+    private void MenuConfigMibDatabase_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new CompileMibsDialog(_mibService) { Owner = this };
+        var result = dlg.ShowDialog();
+        
+        // 컴파일 후 MIB 트리 새로고침 (다이얼로그가 닫혔을 때 항상 새로고침)
+        InitializeMibTree();
+        _vm.AddSystemInfo("[System] MIB Database updated. MIB tree refreshed.");
     }
 
     private void MenuSnmpTest_Click(object sender, RoutedEventArgs e)
