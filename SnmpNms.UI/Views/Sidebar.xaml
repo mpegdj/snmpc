@@ -23,7 +23,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" 
-                          Text="{Binding HeaderText}" 
+                          Text="{Binding HeaderText, FallbackValue=EXPLORER}" 
                           Foreground="{StaticResource VSCodeForeground}"
                           VerticalAlignment="Center"
                           Margin="12,0,0,0"
@@ -44,8 +44,7 @@
         
         <!-- Content Area -->
         <ContentControl x:Name="contentArea" 
-                       Grid.Row="1"
-                       Content="{Binding CurrentContent}"/>
+                       Grid.Row="1"/>
     </Grid>
 </UserControl>
 

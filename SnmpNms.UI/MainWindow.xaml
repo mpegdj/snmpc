@@ -7,6 +7,7 @@
         xmlns:models="clr-namespace:SnmpNms.UI.Models"
         xmlns:local="clr-namespace:SnmpNms.UI"
         xmlns:dialogs="clr-namespace:SnmpNms.UI.Views.Dialogs"
+        xmlns:views="clr-namespace:SnmpNms.UI.Views"
         Title="SnmpNms" Height="800" Width="1200"
         MinHeight="650" MinWidth="980">
     <Window.CommandBindings>
@@ -107,19 +108,7 @@
             </ToolBar>
         </ToolBarTray>
 
-        <StatusBar DockPanel.Dock="Bottom">
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Status: " FontWeight="Bold"/>
-                    <Label Name="lblStatus" Content="Unknown" Foreground="Gray" FontWeight="Bold"/>
-                </StackPanel>
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
-                <TextBlock Text="{Binding SelectedDevice.DisplayName, FallbackValue='(no device selected)'}"/>
-            </StatusBarItem>
-        </StatusBar>
-
+        <!-- VS Code Style Layout -->
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
@@ -127,212 +116,31 @@
                 <RowDefinition Height="220" MinHeight="120"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="48"/>
                 <ColumnDefinition Width="280"/>
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Left: Selection Tool (SNMPc style) -->
-            <GroupBox Grid.Row="0" Grid.Column="0" Header="Selection Tool" Margin="8">
-                <TabControl>
-                    <TabItem Header="Map">
-                        <DockPanel Margin="8">
-                            <TreeView Name="tvDevices"
-                                      ItemsSource="{Binding MapRoots}"
-                                      AllowDrop="True"
-                                      PreviewMouseLeftButtonDown="TvDevices_PreviewMouseLeftButtonDown"
-                                      PreviewMouseMove="TvDevices_PreviewMouseMove"
-                                      Drop="TvDevices_Drop"
-                                      PreviewKeyDown="TvDevices_PreviewKeyDown">
-                                <TreeView.Resources>
-                                    <HierarchicalDataTemplate DataType="{x:Type models:MapNode}" ItemsSource="{Binding Children}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Rectangle Width="10" Height="10" Margin="0,0,6,0"
-                                                       Fill="{Binding EffectiveStatus, Converter={StaticResource DeviceStatusToBrushConverter}}"/>
-                                            <TextBlock Text="{Binding DisplayName}"
-                                                       MouseLeftButtonDown="MapNodeText_MouseLeftButtonDown"/>
-                                        </StackPanel>
-                                    </HierarchicalDataTemplate>
-                                </TreeView.Resources>
-                                <TreeView.ItemContainerStyle>
-                                    <Style TargetType="TreeViewItem">
-                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=OneWay}"/>
-                                        <Setter Property="ContextMenu">
-                                            <Setter.Value>
-                                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                                    <MenuItem Header="Properties (Todo)"
-                                                              Command="{x:Static local:MainWindowCommands.MapProperties}"
-                                                              CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="Open Map View"
-                                                              Command="{x:Static local:MainWindowCommands.MapOpen}"
-                                                              CommandParameter="{Binding}"/>
-                                                    <Separator/>
-                                                    <MenuItem Header="Quick Poll (Todo)"
-                                                              Command="{x:Static local:MainWindowCommands.MapQuickPoll}"
-                                                              CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="MIB Table (Todo)"
-                                                              Command="{x:Static local:MainWindowCommands.MapMibTable}"
-                                                              CommandParameter="{Binding}"/>
-                                                    <Separator/>
-                                                    <MenuItem Header="Delete"
-                                                              Command="{x:Static local:MainWindowCommands.MapDelete}"
-                                                              CommandParameter="{Binding}"/>
-                                                </ContextMenu>
-                                            </Setter.Value>
-                                        </Setter>
-                                        <!-- Expander 클릭 영역 확대 (사각형 영역, 삼각형 아이콘) -->
-                                        <Style.Resources>
-                                            <Style TargetType="ToggleButton">
-                                                <Setter Property="Width" Value="20"/>
-                                                <Setter Property="Height" Value="20"/>
-                                                <Setter Property="Margin" Value="0"/>
-                                                <Setter Property="Padding" Value="0"/>
-                                                <Setter Property="Background" Value="Transparent"/>
-                                                <Setter Property="Foreground" Value="Black"/>
-                                                <Setter Property="BorderThickness" Value="0"/>
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="ToggleButton">
-                                                            <Border x:Name="border" 
-                                                                    Background="{TemplateBinding Background}"
-                                                                    BorderThickness="0"
-                                                                    Width="20" Height="20"
-                                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <ContentPresenter x:Name="contentPresenter"
-                                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <!-- 기본 상태: 투명 배경 -->
-                                                                <Trigger Property="IsMouseOver" Value="False">
-                                                                    <Setter TargetName="border" Property="Background" Value="Transparent"/>
-                                                                </Trigger>
-                                                                <!-- 호버 시 배경색 파란색으로 변경 -->
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter TargetName="border" Property="Background" Value="#0078D4"/>
-                                                                </Trigger>
-                                                                <!-- 접혔을 때: Fill을 검정색으로 강제 (기본이 하얀색이므로) -->
-                                                                <Trigger Property="IsChecked" Value="False">
-                                                                    <Setter Property="Foreground" Value="Black"/>
-                                                                </Trigger>
-                                                                <!-- 펴졌을 때: Fill을 검정색으로 강제 -->
-                                                                <Trigger Property="IsChecked" Value="True">
-                                                                    <Setter Property="Foreground" Value="Black"/>
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                                <Style.Triggers>
-                                                    <!-- 기본 상태: 투명 배경 -->
-                                                    <Trigger Property="IsMouseOver" Value="False">
-                                                        <Setter Property="Background" Value="Transparent"/>
-                                                    </Trigger>
-                                                    <!-- 호버 시 배경색 파란색으로 변경 -->
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="#0078D4"/>
-                                                    </Trigger>
-                                                    <!-- 접혔을 때와 펴졌을 때 모두 Foreground를 검정색으로 강제 -->
-                                                    <Trigger Property="IsChecked" Value="False">
-                                                        <Setter Property="Foreground" Value="Black"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsChecked" Value="True">
-                                                        <Setter Property="Foreground" Value="Black"/>
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Style.Resources>
-                                    </Style>
-                                </TreeView.ItemContainerStyle>
-                            </TreeView>
-                        </DockPanel>
-                    </TabItem>
-                    <TabItem Header="Mib" Name="tabMib">
-                        <DockPanel Margin="12">
-                            <!-- MIB Tree View -->
-                            <TreeView Name="treeMib" DockPanel.Dock="Left" Width="300" Margin="0,0,8,0" SelectedItemChanged="treeMib_SelectedItemChanged">
-                                <TreeView.ItemContainerStyle>
-                                    <Style TargetType="TreeViewItem">
-                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                    </Style>
-                                </TreeView.ItemContainerStyle>
-                                <TreeView.ItemTemplate>
-                                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Name}" Margin="4,2"/>
-                                            <TextBlock Text=" (" Foreground="Gray" Margin="2,2,0,2"/>
-                                            <TextBlock Text="{Binding Oid}" Foreground="Gray" FontSize="10"/>
-                                            <TextBlock Text=")" Foreground="Gray" Margin="0,2,2,2"/>
-                                        </StackPanel>
-                                    </HierarchicalDataTemplate>
-                                </TreeView.ItemTemplate>
-                                <TreeView.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="Get" Click="MibTreeGet_Click"/>
-                                        <MenuItem Header="Get Next" Click="MibTreeGetNext_Click"/>
-                                        <MenuItem Header="Walk" Click="MibTreeWalk_Click"/>
-                                        <Separator/>
-                                        <MenuItem Header="View Table" Click="MibTreeViewTable_Click"/>
-                                        <Separator/>
-                                        <MenuItem Header="Copy OID" Click="MibTreeCopyOid_Click"/>
-                                        <MenuItem Header="Copy Name" Click="MibTreeCopyName_Click"/>
-                                    </ContextMenu>
-                                </TreeView.ContextMenu>
-                            </TreeView>
-                            
-                            <!-- MIB Details Panel -->
-                            <Border DockPanel.Dock="Right" Width="400" BorderBrush="#DDD" BorderThickness="1" Padding="12" Background="#FAFAFA">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <StackPanel>
-                                        <TextBlock Text="MIB Details" FontWeight="Bold" FontSize="14" Margin="0,0,0,12"/>
-                                        
-                                        <TextBlock Text="Name:" FontWeight="SemiBold" Margin="0,4"/>
-                                        <TextBlock Name="txtMibName" Text="-" Margin="0,0,0,12"/>
-                                        
-                                        <TextBlock Text="OID:" FontWeight="SemiBold" Margin="0,4"/>
-                                        <TextBlock Name="txtMibOid" Text="-" Margin="0,0,0,12"/>
-                                        
-                                        <TextBlock Text="Type:" FontWeight="SemiBold" Margin="0,4"/>
-                                        <TextBlock Name="txtMibType" Text="-" Margin="0,0,0,12"/>
-                                        
-                                        <TextBlock Text="Description:" FontWeight="SemiBold" Margin="0,4"/>
-                                        <TextBlock Name="txtMibDescription" Text="-" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                        
-                                        <Separator Margin="0,12"/>
-                                        
-                                        <Button Content="Get Value" Click="BtnMibGet_Click" Margin="0,4" Padding="8,4"/>
-                                        <Button Content="Get Next" Click="BtnMibGetNext_Click" Margin="0,4" Padding="8,4"/>
-                                        <Button Content="Walk" Click="BtnMibWalk_Click" Margin="0,4" Padding="8,4"/>
-                                    </StackPanel>
-                                </ScrollViewer>
-                            </Border>
-                        </DockPanel>
-                    </TabItem>
-                    <TabItem Header="Trend">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap"
-                                       Text="Report profiles / long-term polling / scheduled reports (Todo)"/>
-                        </Grid>
-                    </TabItem>
-                    <TabItem Header="Event">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap"
-                                       Text="Event filters / actions when an event is received (Todo)"/>
-                        </Grid>
-                    </TabItem>
-                    <TabItem Header="Menu">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap"
-                                       Text="Custom menus that appear in Manage/Tools/Help menus (Todo)"/>
-                        </Grid>
-                    </TabItem>
-                </TabControl>
-            </GroupBox>
+            <!-- Activity Bar (왼쪽 가장자리) -->
+            <views:ActivityBar Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
+                              x:Name="activityBar"
+                              ViewChanged="ActivityBar_ViewChanged"/>
 
-            <GridSplitter Grid.Row="0" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+            <!-- Sidebar (Activity Bar 오른쪽) -->
+            <views:Sidebar Grid.Row="0" Grid.Column="1" Grid.RowSpan="3"
+                           x:Name="sidebar"
+                           HeaderText="EXPLORER"/>
 
-            <!-- Center: View Window Area (SNMPc style) -->
-            <Grid Grid.Row="0" Grid.Column="2" Margin="8">
+            <!-- Splitter between Sidebar and Editor -->
+            <GridSplitter Grid.Row="0" Grid.Column="2" Grid.RowSpan="3"
+                         Width="5"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch"
+                         Background="{StaticResource VSCodeDivider}"/>
+
+            <!-- Editor Area (중앙) -->
+            <Grid Grid.Row="0" Grid.Column="3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="48"/>
@@ -540,50 +348,33 @@
                 </Border>
             </Grid>
 
-            <!-- Splitter between View Window Area and Event Log Tool -->
-            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
-                          Height="5"
-                          HorizontalAlignment="Stretch"
-                          VerticalAlignment="Stretch"
-                          Background="#E5E5E5"
-                          ResizeDirection="Rows"
-                          ResizeBehavior="PreviousAndNext"/>
+            <!-- Splitter between Editor and Panel -->
+            <GridSplitter Grid.Row="1" Grid.Column="3"
+                         Height="5"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch"
+                         Background="{StaticResource VSCodeDivider}"
+                         ResizeDirection="Rows"
+                         ResizeBehavior="PreviousAndNext"/>
 
-            <!-- Bottom: Event Log Tool (SNMPc style) -->
-            <GroupBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Header="Event Log Tool" Margin="8">
-                <TabControl>
-                    <TabItem Header="Current">
-                        <eventLog:EventLogTabControl DataContext="{Binding CurrentLog}"/>
-                    </TabItem>
-                    <TabItem Header="History">
-                        <eventLog:EventLogTabControl DataContext="{Binding HistoryLog}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 1">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom1Log}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 2">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom2Log}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 3">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom3Log}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 4">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom4Log}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 5">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom5Log}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 6">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom6Log}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 7">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom7Log}"/>
-                    </TabItem>
-                    <TabItem Header="Custom 8">
-                        <eventLog:EventLogTabControl DataContext="{Binding Custom8Log}"/>
-                    </TabItem>
-                </TabControl>
-            </GroupBox>
+            <!-- Bottom Panel (Event Log) -->
+            <views:BottomPanel Grid.Row="2" Grid.Column="3"
+                               x:Name="bottomPanel"/>
+
         </Grid>
+
+        <!-- Status Bar -->
+        <StatusBar DockPanel.Dock="Bottom" Style="{StaticResource VSCodeStatusBarStyle}">
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Status: " FontWeight="Bold"/>
+                    <Label Name="lblStatus" Content="Unknown" Foreground="White" FontWeight="Bold"/>
+                </StackPanel>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock Text="{Binding SelectedDevice.DisplayName, FallbackValue='(no device selected)'}" Foreground="White"/>
+            </StatusBarItem>
+        </StatusBar>
     </DockPanel>
 </Window>

@@ -10,7 +10,16 @@ public partial class Sidebar : UserControl
             new PropertyMetadata("EXPLORER"));
 
     public static readonly DependencyProperty CurrentContentProperty =
-        DependencyProperty.Register(nameof(CurrentContent), typeof(object), typeof(Sidebar));
+        DependencyProperty.Register(nameof(CurrentContent), typeof(object), typeof(Sidebar),
+            new PropertyMetadata(null, OnCurrentContentChanged));
+
+    private static void OnCurrentContentChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is Sidebar sidebar && sidebar.contentArea != null)
+        {
+            sidebar.contentArea.Content = e.NewValue;
+        }
+    }
 
     public string HeaderText
     {

@@ -13,7 +13,7 @@
                 Style="{StaticResource ActivityBarButtonActiveStyle}"
                 Click="BtnMap_Click"
                 ToolTip="Map">
-            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE700;"/>
+            <TextBlock x:Name="iconMap" Style="{StaticResource ActivityBarIconActiveStyle}" Text="&#xE700;"/>
         </Button>
         
         <!-- Search -->
@@ -21,7 +21,7 @@
                 Style="{StaticResource ActivityBarButtonStyle}"
                 Click="BtnSearch_Click"
                 ToolTip="Search">
-            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;"/>
+            <TextBlock x:Name="iconSearch" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;"/>
         </Button>
         
         <!-- Event Log -->
@@ -29,7 +29,7 @@
                 Style="{StaticResource ActivityBarButtonStyle}"
                 Click="BtnEventLog_Click"
                 ToolTip="Event Log">
-            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;"/>
+            <TextBlock x:Name="iconEventLog" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;"/>
         </Button>
         
         <!-- Settings -->
@@ -37,7 +37,7 @@
                 Style="{StaticResource ActivityBarButtonStyle}"
                 Click="BtnSettings_Click"
                 ToolTip="Settings">
-            <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;"/>
+            <TextBlock x:Name="iconSettings" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;"/>
         </Button>
     </StackPanel>
 </UserControl>

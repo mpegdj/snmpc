@@ -11,6 +11,8 @@ using SnmpNms.Infrastructure;
 using SnmpNms.UI.Models;
 using SnmpNms.UI.ViewModels;
 using SnmpNms.UI.Views.Dialogs;
+using SnmpNms.UI.Views;
+using SnmpNms.UI.Views.EventLog;
 
 namespace SnmpNms.UI;
 
@@ -26,6 +28,8 @@ public partial class MainWindow : Window
 
     private Point _dragStartPoint;
     private MapNode? _selectionAnchor;
+    private SidebarMapView? _sidebarMapView;
+    private TreeView? _tvDevices;
 
     public MainWindow()
     {
@@ -58,6 +62,69 @@ public partial class MainWindow : Window
         _vm.AddDeviceToSubnet(defaultDevice);
         _vm.SelectedDevice = defaultDevice;
         _vm.AddSystemInfo("[System] Map Selection Tree ready (Root Subnet/Default).");
+
+        // VS Code 스타일 UI 초기화
+        this.Loaded += (s, e) => InitializeVSCodeUI();
+    }
+
+    private void InitializeVSCodeUI()
+    {
+        // Sidebar에 Map 뷰 설정
+        _sidebarMapView = new SidebarMapView { DataContext = _vm };
+        _tvDevices = _sidebarMapView.TreeView;
+        _tvDevices.PreviewMouseLeftButtonDown += TvDevices_PreviewMouseLeftButtonDown;
+        _tvDevices.PreviewMouseMove += TvDevices_PreviewMouseMove;
+        _tvDevices.Drop += TvDevices_Drop;
+        _tvDevices.PreviewKeyDown += TvDevices_PreviewKeyDown;
+        _sidebarMapView.MapNodeTextMouseLeftButtonDown += MapNodeText_MouseLeftButtonDown;
+        
+        // DataContext 확인 및 설정
+        System.Diagnostics.Debug.WriteLine($"MapRoots count: {_vm.MapRoots.Count}");
+        sidebar.CurrentContent = _sidebarMapView;
+        
+        // DataContext가 제대로 설정되었는지 확인
+        if (_sidebarMapView.DataContext == null)
+        {
+            _sidebarMapView.DataContext = _vm;
+        }
+
+        // BottomPanel에 Event Log 설정
+        var eventLogControl = new EventLogTabControl { DataContext = _vm.CurrentLog };
+        bottomPanel.SetEventLogContent(eventLogControl);
+
+        // Activity Bar 이벤트 연결
+        activityBar.ViewChanged += ActivityBar_ViewChanged;
+    }
+
+    private void ActivityBar_ViewChanged(object? sender, ActivityBarView view)
+    {
+        // Activity Bar 뷰 변경 처리
+        switch (view)
+        {
+            case ActivityBarView.Map:
+                sidebar.HeaderText = "EXPLORER";
+                _sidebarMapView = new SidebarMapView { DataContext = _vm };
+                _tvDevices = _sidebarMapView.TreeView;
+                _tvDevices.PreviewMouseLeftButtonDown += TvDevices_PreviewMouseLeftButtonDown;
+                _tvDevices.PreviewMouseMove += TvDevices_PreviewMouseMove;
+                _tvDevices.Drop += TvDevices_Drop;
+                _tvDevices.PreviewKeyDown += TvDevices_PreviewKeyDown;
+                _sidebarMapView.MapNodeTextMouseLeftButtonDown += MapNodeText_MouseLeftButtonDown;
+                sidebar.CurrentContent = _sidebarMapView;
+                break;
+            case ActivityBarView.Search:
+                sidebar.HeaderText = "SEARCH";
+                sidebar.CurrentContent = new TextBlock { Text = "Search (Coming soon)", Foreground = System.Windows.Media.Brushes.Gray };
+                break;
+            case ActivityBarView.EventLog:
+                sidebar.HeaderText = "EVENT LOG";
+                sidebar.CurrentContent = new TextBlock { Text = "Event Log (Coming soon)", Foreground = System.Windows.Media.Brushes.Gray };
+                break;
+            case ActivityBarView.Settings:
+                sidebar.HeaderText = "SETTINGS";
+                sidebar.CurrentContent = new TextBlock { Text = "Settings (Coming soon)", Foreground = System.Windows.Media.Brushes.Gray };
+                break;
+        }
     }
 
     // --- Edit Button Bar: Add Map Objects (SNMPc style) ---
@@ -411,7 +478,8 @@ public partial class MainWindow : Window
             dep = VisualTreeHelper.GetParent(dep);
         }
 
-        _dragStartPoint = e.GetPosition(tvDevices);
+        if (_tvDevices == null) return;
+        _dragStartPoint = e.GetPosition(_tvDevices);
 
         var node = FindNodeFromOriginalSource(e.OriginalSource);
         if (node is null) return;
@@ -442,7 +510,8 @@ public partial class MainWindow : Window
     {
         if (e.LeftButton != MouseButtonState.Pressed) return;
 
-        var pos = e.GetPosition(tvDevices);
+        if (_tvDevices == null) return;
+        var pos = e.GetPosition(_tvDevices);
         if (Math.Abs(pos.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
             Math.Abs(pos.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
@@ -450,7 +519,8 @@ public partial class MainWindow : Window
         var selected = _vm.SelectedMapNodes.Where(n => n.NodeType == MapNodeType.Device).ToList();
         if (selected.Count == 0) return;
 
-        DragDrop.DoDragDrop(tvDevices, new DataObject("SnmpNms.MapNodes", selected), DragDropEffects.Move);
+        if (_tvDevices == null) return;
+        DragDrop.DoDragDrop(_tvDevices, new DataObject("SnmpNms.MapNodes", selected), DragDropEffects.Move);
     }
 
     private void TvDevices_Drop(object sender, DragEventArgs e)
@@ -689,7 +759,9 @@ public partial class MainWindow : Window
         try
         {
             var rootTree = _mibService.GetMibTree();
-            treeMib.ItemsSource = new[] { rootTree };
+            // TODO: MIB 트리를 Sidebar에 추가할 때 활성화
+            // if (_treeMib != null)
+            //     _treeMib.ItemsSource = new[] { rootTree };
             
             // 디버깅: 트리 노드 개수 확인
             var totalNodes = CountNodes(rootTree);
@@ -738,7 +810,9 @@ public partial class MainWindow : Window
             ExpandParentNodes(defaultNode, rootNode);
             
             // TreeViewItem을 찾아서 선택
-            var treeViewItem = FindTreeViewItem(treeMib, defaultNode);
+            // TODO: MIB 트리를 Sidebar에 추가할 때 활성화
+            // var treeViewItem = FindTreeViewItem(_treeMib, defaultNode);
+            var treeViewItem = (TreeViewItem?)null;
             if (treeViewItem != null)
             {
                 treeViewItem.IsSelected = true;
@@ -827,7 +901,9 @@ public partial class MainWindow : Window
 
     private MibTreeNode? GetSelectedMibNode()
     {
-        return treeMib.SelectedItem as MibTreeNode;
+        // TODO: MIB 트리를 Sidebar에 추가할 때 활성화
+        // return _treeMib?.SelectedItem as MibTreeNode;
+        return null;
     }
 
     private void treeMib_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -835,10 +911,11 @@ public partial class MainWindow : Window
         var node = e.NewValue as MibTreeNode;
         if (node == null) return;
 
-        txtMibName.Text = node.Name;
-        txtMibOid.Text = node.Oid;
-        txtMibType.Text = node.NodeType.ToString();
-        txtMibDescription.Text = node.Description ?? "-";
+        // TODO: MIB 상세 정보를 Sidebar에 추가할 때 활성화
+        // if (_txtMibName != null) _txtMibName.Text = node.Name;
+        // if (_txtMibOid != null) _txtMibOid.Text = node.Oid;
+        // if (_txtMibType != null) _txtMibType.Text = node.NodeType.ToString();
+        // if (_txtMibDescription != null) _txtMibDescription.Text = node.Description ?? "-";
 
         // MIB Table 탭에도 자동으로 정보 업데이트
         if (!string.IsNullOrEmpty(node.Oid))

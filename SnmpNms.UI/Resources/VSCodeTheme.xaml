@@ -5,22 +5,22 @@
     
     <!-- Background Colors -->
     <SolidColorBrush x:Key="VSCodeBackground" Color="#1e1e1e"/>
-    <SolidColorBrush x:Key="VSCodeSidebarBackground" Color="#252526"/>
-    <SolidColorBrush x:Key="VSCodeActivityBarBackground" Color="#2d2d30"/>
-    <SolidColorBrush x:Key="VSCodeEditorBackground" Color="#1e1e1e"/>
-    <SolidColorBrush x:Key="VSCodePanelBackground" Color="#1e1e1e"/>
+    <SolidColorBrush x:Key="VSCodeSidebarBackground" Color="#f3f3f3"/>
+    <SolidColorBrush x:Key="VSCodeActivityBarBackground" Color="#f3f3f3"/>
+    <SolidColorBrush x:Key="VSCodeEditorBackground" Color="#ffffff"/>
+    <SolidColorBrush x:Key="VSCodePanelBackground" Color="#f3f3f3"/>
     <SolidColorBrush x:Key="VSCodeStatusBarBackground" Color="#007acc"/>
     
     <!-- Text Colors -->
-    <SolidColorBrush x:Key="VSCodeForeground" Color="#cccccc"/>
-    <SolidColorBrush x:Key="VSCodeSecondaryForeground" Color="#858585"/>
-    <SolidColorBrush x:Key="VSCodeDisabledForeground" Color="#6a6a6a"/>
+    <SolidColorBrush x:Key="VSCodeForeground" Color="#000000"/>
+    <SolidColorBrush x:Key="VSCodeSecondaryForeground" Color="#666666"/>
+    <SolidColorBrush x:Key="VSCodeDisabledForeground" Color="#999999"/>
     
     <!-- Accent Colors -->
     <SolidColorBrush x:Key="VSCodeAccent" Color="#007acc"/>
     <SolidColorBrush x:Key="VSCodeAccentHover" Color="#0098ff"/>
-    <SolidColorBrush x:Key="VSCodeSelection" Color="#094771"/>
-    <SolidColorBrush x:Key="VSCodeHover" Color="#2a2d2e"/>
+    <SolidColorBrush x:Key="VSCodeSelection" Color="#0078d4"/>
+    <SolidColorBrush x:Key="VSCodeHover" Color="#e5e5e5"/>
     
     <!-- Tab Colors -->
     <SolidColorBrush x:Key="VSCodeTabInactiveBackground" Color="#2d2d30"/>
@@ -65,9 +65,14 @@
     <Style x:Key="ActivityBarIconStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
         <Setter Property="FontSize" Value="24"/>
-        <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+        <Setter Property="Foreground" Value="#000000"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    
+    <!-- Activity Bar Icon Style (Active) -->
+    <Style x:Key="ActivityBarIconActiveStyle" TargetType="TextBlock" BasedOn="{StaticResource ActivityBarIconStyle}">
+        <Setter Property="Foreground" Value="White"/>
     </Style>
     
     <!-- Sidebar Style -->
@@ -132,10 +137,16 @@
     <Style x:Key="VSCodeTreeViewItemStyle" TargetType="TreeViewItem">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
-        <Setter Property="Padding" Value="2,2"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Style.Resources>
+            <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            </Style>
+        </Style.Resources>
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{StaticResource VSCodeSelection}"/>
+                <Setter Property="Foreground" Value="White"/>
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{StaticResource VSCodeHover}"/>

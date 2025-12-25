@@ -1,0 +1,65 @@
+<UserControl x:Class="SnmpNms.UI.Views.SidebarMapView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:models="clr-namespace:SnmpNms.UI.Models"
+             xmlns:local="clr-namespace:SnmpNms.UI"
+             xmlns:conv="clr-namespace:SnmpNms.UI.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="280"
+             Background="{StaticResource VSCodeSidebarBackground}">
+    <UserControl.Resources>
+        <conv:DeviceStatusToBrushConverter x:Key="DeviceStatusToBrushConverter"/>
+    </UserControl.Resources>
+    <DockPanel Margin="8">
+        <TreeView Name="tvDevices"
+                  ItemsSource="{Binding MapRoots}"
+                  AllowDrop="True"
+                  Background="Transparent"
+                  Foreground="{StaticResource VSCodeForeground}">
+            <TreeView.Resources>
+                <HierarchicalDataTemplate DataType="{x:Type models:MapNode}" ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal">
+                        <Rectangle Width="10" Height="10" Margin="0,0,6,0"
+                                   Fill="{Binding EffectiveStatus, Converter={StaticResource DeviceStatusToBrushConverter}}"/>
+                        <TextBlock Text="{Binding DisplayName}"
+                                   Foreground="{StaticResource VSCodeForeground}"
+                                   MouseLeftButtonDown="MapNodeText_MouseLeftButtonDown"/>
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.Resources>
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem" BasedOn="{StaticResource VSCodeTreeViewItemStyle}">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=OneWay}"/>
+                    <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <MenuItem Header="Properties"
+                                          Command="{x:Static local:MainWindowCommands.MapProperties}"
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="Open Map View"
+                                          Command="{x:Static local:MainWindowCommands.MapOpen}"
+                                          CommandParameter="{Binding}"/>
+                                <Separator/>
+                                <MenuItem Header="Quick Poll"
+                                          Command="{x:Static local:MainWindowCommands.MapQuickPoll}"
+                                          CommandParameter="{Binding}"/>
+                                <MenuItem Header="MIB Table"
+                                          Command="{x:Static local:MainWindowCommands.MapMibTable}"
+                                          CommandParameter="{Binding}"/>
+                                <Separator/>
+                                <MenuItem Header="Delete"
+                                          Command="{x:Static local:MainWindowCommands.MapDelete}"
+                                          CommandParameter="{Binding}"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
+    </DockPanel>
+</UserControl>
+
