@@ -6,6 +6,7 @@
         xmlns:conv="clr-namespace:SnmpNms.UI.Converters"
         xmlns:models="clr-namespace:SnmpNms.UI.Models"
         xmlns:local="clr-namespace:SnmpNms.UI"
+        xmlns:dialogs="clr-namespace:SnmpNms.UI.Views.Dialogs"
         Title="SnmpNms" Height="800" Width="1200"
         MinHeight="650" MinWidth="980">
     <Window.CommandBindings>
@@ -130,18 +131,6 @@
                 <TabControl>
                     <TabItem Header="Map">
                         <DockPanel Margin="8">
-                            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                                <TextBlock Text="Quick Add" FontWeight="Bold" Margin="0,0,0,6"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Name="txtAddIp" Grid.Column="0" Margin="0,0,8,0" ToolTip="IP Address"/>
-                                    <Button Grid.Column="1" Content="Add" Click="AddDevice_Click" Padding="12,2"/>
-                                </Grid>
-                            </StackPanel>
-
                             <TreeView Name="tvDevices"
                                       ItemsSource="{Binding MapRoots}"
                                       AllowDrop="True"
@@ -339,13 +328,13 @@
                                    HorizontalAlignment="Center"
                                    Background="#F7F7F7"/>
                         <StackPanel Margin="6" HorizontalAlignment="Center">
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Device Object (Todo)">
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Device Object" Click="EditAddDeviceObject_Click">
                                 <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE710;"/>
                             </Button>
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Subnet (Todo)">
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Subnet" Click="EditAddSubnet_Click">
                                 <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8D2;"/>
                             </Button>
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Goto (Todo)">
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Goto" Click="EditAddGoto_Click">
                                 <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8A7;"/>
                             </Button>
                             <Separator/>

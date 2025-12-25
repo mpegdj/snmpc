@@ -79,6 +79,24 @@ public class MainViewModel : INotifyPropertyChanged
         return node;
     }
 
+    public MapNode AddSubnet(string name, MapNode? parentSubnet = null)
+    {
+        parentSubnet ??= DefaultSubnet;
+        var node = new MapNode(MapNodeType.Subnet, name);
+        parentSubnet.AddChild(node);
+        return node;
+    }
+
+    public MapNode AddGoto(string name, string gotoSubnetName, MapNode? parentSubnet = null)
+    {
+        parentSubnet ??= DefaultSubnet;
+        // Address를 별도 보관 구조가 없어서, 우선 표시용 Name에 함께 담는다(후속에서 속성 모델로 확장)
+        var display = string.IsNullOrWhiteSpace(gotoSubnetName) ? name : $"{name} -> {gotoSubnetName}";
+        var node = new MapNode(MapNodeType.Goto, display);
+        parentSubnet.AddChild(node);
+        return node;
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)

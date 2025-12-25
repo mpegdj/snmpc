@@ -8,6 +8,7 @@ using SnmpNms.Core.Models;
 using SnmpNms.Infrastructure;
 using SnmpNms.UI.Models;
 using SnmpNms.UI.ViewModels;
+using SnmpNms.UI.Views.Dialogs;
 
 namespace SnmpNms.UI;
 
@@ -52,6 +53,83 @@ public partial class MainWindow : Window
         _vm.AddDeviceToSubnet(defaultDevice);
         _vm.SelectedDevice = defaultDevice;
         _vm.AddSystemInfo("[System] Map Selection Tree ready (Root Subnet/Default).");
+    }
+
+    // --- Edit Button Bar: Add Map Objects (SNMPc style) ---
+    private void EditAddDeviceObject_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Device);
+    private void EditAddSubnet_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Subnet);
+    private void EditAddGoto_Click(object sender, RoutedEventArgs e) => ShowAddMapObjectDialog(MapObjectType.Goto);
+
+    private void ShowAddMapObjectDialog(MapObjectType type)
+    {
+        var dlg = new MapObjectPropertiesDialog(type, _snmpClient) { Owner = this };
+
+        // 기본값: 현재 선택된 장비/입력값 기반
+        if (type == MapObjectType.Device)
+        {
+            dlg.ObjectName = string.IsNullOrWhiteSpace(txtIp.Text) ? "device" : txtIp.Text.Trim();
+            dlg.Address = string.IsNullOrWhiteSpace(txtIp.Text) ? "" : $"{txtIp.Text.Trim()}:161";
+            dlg.ReadCommunity = (txtCommunity.Text ?? "public").Trim();
+        }
+        else if (type == MapObjectType.Subnet)
+        {
+            dlg.ObjectName = "New Subnet";
+        }
+        else
+        {
+            dlg.ObjectName = "Goto";
+            dlg.Address = ""; // goto 대상 subnet 이름
+        }
+
+        if (dlg.ShowDialog() != true) return;
+
+        var parent = GetSelectedSubnetOrDefault();
+        switch (dlg.Result.Type)
+        {
+            case MapObjectType.Device:
+            {
+                var target = new UiSnmpTarget
+                {
+                    IpAddress = dlg.Result.IpOrHost,
+                    Port = dlg.Result.Port,
+                    Community = dlg.Result.ReadCommunity,
+                    Version = dlg.Result.SnmpVersion,
+                    Timeout = dlg.Result.TimeoutMs,
+                    Retries = dlg.Result.Retries
+                };
+                _vm.AddDeviceToSubnet(target, parent);
+                _vm.AddEvent(EventSeverity.Info, target.DisplayName, $"[Map] Device added: {dlg.Result.Name}");
+                break;
+            }
+            case MapObjectType.Subnet:
+            {
+                _vm.AddSubnet(dlg.Result.Name, parent);
+                _vm.AddSystemInfo($"[Map] Subnet added: {dlg.Result.Name}");
+                break;
+            }
+            case MapObjectType.Goto:
+            {
+                _vm.AddGoto(dlg.Result.Name, dlg.Result.GotoSubnetName, parent);
+                _vm.AddSystemInfo($"[Map] Goto added: {dlg.Result.Name} -> {dlg.Result.GotoSubnetName}");
+                break;
+            }
+        }
+
+        parent.IsExpanded = true;
+        _vm.RootSubnet.RecomputeEffectiveStatus();
+    }
+
+    private MapNode GetSelectedSubnetOrDefault()
+    {
+        // 선택된 노드 중 subnet/root가 있으면 그걸 사용
+        var selected = _vm.SelectedMapNodes.FirstOrDefault(n => n.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet);
+        if (selected is not null) return selected;
+
+        // 장비가 선택되어 있으면 부모 subnet으로
+        var device = _vm.SelectedMapNodes.FirstOrDefault(n => n.NodeType == MapNodeType.Device);
+        if (device?.Parent is not null) return device.Parent;
+
+        return _vm.DefaultSubnet;
     }
 
     private void PollingService_OnPollingResult(object? sender, PollingResult e)

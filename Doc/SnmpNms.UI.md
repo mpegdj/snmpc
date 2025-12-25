@@ -26,8 +26,11 @@
 ## 폴더/파일 구조(현재)
 
 - `App.xaml`, `App.xaml.cs` : WPF 앱
-- `MainWindow.xaml`, `MainWindow.xaml.cs` : 단일 메인 윈도우(현재는 Code-behind 중심)
-- `Models/UiSnmpTarget.cs` : `ISnmpTarget` UI용 구현(입력값 보관)
+- `MainWindow.xaml`, `MainWindow.xaml.cs` : 메인 콘솔(현재는 Code-behind + ViewModel 혼합)
+- `MainWindowCommands.cs` : Map Tree ContextMenu 커맨드(RoutedUICommand) 정의
+- `Models/` : UI 표시용 모델(`UiSnmpTarget`, `MapNode`, `EventLogEntry`)
+- `ViewModels/` : `MainViewModel`, `EventLogFilterViewModel`
+- `Views/` : 공용 컨트롤(`EventLogTabControl`, `MapViewControl`)
 
 ---
 
@@ -40,21 +43,19 @@
   - `PollingService_OnPollingResult` (상태 표시)
   - `LoadMibs` (MIB 폴더 로드)
 - `UiSnmpTarget : ISnmpTarget`
+  - `DisplayName`(예: `ip:port`), `Status`(Up/Down/Unknown)
+- `MapNode` (Subnet/Device/Goto 트리 노드 + 다중선택 상태)
+- `MainViewModel` (MapRoots/SelectedDevice/SelectedMapNodes + Event Log)
 
 ---
 
 ## 화면 구성(현재 MainWindow)
 
-- 입력
-  - IP Address (`txtIp`)
-  - Community (`txtCommunity`)
-  - OID (`txtOid`)
-- 액션
-  - `Get` 버튼
-  - `Auto Poll (3s)` 체크박스
-- 출력
-  - `Status` 라벨(`lblStatus`) : Up/Down/Unknown 색상 표시
-  - 결과 텍스트박스(`txtResult`)
+- 상단: Menu/Toolbar(아이콘 버튼)
+- 좌측: Selection Tool (Map Tree)
+- 중앙: View Window Area(Tab 기반, Map View 내부 창 Cascade 지원)
+- 하단: Event Log Tool(탭/필터/검색)
+- SNMP Test 탭: IP/Community/OID 입력 + Get + Auto Poll + 상태 표시
 
 ---
 
@@ -83,11 +84,21 @@
 
 ---
 
+## 최근 안정화 이슈(중요)
+
+### `MenuItem -> TabItem` InvalidCast 크래시
+
+- 증상: XAML 로딩 시 `connectionId` 관련 `XamlParseException` + `InvalidCastException`
+- 원인: `TreeView.ItemContainerStyle` 내부 `ContextMenu`에서 `MenuItem Click="..."` 이벤트를 직접 연결하면,
+  마크업 컴파일러가 `IComponentConnector.Connect()`에서 `AddHandler(MenuItem.ClickEvent, ...)`를 엮는 과정에서
+  target 타입 매핑이 꼬여 크래시가 발생할 수 있음.
+- 해결: ContextMenu `Click` 제거 + `Window.CommandBindings`/`RoutedUICommand`(=`MainWindowCommands`)로 전환
+
+---
+
 ## 현재 리스크/개선 포인트(UI 관점)
 
 - `MainWindow.xaml.cs`에 로직이 집중되어 있어, 장비 목록/알람 콘솔/맵/차트가 늘면 유지보수가 어려움
   - 권장: `ViewModels` 폴더를 만들고 MVVM로 점진 이동
 - `LoadMibs()`에 개발 경로 하드코딩(`D:\git\snmpc\Mib`)이 있음
   - 권장: 실행 경로 기준 `AppDomain.CurrentDomain.BaseDirectory/Mib`로 통일 + 배포 시 포함 전략 수립
-
-
