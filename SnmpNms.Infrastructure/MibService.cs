@@ -52,33 +52,27 @@ public class MibService : IMibService
             var content = File.ReadAllText(filePath);
             
             // 아주 단순화된 파서: "이름 OBJECT-TYPE ... ::= { 부모 숫자 }" 패턴 찾기
-            // 실제 MIB 구조는 훨씬 복잡(IMPORTS, SEQUENCE 등)하지만, 
-            // 1차적으로 '이름'과 '마지막 숫자'만 파악해서 매핑 시도.
-            // * 한계: 완전한 OID 트리(부모 OID 추적)를 만들려면 2-Pass 파싱이 필요함.
-            
-            // 여기서는 정규식보다는, "Line-by-Line"으로 읽으면서
-            // "::= {" 패턴이 있는 줄을 분석하는 방식이 더 안전함.
-            
-            // MIB 파일이 복잡하므로, 지금 당장은
-            // "sysDescr ::= { system 1 }" 같은 패턴을 찾아내는 정규식 사용
-            // 패턴: (단어) ... ::= { (부모) (숫자) }
-            
             // 예: videoResolution OBJECT-TYPE ... ::= { videoEntry 1 }
             
             var regex = new Regex(@"([a-zA-Z0-9_-]+)\s+OBJECT-TYPE.*?::=\s*\{\s*([a-zA-Z0-9_-]+)\s+(\d+)\s*\}", RegexOptions.Singleline);
             var matches = regex.Matches(content);
 
-            // 주의: 부모의 OID를 모르면 전체 OID를 완성할 수 없음.
-            // 따라서 이 방식(Regex Only)은 '부모 OID'를 이미 알고 있거나, 
-            // 파일 내에서 순차적으로 파악해야 함.
-            
-            // => 일단 1차 구현에서는 "파일 로드 시도는 하되, 실제 OID 트리 구성은 복잡하므로 스킵"
-            // 대신, 자주 쓰는 OID들을 수동으로 추가하거나
-            // 추후 'SharpSnmpLib.Mib' 패키지(유료/구버전)를 구하거나 다른 라이브러리 검토 필요.
-            
-            // 하지만! 사용자가 제공한 MVD5000 MIB를 보면
-            // enterprises.nel.mve5000.systemInfo 이런 식일 것임.
-            // root부터 파싱하기 어려우니 로그만 남기고 넘어감.
+            foreach (Match match in matches)
+            {
+                if (match.Success)
+                {
+                    var name = match.Groups[1].Value;
+                    var parentName = match.Groups[2].Value;
+                    var lastId = match.Groups[3].Value;
+
+                    // 부모 OID를 알고 있다면 현재 OID 완성 가능
+                    if (_nameToOid.TryGetValue(parentName, out var parentOid))
+                    {
+                        var currentOid = $"{parentOid}.{lastId}";
+                        Register(currentOid, name);
+                    }
+                }
+            }
         }
         catch
         {
@@ -122,3 +116,4 @@ public class MibService : IMibService
         return _nameToOid.TryGetValue(name, out var oid) ? oid : name;
     }
 }
+

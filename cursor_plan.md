@@ -87,22 +87,23 @@
   - `SharpSnmpLib`의 `ObjectRegistry` 의존성 제거 (버전 호환성 문제 해결)
   - `MibService` 내 `Dictionary<string, string>` 기반 매핑 구현
   - Regex를 이용한 단순 MIB 파싱 구조 준비 (추후 고도화 필요)
-- **문제 해결**: 네임스페이스 오류 해결을 위한 코드 수정 대기 중.
+- **UI 연결**: `MainWindow`에서 MIB 폴더 로드 및 결과 표시 로직 추가
+- **빌드 및 실행**: 실행 중인 프로세스 강제 종료 후 빌드 성공.
 
 ---
 
 ## 🚀 현재 계획 (Current Plan)
 
-### PHASE 2: MIB Parser & Loader (마무리)
-- **목표**: `MibService` 네임스페이스 오류 수정 및 UI 연동
-- **상태**: ⏳ 진행 중
+### PHASE 2: MIB Parser & Loader (최종 확인)
+- **목표**: MIB 로드 및 OID 이름 변환이 잘 되는지 UI 실행 테스트
+- **상태**: ⏳ 대기 중
 
 #### 세부 작업 항목
-1.  **오류 수정**: `MibService.cs`에서 잘못된 `using` 구문 제거
-2.  **UI 연결**: `MainWindow.xaml.cs`에서 `MibService` 인스턴스 생성 및 `Mib` 폴더 로드
-3.  **결과 표시 개선**: `Get` 결과 출력 시 OID 옆에 파싱된 이름 표시
+1.  프로그램 실행 (`dotnet run`)
+2.  `192.168.0.100` 장비 대상으로 GET 요청 (자동으로 `Mib` 폴더 로드됨)
+3.  결과에 `1.3.6.1.2.1.1.1` 대신 `sysDescr` 또는 장비 MIB 이름이 나오는지 확인
 
 ---
 
 ## 📝 다음 요청 사항 (Next Request)
-- `MibService`의 오류를 수정하고 UI에 연결해도 될까요?
+- `dotnet run --project SnmpNms.UI` 명령어로 프로그램을 실행하고, MIB 파싱 결과가 올바르게 나오는지 확인해주시겠습니까?
