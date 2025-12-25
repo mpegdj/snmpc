@@ -88,22 +88,22 @@
   - `MibService` 내 `Dictionary<string, string>` 기반 매핑 구현
   - Regex를 이용한 단순 MIB 파싱 구조 준비 (추후 고도화 필요)
 - **UI 연결**: `MainWindow`에서 MIB 폴더 로드 및 결과 표시 로직 추가
-- **빌드 및 실행**: 실행 중인 프로세스 강제 종료 후 빌드 성공.
+- **테스트 결과**: `sysDescr` 등 기본 MIB뿐만 아니라 `1.3.6.1.2.1.1.3` (sysUpTime) 요청 시 이름 변환 동작 확인됨.
 
 ---
 
 ## 🚀 현재 계획 (Current Plan)
 
-### PHASE 2: MIB Parser & Loader (최종 확인)
-- **목표**: MIB 로드 및 OID 이름 변환이 잘 되는지 UI 실행 테스트
+### PHASE 3: Polling Scheduler 구현 (Implementation)
+- **목표**: 주기적으로 장비 상태를 감시(Polling)하여 Alive/Dead 상태 판단 기능 추가
 - **상태**: ⏳ 대기 중
 
 #### 세부 작업 항목
-1.  프로그램 실행 (`dotnet run`)
-2.  `192.168.0.100` 장비 대상으로 GET 요청 (자동으로 `Mib` 폴더 로드됨)
-3.  결과에 `1.3.6.1.2.1.1.1` 대신 `sysDescr` 또는 장비 MIB 이름이 나오는지 확인
+1.  **Core 정의**: `IPollingService` 인터페이스 정의
+2.  **Infrastructure 구현**: `PollingScheduler` 구현 (Timer 기반, 3초 주기)
+3.  **UI 연결**: 'Auto Poll' 체크박스 추가 및 상태 표시(Alive/Dead) 연동
 
 ---
 
 ## 📝 다음 요청 사항 (Next Request)
-- `dotnet run --project SnmpNms.UI` 명령어로 프로그램을 실행하고, MIB 파싱 결과가 올바르게 나오는지 확인해주시겠습니까?
+- `SnmpNms.Core` 프로젝트에 `IPollingService` 인터페이스를 정의해도 될까요?
