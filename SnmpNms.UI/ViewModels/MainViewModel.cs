@@ -65,6 +65,10 @@ public class MainViewModel : INotifyPropertyChanged
         RootSubnet.AddChild(DefaultSubnet);
         MapRoots.Add(RootSubnet);
 
+        // UX: 첫 실행 시 트리가 접혀있으면 "Device가 안 보인다"로 느껴져서 기본 확장
+        RootSubnet.IsExpanded = true;
+        DefaultSubnet.IsExpanded = true;
+
         // 각 탭마다 독립 필터(스코프/Severity/검색)를 갖는다.
         CurrentLog = new EventLogFilterViewModel("Current", Events, () => SelectedDevice, this);
         HistoryLog = new EventLogFilterViewModel("History", Events, () => SelectedDevice, this);

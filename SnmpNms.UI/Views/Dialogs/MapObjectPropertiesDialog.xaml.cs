@@ -34,22 +34,189 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
 
         DataContext = this;
         InitializeComponent();
+        
+        // Address 입력창 초기화
+        if (ObjectType == MapObjectType.Device)
+        {
+            SyncAddressToInputs();
+        }
+    }
+    
+    private void SyncAddressToInputs()
+    {
+        // Address 속성에서 IP:Port를 파싱하여 각 입력창에 설정
+        var (host, port) = ParseHostPort(Address);
+        if (!string.IsNullOrWhiteSpace(host))
+        {
+            var parts = host.Split('.');
+            if (parts.Length == 4)
+            {
+                txtAddress1.Text = parts[0];
+                txtAddress2.Text = parts[1];
+                txtAddress3.Text = parts[2];
+                txtAddress4.Text = parts[3];
+            }
+        }
+        txtPort.Text = port > 0 ? port.ToString() : "161";
+    }
+    
+    private void SyncInputsToAddress()
+    {
+        // 각 입력창의 값을 조합하여 Address 속성에 설정
+        _isSyncingAddress = true;
+        try
+        {
+            var parts = new[] { txtAddress1.Text, txtAddress2.Text, txtAddress3.Text, txtAddress4.Text };
+            var ip = string.Join(".", parts);
+            if (int.TryParse(txtPort.Text, out var port) && port > 0)
+            {
+                Address = $"{ip}:{port}";
+            }
+            else if (!string.IsNullOrWhiteSpace(ip))
+            {
+                Address = ip;
+            }
+        }
+        finally
+        {
+            _isSyncingAddress = false;
+        }
+    }
+    
+    private void AddressPart_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        var txt = sender as System.Windows.Controls.TextBox;
+        if (txt is null) return;
+        
+        // 숫자만 입력되도록 필터링 (이미 PreviewTextInput에서 처리하지만 안전장치)
+        var text = txt.Text;
+        if (string.IsNullOrWhiteSpace(text)) return;
+        
+        // 3자리 입력 시 자동으로 다음 입력창으로 이동
+        if (text.Length >= 3 && txt != txtAddress4)
+        {
+            var next = txt == txtAddress1 ? txtAddress2 : 
+                      txt == txtAddress2 ? txtAddress3 : txtAddress4;
+            next?.Focus();
+            next?.SelectAll();
+        }
+        
+        SyncInputsToAddress();
+    }
+    
+    private void AddressPart_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        // 숫자만 허용
+        e.Handled = !char.IsDigit(e.Text, 0);
+    }
+    
+    private void AddressPart_KeyDown(object sender, KeyEventArgs e)
+    {
+        var txt = sender as System.Windows.Controls.TextBox;
+        if (txt is null) return;
+        
+        // Backspace가 첫 번째 입력창에서 눌리면 이전 입력창으로 이동
+        if (e.Key == Key.Back && txt.Text.Length == 0)
+        {
+            var prev = txt == txtAddress2 ? txtAddress1 :
+                      txt == txtAddress3 ? txtAddress2 :
+                      txt == txtAddress4 ? txtAddress3 : null;
+            if (prev != null)
+            {
+                prev.Focus();
+                prev.SelectAll();
+                e.Handled = true;
+            }
+        }
+        // Enter 키로 Lookup 실행
+        else if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            if (ObjectType == MapObjectType.Device)
+            {
+                _ = LookupWithPreviewAsync();
+            }
+        }
+        // 점(.) 입력 시 다음 입력창으로 이동
+        else if (e.Key == Key.OemPeriod || e.Key == Key.Decimal)
+        {
+            var next = txt == txtAddress1 ? txtAddress2 :
+                      txt == txtAddress2 ? txtAddress3 :
+                      txt == txtAddress3 ? txtAddress4 : null;
+            if (next != null)
+            {
+                next.Focus();
+                next.SelectAll();
+                e.Handled = true;
+            }
+        }
+    }
+    
+    private void AddressPart_GotFocus(object sender, RoutedEventArgs e)
+    {
+        // 포커스 시 전체 선택
+        if (sender is System.Windows.Controls.TextBox txt)
+        {
+            txt.SelectAll();
+        }
+    }
+    
+    private void Port_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        SyncInputsToAddress();
+    }
+    
+    private void Port_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        // 숫자만 허용
+        e.Handled = !char.IsDigit(e.Text, 0);
+    }
+    
+    private void Port_KeyDown(object sender, KeyEventArgs e)
+    {
+        // Enter 키로 Lookup 실행
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            if (ObjectType == MapObjectType.Device)
+            {
+                _ = LookupWithPreviewAsync();
+            }
+        }
     }
 
     public MapObjectType ObjectType { get; set; }
 
-    private string _objectName = "";
-    public string ObjectName
+    private string _alias = "";
+    public string Alias
     {
-        get => _objectName;
-        set { if (_objectName == value) return; _objectName = value; OnPropertyChanged(); }
+        get => _alias;
+        set { if (_alias == value) return; _alias = value; OnPropertyChanged(); }
+    }
+
+    private string _device = "";
+    public string Device
+    {
+        get => _device;
+        set { if (_device == value) return; _device = value; OnPropertyChanged(); }
     }
 
     private string _address = "";
+    private bool _isSyncingAddress = false;
     public string Address
     {
         get => _address;
-        set { if (_address == value) return; _address = value; OnPropertyChanged(); }
+        set 
+        { 
+            if (_address == value) return; 
+            _address = value; 
+            OnPropertyChanged();
+            // Address 속성이 외부에서 변경되면 입력창 동기화
+            if (!_isSyncingAddress && ObjectType == MapObjectType.Device)
+            {
+                SyncAddressToInputs();
+            }
+        }
     }
 
     private string _iconName = "auto.ico";
@@ -94,7 +261,8 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
     public sealed class ParsedResult
     {
         public MapObjectType Type { get; init; }
-        public string Name { get; init; } = "";
+        public string Alias { get; init; } = "";
+        public string Device { get; init; } = "";
         public string Icon { get; init; } = "auto.ico";
         public string Description { get; init; } = "";
 
@@ -114,11 +282,6 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
 
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(ObjectName))
-        {
-            MessageBox.Show(this, "Name은 필수입니다.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
 
         // basic numeric parse
         if (!int.TryParse(PollIntervalSec.Trim(), out var pollIntervalSec) || pollIntervalSec < 0)
@@ -156,7 +319,8 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
             Result = new ParsedResult
             {
                 Type = ObjectType,
-                Name = ObjectName.Trim(),
+                Alias = (Alias ?? "").Trim(),
+                Device = (Device ?? "").Trim(),
                 Icon = (IconName ?? "auto.ico").Trim(),
                 Description = (Description ?? "").Trim(),
                 IpOrHost = host,
@@ -174,7 +338,8 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
             Result = new ParsedResult
             {
                 Type = ObjectType,
-                Name = ObjectName.Trim(),
+                Alias = (Alias ?? "").Trim(),
+                Device = "",
                 Icon = (IconName ?? "auto.ico").Trim(),
                 Description = (Description ?? "").Trim(),
             };
@@ -184,7 +349,8 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
             Result = new ParsedResult
             {
                 Type = ObjectType,
-                Name = ObjectName.Trim(),
+                Alias = (Alias ?? "").Trim(),
+                Device = "",
                 Icon = (IconName ?? "auto.ico").Trim(),
                 Description = (Description ?? "").Trim(),
                 GotoSubnetName = (Address ?? "").Trim(), // SNMPc: Address에 점프할 Subnet 이름
@@ -195,13 +361,6 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
         Close();
     }
 
-    private async void Address_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter) return;
-        if (ObjectType != MapObjectType.Device) return;
-        e.Handled = true;
-        await LookupWithPreviewAsync();
-    }
 
     private async void Lookup_Click(object sender, RoutedEventArgs e)
     {
@@ -297,12 +456,13 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
 
                 var preview = new LookupPreviewDialog(host) { Owner = this };
                 preview.LogText = string.Join(Environment.NewLine, log);
-                preview.ProposedName = string.IsNullOrWhiteSpace(ObjectName) ? host : ObjectName;
+                preview.ProposedName = string.IsNullOrWhiteSpace(Alias) ? host : Alias;
                 preview.ProposedDescription = string.IsNullOrWhiteSpace(Description) ? "" : Description;
 
                 if (preview.ShowDialog() == true)
                 {
-                    ObjectName = (preview.ProposedName ?? "").Trim();
+                    Alias = (preview.ProposedName ?? "").Trim();
+                    Device = (preview.ProposedName ?? "").Trim();
                     Description = preview.ProposedDescription ?? "";
                     OnPropertyChanged(nameof(Description));
                     LookupStatus = "Lookup OK (사용자 적용됨 / SNMP client 미주입)";
@@ -327,12 +487,13 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
 
                 var previewFail = new LookupPreviewDialog(host) { Owner = this };
                 previewFail.LogText = string.Join(Environment.NewLine, log);
-                previewFail.ProposedName = string.IsNullOrWhiteSpace(ObjectName) ? host : ObjectName;
+                previewFail.ProposedName = string.IsNullOrWhiteSpace(Alias) ? host : Alias;
                 previewFail.ProposedDescription = string.IsNullOrWhiteSpace(Description) ? "" : Description;
 
                 if (previewFail.ShowDialog() == true)
                 {
-                    ObjectName = (previewFail.ProposedName ?? "").Trim();
+                    Alias = (previewFail.ProposedName ?? "").Trim();
+                    Device = (previewFail.ProposedName ?? "").Trim();
                     Description = previewFail.ProposedDescription ?? "";
                     OnPropertyChanged(nameof(Description));
                     LookupStatus = "Lookup OK (사용자 적용됨) / SNMP FAIL";
@@ -360,8 +521,9 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
             log.Add($"  sysObjectID: {sysObjectId}");
             log.Add($"  sysName: {sysName}");
 
-            var proposedName = !string.IsNullOrWhiteSpace(sysName) ? sysName.Trim() : host;
-
+            // sysName을 Alias와 Device에 채우기
+            var deviceName = !string.IsNullOrWhiteSpace(sysName) ? sysName.Trim() : host;
+            
             var descLines = new List<string>();
             if (!string.IsNullOrWhiteSpace(sysDescr)) descLines.Add(sysDescr.Trim());
             if (!string.IsNullOrWhiteSpace(sysObjectId)) descLines.Add($"sysObjectID: {sysObjectId.Trim()}");
@@ -373,13 +535,15 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
 
             var previewOk = new LookupPreviewDialog(host) { Owner = this };
             previewOk.LogText = string.Join(Environment.NewLine, log);
-            previewOk.ProposedName = proposedName;
+            previewOk.ProposedName = deviceName;
             previewOk.ProposedDescription = proposedDesc;
 
             if (previewOk.ShowDialog() == true)
             {
-                ObjectName = (previewOk.ProposedName ?? "").Trim();
-                Description = previewOk.ProposedDescription ?? "";
+                // sysName을 Alias와 Device에 채우기
+                Alias = deviceName;
+                Device = deviceName;
+                Description = proposedDesc;
                 OnPropertyChanged(nameof(Description));
                 LookupStatus = "Lookup OK (사용자 적용됨) / SNMP OK";
             }

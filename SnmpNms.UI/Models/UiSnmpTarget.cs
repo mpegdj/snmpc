@@ -48,6 +48,18 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
         }
     }
 
+    private string _device = "";
+    public string Device
+    {
+        get => _device;
+        set
+        {
+            if (_device == value) return;
+            _device = value ?? "";
+            OnPropertyChanged();
+        }
+    }
+
     public string Community { get; set; } = "public";
     public SnmpVersion Version { get; set; } = SnmpVersion.V2c;
     public int Timeout { get; set; } = 3000;

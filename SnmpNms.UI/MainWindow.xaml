@@ -264,7 +264,8 @@
                                             </DataGridTemplateColumn>
 
                                             <DataGridTextColumn Header="IP" Binding="{Binding Target.IpAddress}" Width="120"/>
-                                            <DataGridTextColumn Header="Name" Binding="{Binding Target.Alias}" Width="220"/>
+                                            <DataGridTextColumn Header="Alias" Binding="{Binding Target.Alias}" Width="110"/>
+                                            <DataGridTextColumn Header="Device" Binding="{Binding Target.Device}" Width="110"/>
                                             <DataGridTextColumn Header="Port" Binding="{Binding Target.Port}" Width="60"/>
                                             <DataGridTextColumn Header="Subnet" Binding="{Binding Parent.Name}" Width="120"/>
                                             <DataGridTextColumn Header="Status" Binding="{Binding Target.Status}" Width="90"/>

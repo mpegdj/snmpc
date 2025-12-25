@@ -67,17 +67,20 @@ public partial class MainWindow : Window
         // 기본값: 현재 선택된 장비/입력값 기반
         if (type == MapObjectType.Device)
         {
-            dlg.ObjectName = string.IsNullOrWhiteSpace(txtIp.Text) ? "device" : txtIp.Text.Trim();
+            dlg.Alias = string.IsNullOrWhiteSpace(txtIp.Text) ? "" : txtIp.Text.Trim();
+            dlg.Device = "";
             dlg.Address = string.IsNullOrWhiteSpace(txtIp.Text) ? "" : $"{txtIp.Text.Trim()}:161";
             dlg.ReadCommunity = (txtCommunity.Text ?? "public").Trim();
         }
         else if (type == MapObjectType.Subnet)
         {
-            dlg.ObjectName = "New Subnet";
+            dlg.Alias = "New Subnet";
+            dlg.Device = "";
         }
         else
         {
-            dlg.ObjectName = "Goto";
+            dlg.Alias = "Goto";
+            dlg.Device = "";
             dlg.Address = ""; // goto 대상 subnet 이름
         }
 
@@ -92,7 +95,8 @@ public partial class MainWindow : Window
                 {
                     IpAddress = dlg.Result.IpOrHost,
                     Port = dlg.Result.Port,
-                    Alias = dlg.Result.Name,
+                    Alias = dlg.Result.Alias,
+                    Device = dlg.Result.Device,
                     Community = dlg.Result.ReadCommunity,
                     Version = dlg.Result.SnmpVersion,
                     Timeout = dlg.Result.TimeoutMs,
@@ -104,14 +108,14 @@ public partial class MainWindow : Window
             }
             case MapObjectType.Subnet:
             {
-                _vm.AddSubnet(dlg.Result.Name, parent);
-                _vm.AddSystemInfo($"[Map] Subnet added: {dlg.Result.Name}");
+                _vm.AddSubnet(dlg.Result.Alias, parent);
+                _vm.AddSystemInfo($"[Map] Subnet added: {dlg.Result.Alias}");
                 break;
             }
             case MapObjectType.Goto:
             {
-                _vm.AddGoto(dlg.Result.Name, dlg.Result.GotoSubnetName, parent);
-                _vm.AddSystemInfo($"[Map] Goto added: {dlg.Result.Name} -> {dlg.Result.GotoSubnetName}");
+                _vm.AddGoto(dlg.Result.Alias, dlg.Result.GotoSubnetName, parent);
+                _vm.AddSystemInfo($"[Map] Goto added: {dlg.Result.Alias} -> {dlg.Result.GotoSubnetName}");
                 break;
             }
         }
@@ -324,6 +328,20 @@ public partial class MainWindow : Window
     // --- Map Selection Tree interactions (SNMPc style) ---
     private void TvDevices_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // SNMPc 매뉴얼: "Single-click on the small box to the left of a subnet icon to open or close"
+        // Expander(▶/▼) 클릭은 기본 동작(expand/collapse)을 허용해야 함
+        var dep = e.OriginalSource as DependencyObject;
+        while (dep is not null)
+        {
+            // TreeViewItem의 ToggleButton(expander)을 클릭한 경우 기본 동작 허용
+            if (dep is System.Windows.Controls.Primitives.ToggleButton)
+            {
+                e.Handled = false;
+                return;
+            }
+            dep = VisualTreeHelper.GetParent(dep);
+        }
+
         _dragStartPoint = e.GetPosition(tvDevices);
 
         var node = FindNodeFromOriginalSource(e.OriginalSource);
