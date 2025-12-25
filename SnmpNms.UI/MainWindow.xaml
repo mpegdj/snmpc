@@ -1,4 +1,4 @@
-﻿<Window x:Class="SnmpManager.MainWindow"
+﻿<Window x:Class="SnmpNms.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Simple SNMP Manager" Height="450" Width="600">

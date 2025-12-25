@@ -61,20 +61,39 @@
   dotnet build SnmpNms.sln
   ```
 
+### 2025-12-25 (PHASE 1: SnmpClient Core 구현)
+- **Core 정의 (인터페이스 및 모델)**
+  - `ISnmpTarget`, `ISnmpClient`
+  - `SnmpResult`, `SnmpVariable`, `SnmpVersion` (Enum)
+- **Infrastructure 구현 (실제 통신 로직)**
+  - `SnmpClient`: `SharpSnmpLib`의 `Messenger` 클래스를 활용하여 비동기(`Task.Run`) 패턴으로 `Get`, `GetNext`, `Walk` 구현
+- **UI 리팩토링 및 연결**
+  - `UiSnmpTarget`: `ISnmpTarget` 구현체 추가
+  - `MainWindow.xaml.cs`: `ISnmpClient`를 사용하여 SNMP 요청 수행하도록 변경
+  - 네임스페이스 정리 (`SnmpManager` -> `SnmpNms.UI`)
+- **최종 빌드**: 정상 동작 확인 완료
+- **초기 실행 테스트**: 프로그램 실행 성공. 로컬 호스트(`127.0.0.1`) 테스트 시 `Connection forcibly closed` 오류 확인 (정상: 로컬 SNMP 서비스 미가동 상태).
+
+### 2025-12-25 (PHASE 1.5: 통신 테스트 검증)
+- **외부 장비 테스트**: LAN에 있는 Encoder/Decoder 장비(`192.168.0.100`, `192.168.0.101`) 대상으로 SNMP GET 성공.
+  - 응답 결과: `NEL MVE5000`, `NEL MVD5000` (sysDescr)
+  - 응답 시간: 3ms ~ 6ms (매우 양호)
+- **결론**: `SnmpClient` 통신 모듈 정상 동작 검증 완료.
+
 ---
 
 ## 🚀 현재 계획 (Current Plan)
 
-### PHASE 1: SnmpClient Core 구현 (Implementation)
-- **목표**: 상용 NMS 스타일의 `ISnmpClient` 정의 및 `SnmpClient` 구현
+### PHASE 2: MIB Parser & Loader (최소 기능)
+- **목표**: OID(`1.3.6.1.2.1.1.1.0`)를 사람이 읽을 수 있는 이름(`sysDescr`)으로 변환
 - **상태**: ⏳ 대기 중
 
 #### 세부 작업 항목
-1.  **Core 정의**: `ISnmpClient`, `SnmpResult`, `ISnmpTarget` 인터페이스 정의
-2.  **Infrastructure 구현**: `Lextm.SharpSnmpLib`을 이용한 실제 통신 로직 (`Get`, `Walk`) 구현
-3.  **UI 연결**: 기존 `MainWindow.xaml.cs`의 직접 호출 코드를 `SnmpClient` 사용 코드로 변경
+1.  **Core 정의**: `IMibService` 인터페이스 정의 (OID <-> Name 변환)
+2.  **Infrastructure 구현**: `SharpSnmpLib`의 `ObjectRegistry`를 활용한 `MibService` 구현
+3.  **UI 연결**: 결과를 출력할 때 `MibService`를 통해 이름도 함께 표시
 
 ---
 
 ## 📝 다음 요청 사항 (Next Request)
-- Core 프로젝트에 `ISnmpClient` 인터페이스와 관련 모델 클래스들을 정의해도 될까요?
+- `IMibService` 정의 및 구현 작업을 시작해도 될까요?

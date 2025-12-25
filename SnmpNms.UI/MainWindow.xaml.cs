@@ -1,56 +1,68 @@
-﻿using System.Net;
-using System.Windows;
-using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Messaging;
+﻿using System.Windows;
+using SnmpNms.Core.Interfaces;
+using SnmpNms.Core.Models;
+using SnmpNms.Infrastructure;
+using SnmpNms.UI.Models;
 
-namespace SnmpManager;
+namespace SnmpNms.UI;
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
 public partial class MainWindow : Window
 {
+    private readonly ISnmpClient _snmpClient;
+
     public MainWindow()
     {
         InitializeComponent();
+        // 실제 애플리케이션에서는 DI 컨테이너를 사용하여 주입받는 것이 좋습니다.
+        _snmpClient = new SnmpClient();
     }
 
-    private void BtnGet_Click(object sender, RoutedEventArgs e)
+    private async void BtnGet_Click(object sender, RoutedEventArgs e)
     {
         txtResult.Text = "Sending SNMP GET request...";
-        
+        btnGet.IsEnabled = false;
+
         try
         {
-            if (!IPAddress.TryParse(txtIp.Text, out var ip))
+            // 화면의 입력값으로 Target 객체 생성
+            var target = new UiSnmpTarget
             {
-                txtResult.Text = "Invalid IP Address format.";
-                return;
-            }
-            
-            var community = new OctetString(txtCommunity.Text);
-            var oid = new ObjectIdentifier(txtOid.Text);
-            var version = VersionCode.V2; // V2c
+                IpAddress = txtIp.Text,
+                Community = txtCommunity.Text,
+                Version = SnmpVersion.V2c, // 간단하게 V2c 고정, 추후 UI 바인딩 필요
+                Timeout = 3000
+            };
 
-            // SharpSnmpLib Messenger.Get
-            var result = Messenger.Get(version, 
-                                       new IPEndPoint(ip, 161), 
-                                       community, 
-                                       new List<Variable> { new Variable(oid) }, 
-                                       3000); // 3000ms timeout
+            var oid = txtOid.Text;
 
-            if (result != null && result.Count > 0)
+            // 비동기 호출
+            var result = await _snmpClient.GetAsync(target, oid);
+
+            if (result.IsSuccess)
             {
-                var variable = result[0];
-                txtResult.Text = $"Success!\nOID: {variable.Id}\nType: {variable.Data.TypeCode}\nValue: {variable.Data}";
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"Success! (Time: {result.ResponseTime}ms)");
+                foreach (var v in result.Variables)
+                {
+                    sb.AppendLine(v.ToString());
+                }
+                txtResult.Text = sb.ToString();
             }
             else
             {
-                txtResult.Text = "No response received.";
+                txtResult.Text = $"Failed: {result.ErrorMessage}";
             }
         }
         catch (Exception ex)
         {
             txtResult.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            btnGet.IsEnabled = true;
         }
     }
 }
