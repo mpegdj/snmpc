@@ -208,3 +208,72 @@ C) 개발툴 우선(MIB Browser/Walk/Get 중심)
   - `SnmpNms.Infrastructure.md`
   - `SnmpNms.UI.md`
   - `4_dev_chtgpt.md`
+
+---
+
+## 2025-12-25 (20:13) — 메인 GUI(SNMPc 스타일) 셸 구축
+
+- **작업내용**
+  - `MainWindow`를 SNMPc 스타일 콘솔 레이아웃으로 개편:
+    - 상단 Menu/Toolbar
+    - 좌측 Device Explorer(트리)
+    - 우측 메인 Tab(대시보드/디바이스/알람/성능/MIB/SNMP Test)
+    - 하단 Event Log + 상태바(Status)
+  - 기존 기능(SNMP GET / Auto Poll)은 **SNMP Test 탭**으로 이동해 계속 동작하도록 유지.
+  - Device Explorer에서 Quick Add/선택/삭제, Toolbar에서 Poll 시작/중지/로그 삭제 등 최소 조작 추가.
+  - 빌드 확인: `SnmpNms.sln` Debug 빌드 **성공(오류 0)**.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/MainWindow.xaml` : (레이아웃 전체 개편)
+  - `SnmpNms.UI/MainWindow.xaml.cs` : (ViewModel 연결 + Device Explorer/Toolbar 이벤트 핸들러 추가)
+  - `SnmpNms.UI/ViewModels/MainViewModel.cs` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/Models/UiSnmpTarget.cs` : (DisplayName 추가)
+  - `4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
+
+- **변경된 파일 목록(사이드바 대체)**
+  - `SnmpNms.UI/MainWindow.xaml`
+  - `SnmpNms.UI/MainWindow.xaml.cs`
+  - `SnmpNms.UI/ViewModels/MainViewModel.cs`
+  - `SnmpNms.UI/Models/UiSnmpTarget.cs`
+  - `4_dev_chtgpt.md`
+
+---
+
+## 2025-12-25 (시간 미확인) — 문서 `Doc/` 폴더로 정리 + Map View(Cascade) / Event Log 탭 확장
+
+- **작업내용**
+  - 문서(`dev_plan/dev_ops/dev_mvp/레퍼런스/로그`)를 `Doc/` 폴더로 정리하는 방향을 기준으로 이후 작업을 맞추기로 함.
+  - **View Window Area는 탭 기반 유지**하되, `Map View` 탭 내부에서 SNMPc처럼 **겹치는 내부 창**을 띄우고 **Cascade 정렬** 가능하게 최소 구현.
+  - 하단 **Event Log Tool** 탭을 `Custom 3 ~ Custom 8`까지 확장(필터/전체/장비별 로직은 추후 구현).
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/MainWindow.xaml` : (Map View에 내부 창 컨트롤 연결, Event Log 탭 확장)
+  - `SnmpNms.UI/MainWindow.xaml.cs` : (Window/Cascade → Map View Cascade 연결)
+  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml.cs` : `L1-L(끝)` (신규 생성)
+  - `Doc/4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
+
+- **변경된 파일 목록(사이드바 대체)**
+  - `SnmpNms.UI/MainWindow.xaml`
+  - `SnmpNms.UI/MainWindow.xaml.cs`
+  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml`
+  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml.cs`
+  - `Doc/4_dev_chtgpt.md`
+
+---
+
+## 2025-12-25 (20:50) — Tool Bar/Edit Bar 아이콘 버튼화 + Log Window 리사이즈
+
+- **작업내용**
+  - 상단 **Tool Bar**를 텍스트 버튼에서 **아이콘 버튼 스타일**로 통일(SNMPc 느낌 강화).
+  - 우측 **Edit Bar**를 툴바가 아닌 **세로 아이콘 버튼(스택)**으로 구성(버튼 크기/간격 통일).
+  - 하단 **Event Log Tool** 영역을 `GridSplitter`로 분리해, 경계를 드래그하면 **높이가 동적으로 변경**되도록 개선.
+  - 빌드 확인: `SnmpNms.sln` Debug 빌드 **성공(오류 0)**.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/MainWindow.xaml` : (아이콘 버튼 스타일, Edit Bar 버튼화, Log 리사이즈 GridSplitter 추가)
+  - `Doc/4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
+
+- **변경된 파일 목록(사이드바 대체)**
+  - `SnmpNms.UI/MainWindow.xaml`
+  - `Doc/4_dev_chtgpt.md`

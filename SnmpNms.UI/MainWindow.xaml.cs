@@ -5,6 +5,7 @@ using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using SnmpNms.Infrastructure;
 using SnmpNms.UI.Models;
+using SnmpNms.UI.ViewModels;
 
 namespace SnmpNms.UI;
 
@@ -16,6 +17,7 @@ public partial class MainWindow : Window
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
     private readonly IPollingService _pollingService;
+    private readonly MainViewModel _vm;
 
     public MainWindow()
     {
@@ -25,12 +27,25 @@ public partial class MainWindow : Window
         _snmpClient = new SnmpClient();
         _mibService = new MibService();
         _pollingService = new PollingService(_snmpClient);
+        _vm = new MainViewModel();
+        DataContext = _vm;
 
         // Polling 이벤트 연결
         _pollingService.OnPollingResult += PollingService_OnPollingResult;
 
         // MIB 파일 로드 (Mib 폴더가 실행 파일 위치 또는 상위에 있다고 가정)
         LoadMibs();
+
+        // 기본 디바이스(샘플) 추가
+        var defaultDevice = new UiSnmpTarget
+        {
+            IpAddress = "127.0.0.1",
+            Community = "public",
+            Version = SnmpVersion.V2c,
+            Timeout = 3000
+        };
+        _vm.Devices.Add(defaultDevice);
+        _vm.SelectedDevice = defaultDevice;
     }
 
     private void PollingService_OnPollingResult(object? sender, PollingResult e)
@@ -40,7 +55,7 @@ public partial class MainWindow : Window
         {
             if (e.Status == DeviceStatus.Up)
             {
-                lblStatus.Content = $"Up ({DateTime.Now:HH:mm:ss})";
+                lblStatus.Content = $"Up - {e.Target.IpAddress} ({DateTime.Now:HH:mm:ss})";
                 lblStatus.Foreground = Brushes.Green;
                 // Polling 로그는 너무 많을 수 있으므로 상태 변경 시에만 찍거나, 별도 로그창 사용 권장
                 // 여기서는 간단하게 시간 갱신
@@ -48,7 +63,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                lblStatus.Content = $"Down ({DateTime.Now:HH:mm:ss})";
+                lblStatus.Content = $"Down - {e.Target.IpAddress} ({DateTime.Now:HH:mm:ss})";
                 lblStatus.Foreground = Brushes.Red;
                 txtResult.AppendText($"[Poll] {e.Target.IpAddress} is Down: {e.Message}\n");
                 txtResult.ScrollToEnd();
@@ -58,13 +73,7 @@ public partial class MainWindow : Window
 
     private void ChkAutoPoll_Checked(object sender, RoutedEventArgs e)
     {
-        var target = new UiSnmpTarget
-        {
-            IpAddress = txtIp.Text,
-            Community = txtCommunity.Text,
-            Version = SnmpVersion.V2c,
-            Timeout = 3000
-        };
+        var target = BuildTargetFromInputs();
 
         _pollingService.AddTarget(target);
         _pollingService.Start();
@@ -73,19 +82,28 @@ public partial class MainWindow : Window
 
     private void ChkAutoPoll_Unchecked(object sender, RoutedEventArgs e)
     {
-        _pollingService.Stop();
-        // 현재는 단일 타겟만 가정하여 전체 중지 후 제거 (또는 IP 기준으로 제거 가능)
-        // 여기서는 간단하게 Stop만 호출하거나, 입력된 IP를 제거
-        var target = new UiSnmpTarget
-        {
-            IpAddress = txtIp.Text,
-            Port = 161 
-        };
+        var target = BuildTargetFromInputs(minimal: true);
         _pollingService.RemoveTarget(target);
+        _pollingService.Stop(); // 현재는 단순화를 위해 전체 Stop
         
         txtResult.AppendText($"[System] Auto Polling Stopped\n");
         lblStatus.Content = "Unknown";
         lblStatus.Foreground = Brushes.Gray;
+    }
+
+    private UiSnmpTarget BuildTargetFromInputs(bool minimal = false)
+    {
+        var ip = txtIp.Text?.Trim() ?? "";
+        var community = txtCommunity.Text?.Trim() ?? "public";
+
+        return new UiSnmpTarget
+        {
+            IpAddress = ip,
+            Community = minimal ? "public" : community,
+            Version = SnmpVersion.V2c,
+            Timeout = 3000,
+            Port = 161
+        };
     }
 
     private void LoadMibs()
@@ -178,5 +196,131 @@ public partial class MainWindow : Window
         {
             btnGet.IsEnabled = true;
         }
+    }
+
+    private void AddDevice_Click(object sender, RoutedEventArgs e)
+    {
+        var ip = (txtAddIp.Text ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(ip))
+        {
+            // txtIp에 값이 있으면 그걸로 추가도 허용
+            ip = (txtIp.Text ?? "").Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(ip))
+        {
+            txtResult.AppendText("[System] AddDevice: IP is empty.\n");
+            return;
+        }
+
+        // 중복 방지(동일 ip:port)
+        if (_vm.Devices.Any(d => d.IpAddress == ip && d.Port == 161))
+        {
+            txtResult.AppendText($"[System] Device already exists: {ip}:161\n");
+            return;
+        }
+
+        var dev = new UiSnmpTarget
+        {
+            IpAddress = ip,
+            Community = (txtCommunity.Text ?? "public").Trim(),
+            Version = SnmpVersion.V2c,
+            Timeout = 3000,
+            Port = 161
+        };
+
+        _vm.Devices.Add(dev);
+        _vm.SelectedDevice = dev;
+        txtResult.AppendText($"[System] Device added: {dev.DisplayName}\n");
+        txtResult.ScrollToEnd();
+    }
+
+    private void RemoveDevice_Click(object sender, RoutedEventArgs e)
+    {
+        if (tvDevices.SelectedItem is not UiSnmpTarget selected)
+        {
+            txtResult.AppendText("[System] RemoveDevice: no device selected.\n");
+            return;
+        }
+
+        _pollingService.RemoveTarget(selected);
+        _vm.Devices.Remove(selected);
+        _vm.SelectedDevice = _vm.Devices.FirstOrDefault();
+
+        txtResult.AppendText($"[System] Device removed: {selected.DisplayName}\n");
+        txtResult.ScrollToEnd();
+    }
+
+    private void TvDevices_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (e.NewValue is not UiSnmpTarget dev) return;
+
+        _vm.SelectedDevice = dev;
+        txtIp.Text = dev.IpAddress;
+        txtCommunity.Text = dev.Community;
+
+        txtResult.AppendText($"[System] Selected device: {dev.DisplayName}\n");
+        txtResult.ScrollToEnd();
+    }
+
+    private void StartPoll_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedDevice is null)
+        {
+            txtResult.AppendText("[System] StartPoll: no device selected.\n");
+            return;
+        }
+
+        _pollingService.AddTarget(_vm.SelectedDevice);
+        _pollingService.Start();
+        chkAutoPoll.IsChecked = true;
+        txtResult.AppendText($"[System] Polling started for {_vm.SelectedDevice.DisplayName}\n");
+        txtResult.ScrollToEnd();
+    }
+
+    private void StopPoll_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedDevice is not null)
+        {
+            _pollingService.RemoveTarget(_vm.SelectedDevice);
+        }
+        _pollingService.Stop();
+        chkAutoPoll.IsChecked = false;
+        txtResult.AppendText("[System] Polling stopped\n");
+        txtResult.ScrollToEnd();
+    }
+
+    private void ClearLog_Click(object sender, RoutedEventArgs e)
+    {
+        txtResult.Clear();
+    }
+
+    private void MenuExit_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void MenuRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        txtResult.AppendText("[System] Refresh requested\n");
+        txtResult.ScrollToEnd();
+    }
+
+    private void MenuSnmpTest_Click(object sender, RoutedEventArgs e)
+    {
+        tabMain.SelectedIndex = 5; // SNMP Test 탭(현재 순서 기준)
+    }
+
+    private void MenuAbout_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "SnmpNms (WPF)\nSNMPc 스타일 NMS를 목표로 하는 프로젝트입니다.",
+            "About",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void MenuWindowsCascade_Click(object sender, RoutedEventArgs e)
+    {
+        // SNMPc 스타일: View Window Area 내부 창 정렬(Cascade)
+        // 현재는 Map View 탭 내부에서 겹치는 내부 창을 제공한다.
+        mapViewControl?.CascadeWindows();
     }
 }

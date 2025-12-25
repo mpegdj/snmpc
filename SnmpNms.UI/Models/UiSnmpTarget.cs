@@ -11,5 +11,7 @@ public class UiSnmpTarget : ISnmpTarget
     public SnmpVersion Version { get; set; } = SnmpVersion.V2c;
     public int Timeout { get; set; } = 3000;
     public int Retries { get; set; } = 1;
+
+    public string DisplayName => $"{IpAddress}:{Port}";
 }
 

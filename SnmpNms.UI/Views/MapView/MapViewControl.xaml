@@ -1,0 +1,26 @@
+<UserControl x:Class="SnmpNms.UI.Views.MapView.MapViewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinHeight="200" MinWidth="200">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ToolBarTray Grid.Row="0">
+            <ToolBar>
+                <Button Content="Cascade" Click="Cascade_Click" Padding="10,2"/>
+                <Button Content="Add Window" Click="AddWindow_Click" Padding="10,2"/>
+                <Separator/>
+                <TextBlock Text="(내부 창은 Map View 탭 안에서 겹쳐 표시됩니다)" VerticalAlignment="Center"/>
+            </ToolBar>
+        </ToolBarTray>
+
+        <Border Grid.Row="1" Margin="8" BorderBrush="#DDD" BorderThickness="1" Background="#0E6B6B" CornerRadius="4">
+            <Canvas Name="MdiCanvas"/>
+        </Border>
+    </Grid>
+</UserControl>
+
+

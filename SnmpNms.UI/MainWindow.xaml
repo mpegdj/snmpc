@@ -1,40 +1,383 @@
 ﻿<Window x:Class="SnmpNms.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Simple SNMP Manager" Height="450" Width="600">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="100"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        xmlns:mapView="clr-namespace:SnmpNms.UI.Views.MapView"
+        Title="SnmpNms" Height="800" Width="1200"
+        MinHeight="650" MinWidth="980">
+    <DockPanel>
+        <DockPanel.Resources>
+            <!-- Simple icon button style using Segoe MDL2 Assets (built-in on Windows) -->
+            <Style x:Key="IconButton" TargetType="Button">
+                <Setter Property="Width" Value="30"/>
+                <Setter Property="Height" Value="28"/>
+                <Setter Property="Margin" Value="2"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="#CFCFCF"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+            </Style>
+            <Style x:Key="IconGlyph" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+            </Style>
+        </DockPanel.Resources>
 
-        <Label Grid.Row="0" Grid.Column="0" Content="IP Address:"/>
-        <TextBox Grid.Row="0" Grid.Column="1" Name="txtIp" Text="127.0.0.1" Margin="2"/>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="E_xit" Click="MenuExit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Refresh" Click="MenuRefresh_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Window">
+                <MenuItem Header="Cascade" Click="MenuWindowsCascade_Click"/>
+                <MenuItem Header="Tile (Todo)" IsEnabled="False"/>
+            </MenuItem>
+            <MenuItem Header="_Tools">
+                <MenuItem Header="SNMP Test" Click="MenuSnmpTest_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="About" Click="MenuAbout_Click"/>
+            </MenuItem>
+        </Menu>
 
-        <Label Grid.Row="1" Grid.Column="0" Content="Community:"/>
-        <TextBox Grid.Row="1" Grid.Column="1" Name="txtCommunity" Text="public" Margin="2"/>
+        <ToolBarTray DockPanel.Dock="Top">
+            <ToolBar>
+                <Button Style="{StaticResource IconButton}" ToolTip="Add Device" Click="AddDevice_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE710;"/>
+                </Button>
+                <Button Style="{StaticResource IconButton}" ToolTip="Remove Device" Click="RemoveDevice_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74D;"/>
+                </Button>
+                <Separator/>
+                <Button Style="{StaticResource IconButton}" ToolTip="Start Poll" Click="StartPoll_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE768;"/>
+                </Button>
+                <Button Style="{StaticResource IconButton}" ToolTip="Stop Poll" Click="StopPoll_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE71A;"/>
+                </Button>
+                <Separator/>
+                <Button Style="{StaticResource IconButton}" ToolTip="Clear Log" Click="ClearLog_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74D;"/>
+                </Button>
+            </ToolBar>
+            <ToolBar>
+                <Button Style="{StaticResource IconButton}" ToolTip="Map View Back (Todo)" IsEnabled="False">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE72B;"/>
+                </Button>
+                <Button Style="{StaticResource IconButton}" ToolTip="Map View Forward (Todo)" IsEnabled="False">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE72A;"/>
+                </Button>
+                <Button Style="{StaticResource IconButton}" ToolTip="Map View Parent (Todo)" IsEnabled="False">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74A;"/>
+                </Button>
+                <Button Style="{StaticResource IconButton}" ToolTip="Root Subnet Map View (Todo)" IsEnabled="False">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE80F;"/>
+                </Button>
+                <Separator/>
+                <TextBlock Text="Map:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox Width="180" IsEnabled="False"/>
+                <Separator/>
+                <TextBlock Text="MIB:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox Width="220" IsEnabled="False"/>
+            </ToolBar>
+        </ToolBarTray>
 
-        <Label Grid.Row="2" Grid.Column="0" Content="OID:"/>
-        <TextBox Grid.Row="2" Grid.Column="1" Name="txtOid" Text="1.3.6.1.2.1.1.1.0" Margin="2"/>
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Status: " FontWeight="Bold"/>
+                    <Label Name="lblStatus" Content="Unknown" Foreground="Gray" FontWeight="Bold"/>
+                </StackPanel>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock Text="{Binding SelectedDevice.DisplayName, FallbackValue='(no device selected)'}"/>
+            </StatusBarItem>
+        </StatusBar>
 
-        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="2">
-            <CheckBox Name="chkAutoPoll" Content="Auto Poll (3s)" VerticalAlignment="Center" Margin="0,0,10,0" Checked="ChkAutoPoll_Checked" Unchecked="ChkAutoPoll_Unchecked"/>
-            <Button Name="btnGet" Content="Get" Click="BtnGet_Click" Width="100"/>
-        </StackPanel>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="5"/>
+                <RowDefinition Height="220" MinHeight="120"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="2">
-            <Label Content="Status: " FontWeight="Bold"/>
-            <Label Name="lblStatus" Content="Unknown" Foreground="Gray" FontWeight="Bold"/>
-        </StackPanel>
+            <!-- Left: Selection Tool (SNMPc style) -->
+            <GroupBox Grid.Row="0" Grid.Column="0" Header="Selection Tool" Margin="8">
+                <TabControl>
+                    <TabItem Header="Map">
+                        <DockPanel Margin="8">
+                            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                                <TextBlock Text="Quick Add" FontWeight="Bold" Margin="0,0,0,6"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Name="txtAddIp" Grid.Column="0" Margin="0,0,8,0" ToolTip="IP Address"/>
+                                    <Button Grid.Column="1" Content="Add" Click="AddDevice_Click" Padding="12,2"/>
+                                </Grid>
+                            </StackPanel>
 
-        <TextBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Name="txtResult" Margin="2" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"/>
-    </Grid>
+                            <TreeView Name="tvDevices"
+                                      ItemsSource="{Binding Devices}"
+                                      SelectedItemChanged="TvDevices_SelectedItemChanged">
+                                <TreeView.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayName}"/>
+                                    </DataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                        </DockPanel>
+                    </TabItem>
+                    <TabItem Header="Mib">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="Compiled SNMP Mibs, Custom Tables, Custom Mib Expressions (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Trend">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="Report profiles / long-term polling / scheduled reports (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Event">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="Event filters / actions when an event is received (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Menu">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="Custom menus that appear in Manage/Tools/Help menus (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </GroupBox>
+
+            <GridSplitter Grid.Row="0" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+
+            <!-- Center: View Window Area (SNMPc style) -->
+            <Grid Grid.Row="0" Grid.Column="2" Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="48"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- View Window (we keep our existing tabs as one main view) -->
+                <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top"
+                                   Text="View Window Area"
+                                   Padding="10,6"
+                                   FontWeight="Bold"
+                                   Background="#F7F7F7"/>
+                        <TabControl Name="tabMain" Margin="0">
+                            <TabItem Header="Dashboard">
+                                <Grid Margin="12">
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="Dashboard (Coming soon)"/>
+                                </Grid>
+                            </TabItem>
+
+                            <TabItem Header="Map View">
+                                <mapView:MapViewControl x:Name="mapViewControl"/>
+                            </TabItem>
+
+                            <TabItem Header="Device">
+                                <Grid Margin="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="Device Detail"/>
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
+                                        <TextBlock Text="IP: " FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedDevice.IpAddress, FallbackValue='-'}" Margin="0,0,16,0"/>
+                                        <TextBlock Text="Community: " FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedDevice.Community, FallbackValue='-'}" Margin="0,0,16,0"/>
+                                        <TextBlock Text="Version: " FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedDevice.Version, FallbackValue='-'}"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="2" Margin="0,16,0,0" TextWrapping="Wrap"
+                                               Text="이 탭은 추후 Interface/Inventory/Config(SET)/MIB 변수 뷰로 확장 예정."/>
+                                </Grid>
+                            </TabItem>
+
+                            <TabItem Header="Alarms">
+                                <Grid Margin="12">
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="Alarm Console (Coming soon)"/>
+                                </Grid>
+                            </TabItem>
+
+                            <TabItem Header="Performance">
+                                <Grid Margin="12">
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="Performance (Coming soon)"/>
+                                </Grid>
+                            </TabItem>
+
+                            <TabItem Header="MIB Table">
+                                <Grid Margin="12">
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="MIB Table (Todo)"/>
+                                </Grid>
+                            </TabItem>
+
+                            <TabItem Header="MIB Graph">
+                                <Grid Margin="12">
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="MIB Graph (Todo)"/>
+                                </Grid>
+                            </TabItem>
+
+                            <TabItem Header="SNMP Test">
+                                <Grid Margin="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Label Grid.Row="0" Grid.Column="0" Content="IP Address:"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Name="txtIp" Text="127.0.0.1" Margin="2"/>
+
+                                    <Label Grid.Row="1" Grid.Column="0" Content="Community:"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Name="txtCommunity" Text="public" Margin="2"/>
+
+                                    <Label Grid.Row="2" Grid.Column="0" Content="OID/Name:"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Name="txtOid" Text="1.3.6.1.2.1.1.1.0" Margin="2"/>
+
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="2">
+                                        <CheckBox Name="chkAutoPoll" Content="Auto Poll (3s)" VerticalAlignment="Center" Margin="0,0,10,0"
+                                                  Checked="ChkAutoPoll_Checked" Unchecked="ChkAutoPoll_Unchecked"/>
+                                        <Button Name="btnGet" Content="Get" Click="BtnGet_Click" Width="100"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="2,10,2,0" TextWrapping="Wrap"
+                                               Text="결과/로그는 하단 Event Log 창에 출력됩니다."/>
+                                </Grid>
+                            </TabItem>
+                        </TabControl>
+                    </DockPanel>
+                </Border>
+
+                <!-- Right: Edit Button Bar (placeholder) -->
+                <Border Grid.Column="1" Margin="8,0,0,0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top"
+                                   Text="Edit"
+                                   Padding="6"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   Background="#F7F7F7"/>
+                        <StackPanel Margin="6" HorizontalAlignment="Center">
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Device Object (Todo)">
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE710;"/>
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Subnet (Todo)">
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8D2;"/>
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Goto (Todo)">
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8A7;"/>
+                            </Button>
+                            <Separator/>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Geo Subnet (Todo)">
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE81D;"/>
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Link Between Objects (Todo)">
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE71B;"/>
+                            </Button>
+                            <Button Style="{StaticResource IconButton}" ToolTip="Add Network Object (Todo)">
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8D4;"/>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- Splitter between View Window Area and Event Log Tool -->
+            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                          Height="5"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          Background="#E5E5E5"
+                          ResizeDirection="Rows"
+                          ResizeBehavior="PreviousAndNext"/>
+
+            <!-- Bottom: Event Log Tool (SNMPc style) -->
+            <GroupBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Header="Event Log Tool" Margin="8">
+                <TabControl>
+                    <TabItem Header="Current">
+                        <TextBox Name="txtResult"
+                                 IsReadOnly="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 AcceptsReturn="True"
+                                 TextWrapping="NoWrap"/>
+                    </TabItem>
+                    <TabItem Header="History">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="History view (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 1">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 2">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 3">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 4">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 5">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 6">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 7">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Custom 8">
+                        <Grid Margin="12">
+                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </GroupBox>
+        </Grid>
+    </DockPanel>
 </Window>
