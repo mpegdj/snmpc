@@ -12,10 +12,6 @@ public class MibService : IMibService
     public MibService()
     {
         _registry = new ObjectRegistry();
-        // 기본 표준 MIB 로드 (필요시)
-        // _registry.Import(MibModule.Create(...)); 
-        // SharpSnmpLib은 기본적으로 일부 MIB를 알 수도 있지만, 
-        // 보통은 명시적으로 로드해야 합니다.
     }
 
     public void LoadMibModules(string directoryPath)
@@ -26,36 +22,50 @@ public class MibService : IMibService
             .Concat(Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories))
             .ToList();
 
-        // SharpSnmpLib의 MibModule을 사용하여 파일 파싱 및 등록
-        // 주의: 의존성(IMPORTS) 순서가 중요할 수 있음.
-        // 여기서는 단순하게 발견된 파일들을 로드 시도.
-        
-        foreach (var file in files)
-        {
-            try 
-            {
-                // MIB 파일 파싱은 SharpSnmpLib의 Parser 사용
-                // 하지만 SharpSnmpLib 10+ 버전에서는 ObjectRegistry.Import가 사라지거나 방식이 다를 수 있음.
-                // 일반적인 방식: MibModule 리스트 생성 -> ObjectTree 생성.
-                
-                // 여기서는 구현 복잡도를 낮추기 위해, SharpSnmpLib의 구버전 방식보다는
-                // 최신 패턴이나 혹은 직접 매핑을 관리하는 방식을 쓸 수도 있지만,
-                // 라이브러리 기능을 최대한 활용해 봄.
+        if (files.Count == 0) return;
 
-                // * 중요: SharpSnmpLib의 MIB 파싱 기능은 완전하지 않을 수 있고 
-                // 상용 제품 수준의 MIB 파서는 매우 복잡함.
-                // 우선은 'ObjectRegistry' 대신 'Reload'나 'Compile' 메서드가 있는지 확인 필요.
-                
-                // (임시 구현) 일단 인터페이스만 맞추고, 실제 파싱 로직은
-                // 라이브러리 버전에 맞는 정확한 코드로 채워넣어야 함.
-                // 12.5.7 버전 기준으로는 IModule 파싱 후 ObjectTree에 추가하는 방식.
-                
-                // TODO: 실제 파싱 로직 구현 (복잡하므로 1차는 스텁)
-            }
-            catch
+        try
+        {
+            // SharpSnmpLib의 ObjectRegistry는 Import(IEnumerable<IModule>) 형태를 지원하지 않고
+            // 생성자 또는 내부 메서드를 사용해야 하는데 버전마다 다름.
+            // 12.x 버전에서는 File.ReadAllText 등을 통해 파싱해야 함.
+            
+            // 1. 파서 생성 및 파일 로드
+            // SharpSnmpLib의 Mib 파싱은 다소 까다로워 예외처리가 중요.
+            // 여러 파일을 한꺼번에 파싱해야 의존성(Import)이 해결됨.
+            
+            var modules = new List<IModule>();
+            var parser = new Parser();
+
+            foreach (var file in files)
             {
-                // 로드 실패 무시
+                try
+                {
+                    // 스트림 리더로 파일을 열어서 파싱
+                    using var reader = new StreamReader(file);
+                    var module = parser.ParseToModule(reader);
+                    if (module != null)
+                    {
+                        modules.Add(module);
+                    }
+                }
+                catch
+                {
+                    // 개별 파일 파싱 에러는 무시 (표준이 아닌 MIB 형식이 섞여있을 수 있음)
+                }
             }
+
+            // 2. Registry에 등록 (Tree 갱신)
+            // Import 대신 Refresh나 Load를 사용하는 패턴이 있을 수 있음.
+            // 12.5.7 버전 기준: ObjectRegistry는 생성자 없이 생성 불가하거나, Import 메서드 사용
+            // public void Import(IEnumerable<IModule> modules)
+            
+            _registry.Import(modules);
+            _registry.Refresh(); // 트리 갱신
+        }
+        catch
+        {
+            // 전체 로드 실패 (의존성 문제 등)
         }
     }
 
@@ -63,14 +73,18 @@ public class MibService : IMibService
     {
         try
         {
-             // _registry.Translate(oid) 같은 기능 사용
-             // 만약 못 찾으면 원래 OID 반환
              var id = new ObjectIdentifier(oid);
-             // 라이브러리 기능으로 해석 시도
-             // var entry = _registry.Tree.Search(id);
-             // return entry != null ? entry.Name : oid;
+             // Registry에서 OID 검색
+             // Tree.Search(id) -> IDefinition 반환
+             var entry = _registry.Tree.Search(id);
+             if (entry != null)
+             {
+                 return entry.Name;
+             }
              
-             return oid; // 1차 구현: 그대로 반환 (통과용)
+             // 만약 정확히 일치하지 않아도, 트리에서 가장 가까운 부모를 찾아서 보여줄 수도 있음.
+             // 일단은 정확한 매칭만 이름으로 반환.
+             return oid;
         }
         catch
         {
@@ -80,8 +94,16 @@ public class MibService : IMibService
 
     public string GetOid(string name)
     {
-        // 반대 매핑
-        return name; 
+        try
+        {
+            // 이름으로 OID 찾기 (역방향)
+            // ObjectRegistry에는 Translate 기능이 있음
+            var oid = _registry.Translate(name);
+            return oid.ToString();
+        }
+        catch
+        {
+            return name;
+        }
     }
 }
-
