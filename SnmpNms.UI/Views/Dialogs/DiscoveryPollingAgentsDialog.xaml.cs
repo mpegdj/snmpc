@@ -51,7 +51,7 @@ public partial class DiscoveryPollingAgentsDialog : Window
             {
                 FilterType.Address => $"{Type} Address: {Range}",
                 FilterType.Maker => $"{Type} Maker: {Range}",
-                FilterType.DeviceName => $"{Type} Device Name: {Range}",
+                FilterType.DeviceName => $"{Type} Device Pattern: {Range}",
                 _ => $"{Type} {Range}"
             };
         }
@@ -67,6 +67,9 @@ public partial class DiscoveryPollingAgentsDialog : Window
         public bool EnableServicePolling { get; set; } = true;
         public bool FindNonSnmpNodes { get; set; } = true;
         public bool FindRmonDevices { get; set; } = true;
+        public bool FindSnmpV1 { get; set; } = true;
+        public bool FindSnmpV2 { get; set; } = true;
+        public bool FindSnmpV3 { get; set; } = true;
         public bool FindWeb { get; set; } = true;
         public bool FindSmtp { get; set; } = true;
         public bool FindTelnet { get; set; }
@@ -121,15 +124,7 @@ public partial class DiscoveryPollingAgentsDialog : Window
             else
             {
                 // 기본값 설정
-                Config = new DiscoveryConfig();
-                Config.Communities.Add(new CommunityEntry { Version = "V1", ReadCommunity = "crclab", WriteCommunity = "crclab" });
-                Config.Communities.Add(new CommunityEntry { Version = "V1", ReadCommunity = "public", WriteCommunity = "netman" });
-                Config.Filters.Add(new FilterEntry { Type = "Include", Range = "192.168.0.100-101", FilterCategory = FilterType.Address });
-                Config.Filters.Add(new FilterEntry { Type = "Include", Range = "192.168.1.100-101", FilterCategory = FilterType.Address });
-                Config.Filters.Add(new FilterEntry { Type = "Include", Range = "ntt*", FilterCategory = FilterType.Maker });
-                Config.Filters.Add(new FilterEntry { Type = "Include", Range = "hv*", FilterCategory = FilterType.Maker });
-                Config.Filters.Add(new FilterEntry { Type = "Include", Range = "mv*", FilterCategory = FilterType.Maker });
-                Config.Filters.Add(new FilterEntry { Type = "Include", Range = "hc*", FilterCategory = FilterType.Maker });
+                SetDefaultConfig();
             }
         }
         catch
@@ -145,6 +140,20 @@ public partial class DiscoveryPollingAgentsDialog : Window
         foreach (var comm in Config.Communities) Communities.Add(comm);
         foreach (var filter in Config.Filters) Filters.Add(filter);
     }
+    
+    private void SetDefaultConfig()
+    {
+        Config = new DiscoveryConfig();
+        Config.Seeds.Add(new SeedEntry { IpAddr = "192.168.0.0", Netmask = "255.255.254.0" });
+        Config.Communities.Add(new CommunityEntry { Version = "V1", ReadCommunity = "crclab", WriteCommunity = "crclab" });
+        Config.Communities.Add(new CommunityEntry { Version = "V1", ReadCommunity = "public", WriteCommunity = "netman" });
+        Config.Filters.Add(new FilterEntry { Type = "Include", Range = "192.168.0.100-101", FilterCategory = FilterType.Address });
+        Config.Filters.Add(new FilterEntry { Type = "Include", Range = "192.168.1.100-101", FilterCategory = FilterType.Address });
+        Config.Filters.Add(new FilterEntry { Type = "Include", Range = "ntt*", FilterCategory = FilterType.Maker });
+        Config.Filters.Add(new FilterEntry { Type = "Include", Range = "hv*", FilterCategory = FilterType.DeviceName });
+        Config.Filters.Add(new FilterEntry { Type = "Include", Range = "mv*", FilterCategory = FilterType.DeviceName });
+        Config.Filters.Add(new FilterEntry { Type = "Include", Range = "hc*", FilterCategory = FilterType.DeviceName });
+    }
 
     private void SaveConfig()
     {
@@ -159,6 +168,9 @@ public partial class DiscoveryPollingAgentsDialog : Window
             Config.EnableServicePolling = chkEnableServicePolling.IsChecked == true;
             Config.FindNonSnmpNodes = chkFindNonSnmpNodes.IsChecked == true;
             Config.FindRmonDevices = chkFindRmonDevices.IsChecked == true;
+            Config.FindSnmpV1 = chkFindSnmpV1.IsChecked == true;
+            Config.FindSnmpV2 = chkFindSnmpV2.IsChecked == true;
+            Config.FindSnmpV3 = chkFindSnmpV3.IsChecked == true;
             Config.FindWeb = chkFindWeb.IsChecked == true;
             Config.FindSmtp = chkFindSmtp.IsChecked == true;
             Config.FindTelnet = chkFindTelnet.IsChecked == true;
@@ -188,6 +200,9 @@ public partial class DiscoveryPollingAgentsDialog : Window
         chkEnableServicePolling.IsChecked = Config.EnableServicePolling;
         chkFindNonSnmpNodes.IsChecked = Config.FindNonSnmpNodes;
         chkFindRmonDevices.IsChecked = Config.FindRmonDevices;
+        chkFindSnmpV1.IsChecked = Config.FindSnmpV1;
+        chkFindSnmpV2.IsChecked = Config.FindSnmpV2;
+        chkFindSnmpV3.IsChecked = Config.FindSnmpV3;
         chkFindWeb.IsChecked = Config.FindWeb;
         chkFindSmtp.IsChecked = Config.FindSmtp;
         chkFindTelnet.IsChecked = Config.FindTelnet;
@@ -265,20 +280,77 @@ public partial class DiscoveryPollingAgentsDialog : Window
 
     private void BtnSeedAdd_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(txtSeedIpAddr.Text) || string.IsNullOrWhiteSpace(txtSeedNetmask.Text))
+        var seedInput = txtSeedIpAddr.Text.Trim();
+        if (string.IsNullOrWhiteSpace(seedInput))
         {
-            MessageBox.Show("Please enter both IP address and netmask.", "Input Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Please enter IP address (CIDR format: X.X.X.X/YY or separate IP and netmask).", "Input Required", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
+        }
+        
+        string ipAddr;
+        string netmask;
+        
+        // CIDR 표기법 확인 (예: 192.168.0.0/24)
+        if (seedInput.Contains('/'))
+        {
+            var parts = seedInput.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 2)
+            {
+                MessageBox.Show("Invalid CIDR format. Use X.X.X.X/YY (e.g., 192.168.0.0/24)", "Invalid Format", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            
+            ipAddr = parts[0].Trim();
+            var cidrPrefix = parts[1].Trim();
+            
+            // CIDR prefix를 netmask로 변환
+            if (!int.TryParse(cidrPrefix, out int prefixLength) || prefixLength < 0 || prefixLength > 32)
+            {
+                MessageBox.Show("Invalid CIDR prefix length. Must be between 0 and 32.", "Invalid Format", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            
+            netmask = CidrToNetmask(prefixLength);
+        }
+        else
+        {
+            // 기존 방식: IP와 Netmask를 별도로 입력
+            ipAddr = seedInput;
+            netmask = txtSeedNetmask.Text.Trim();
+            
+            if (string.IsNullOrWhiteSpace(netmask))
+            {
+                MessageBox.Show("Please enter netmask or use CIDR format (X.X.X.X/YY).", "Input Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
         }
         
         Seeds.Add(new SeedEntry 
         { 
-            IpAddr = txtSeedIpAddr.Text.Trim(), 
-            Netmask = txtSeedNetmask.Text.Trim() 
+            IpAddr = ipAddr, 
+            Netmask = netmask 
         });
         
         txtSeedIpAddr.Clear();
         txtSeedNetmask.Clear();
+    }
+    
+    /// <summary>
+    /// CIDR prefix length를 netmask로 변환합니다.
+    /// 예: 24 -> 255.255.255.0
+    /// </summary>
+    private string CidrToNetmask(int prefixLength)
+    {
+        if (prefixLength == 0) return "0.0.0.0";
+        if (prefixLength == 32) return "255.255.255.255";
+        
+        uint mask = 0xFFFFFFFF << (32 - prefixLength);
+        var bytes = BitConverter.GetBytes(mask);
+        if (BitConverter.IsLittleEndian)
+        {
+            Array.Reverse(bytes);
+        }
+        return $"{bytes[0]}.{bytes[1]}.{bytes[2]}.{bytes[3]}";
     }
 
     private void BtnSeedChange_Click(object sender, RoutedEventArgs e)
@@ -431,6 +503,38 @@ public partial class DiscoveryPollingAgentsDialog : Window
                 Agents.Remove(selected);
             }
         }
+    }
+
+    private void BtnDefault_Click(object sender, RoutedEventArgs e)
+    {
+        var result = MessageBox.Show(
+            "모든 설정을 기본값으로 되돌리시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.",
+            "기본값으로 복원",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        
+        if (result == MessageBoxResult.Yes)
+        {
+            ResetToDefaults();
+            MessageBox.Show("설정이 기본값으로 복원되었습니다.", "완료", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void ResetToDefaults()
+    {
+        // 기본값 설정
+        SetDefaultConfig();
+        
+        // ObservableCollection에 복사
+        Seeds.Clear();
+        Communities.Clear();
+        Filters.Clear();
+        foreach (var seed in Config.Seeds) Seeds.Add(seed);
+        foreach (var comm in Config.Communities) Communities.Add(comm);
+        foreach (var filter in Config.Filters) Filters.Add(filter);
+        
+        // UI에 설정 반영
+        ApplyConfigToUI();
     }
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)

@@ -39,7 +39,6 @@ public partial class DiscoveryProgressDialog : Window
     private readonly ISnmpClient _snmpClient;
     private readonly DiscoveryPollingAgentsDialog.DiscoveryConfig _config;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private bool _isRunning = false;
 
     public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; } = new();
 
@@ -57,7 +56,6 @@ public partial class DiscoveryProgressDialog : Window
 
     private async Task StartDiscoveryAsync()
     {
-        _isRunning = true;
         btnStop.IsEnabled = true;
         btnOk.IsEnabled = false;
         btnCancel.IsEnabled = true;
@@ -71,47 +69,72 @@ public partial class DiscoveryProgressDialog : Window
             AddLog("");
 
             var discoveredIps = new HashSet<string>();
+            var discoveredIpsLock = new object();
 
-            // Seeds에서 IP 범위 생성
+            // 필터 타입 확인 (Maker/DeviceName 필터가 있으면 필터링을 위해 SNMP 값 필요)
+            var hasMakerFilter = _config.Filters.Any(f => f.FilterCategory == DiscoveryPollingAgentsDialog.FilterType.Maker);
+            var hasDeviceNameFilter = _config.Filters.Any(f => f.FilterCategory == DiscoveryPollingAgentsDialog.FilterType.DeviceName);
+            var needsFilterCheck = hasMakerFilter || hasDeviceNameFilter; // Maker/DeviceName 필터가 있으면 필터링 필요
+            // SNMP는 항상 검사 (Address 필터만 있어도 SNMP 검사 필요)
+
+            // Seeds에서 네트워크 범위 생성 (Seed IP와 Netmask로 서브넷 범위 계산)
             foreach (var seed in _config.Seeds)
             {
                 if (_cancellationTokenSource.Token.IsCancellationRequested) break;
 
-                AddLog($"Scanning seed: {seed.IpAddr}/{seed.Netmask}");
+                AddLog($"Scanning network: {seed.IpAddr}/{seed.Netmask}");
                 var ipRange = GenerateIpRange(seed.IpAddr, seed.Netmask);
                 AddLog($"  Generated {ipRange.Count} IP addresses");
 
-                foreach (var ip in ipRange)
+                // Address 필터 미리 적용
+                var addressFilters = _config.Filters.Where(f => f.FilterCategory == DiscoveryPollingAgentsDialog.FilterType.Address).ToList();
+                var filteredIps = ipRange.Where(ip =>
                 {
-                    if (_cancellationTokenSource.Token.IsCancellationRequested) break;
-                    if (discoveredIps.Contains(ip)) continue;
-
-                    // Address 필터 확인
-                    var addressFilters = _config.Filters.Where(f => f.FilterCategory == DiscoveryPollingAgentsDialog.FilterType.Address).ToList();
-                    if (addressFilters.Count > 0)
-                    {
-                        bool addressMatch = false;
-                        foreach (var filter in addressFilters)
-                        {
-                            if (filter.Type == "Include" && MatchesAddressPattern(ip, filter.Range))
-                            {
-                                addressMatch = true;
-                                break;
-                            }
-                            if (filter.Type == "Exclude" && MatchesAddressPattern(ip, filter.Range))
-                            {
-                                addressMatch = false;
-                                break;
-                            }
-                        }
-                        if (!addressMatch) continue;
-                    }
-
-                    discoveredIps.Add(ip);
-                    await DiscoverDeviceAsync(ip, _config);
+                    if (addressFilters.Count == 0) return true;
                     
-                    UpdateProgress();
-                }
+                    bool addressMatch = false;
+                    foreach (var filter in addressFilters)
+                    {
+                        if (filter.Type == "Include" && MatchesAddressPattern(ip, filter.Range))
+                        {
+                            addressMatch = true;
+                            break;
+                        }
+                        if (filter.Type == "Exclude" && MatchesAddressPattern(ip, filter.Range))
+                        {
+                            return false;
+                        }
+                    }
+                    return addressMatch;
+                }).ToList();
+
+                AddLog($"  After address filter: {filteredIps.Count} IP addresses");
+
+                // 병렬 처리로 Discovery 수행 (최대 50개 동시 실행)
+                var semaphore = new SemaphoreSlim(50);
+                var tasks = filteredIps.Select(async ip =>
+                {
+                    if (_cancellationTokenSource.Token.IsCancellationRequested) return;
+                    
+                    await semaphore.WaitAsync(_cancellationTokenSource.Token);
+                    try
+                    {
+                        lock (discoveredIpsLock)
+                        {
+                            if (discoveredIps.Contains(ip)) return;
+                            discoveredIps.Add(ip);
+                        }
+
+                        await DiscoverDeviceAsync(ip, _config, needsFilterCheck);
+                        UpdateProgress();
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                });
+
+                await Task.WhenAll(tasks);
             }
 
             if (!_cancellationTokenSource.Token.IsCancellationRequested)
@@ -135,13 +158,16 @@ public partial class DiscoveryProgressDialog : Window
         }
         finally
         {
-            _isRunning = false;
             btnStop.IsEnabled = false;
             btnOk.IsEnabled = true;
             btnCancel.IsEnabled = true;
         }
     }
 
+    /// <summary>
+    /// Seed IP와 Netmask를 사용하여 서브넷 범위 내의 모든 호스트 IP 주소를 생성합니다.
+    /// Seed IP는 네트워크 내의 어떤 IP든 될 수 있으며, Netmask와 AND 연산하여 네트워크 주소를 계산합니다.
+    /// </summary>
     private List<string> GenerateIpRange(string ipAddr, string netmask)
     {
         var ips = new List<string>();
@@ -156,28 +182,80 @@ public partial class DiscoveryProgressDialog : Window
             var ipBytes = ip.GetAddressBytes();
             var maskBytes = mask.GetAddressBytes();
             
-            // 네트워크 주소 계산
+            // Seed IP와 Netmask를 AND 연산하여 네트워크 주소 계산
+            // 예: 192.168.0.100 & 255.255.255.0 = 192.168.0.0
             var networkBytes = new byte[4];
             for (int i = 0; i < 4; i++)
             {
                 networkBytes[i] = (byte)(ipBytes[i] & maskBytes[i]);
             }
             
-            // 호스트 부분 마스크 계산
-            var hostMask = ~BitConverter.ToUInt32(maskBytes.Reverse().ToArray(), 0);
-            var hostCount = hostMask + 1;
-            
-            // 너무 많은 IP는 제한 (예: /24 = 256개)
-            if (hostCount > 256) hostCount = 256;
-            
-            for (uint i = 1; i < hostCount - 1; i++) // 0과 255 제외
+            // 호스트 부분이 시작되는 바이트 위치 찾기
+            int hostStartByte = 3;
+            for (int i = 0; i < 4; i++)
             {
-                var hostBytes = BitConverter.GetBytes(i).Take(4).ToArray();
-                var finalBytes = new byte[4];
-                for (int j = 0; j < 4; j++)
+                if (maskBytes[i] != 0xFF)
                 {
-                    finalBytes[j] = (byte)(networkBytes[j] | hostBytes[j]);
+                    hostStartByte = i;
+                    break;
                 }
+            }
+            
+            // 전체 마스크를 고려하여 호스트 비트 수 계산
+            int totalHostBits = 0;
+            
+            for (int i = hostStartByte; i < 4; i++)
+            {
+                byte maskByte = maskBytes[i];
+                if (maskByte == 0)
+                {
+                    // 완전히 호스트 부분인 바이트
+                    totalHostBits += 8;
+                }
+                else if (maskByte != 0xFF)
+                {
+                    // 부분적으로 호스트 부분인 바이트
+                    for (int bit = 7; bit >= 0; bit--)
+                    {
+                        if ((maskByte & (1 << bit)) == 0)
+                        {
+                            totalHostBits++;
+                        }
+                    }
+                    // 이 바이트 이후의 모든 바이트는 호스트 부분
+                    for (int j = i + 1; j < 4; j++)
+                    {
+                        totalHostBits += 8;
+                    }
+                    break;
+                }
+            }
+            
+            // 호스트 개수 계산 (2^hostBits)
+            // totalHostBits가 0이면 기본값 256 사용
+            uint hostCount = totalHostBits > 0 ? (uint)(1 << totalHostBits) : 256;
+            
+            // 너무 많은 IP는 제한 (최대 512개)
+            if (hostCount > 512) hostCount = 512;
+            
+            // IP 범위 생성 (1부터 hostCount-2까지, 네트워크 주소와 브로드캐스트 제외)
+            for (uint hostNum = 1; hostNum < hostCount - 1; hostNum++)
+            {
+                var finalBytes = new byte[4];
+                Array.Copy(networkBytes, finalBytes, 4);
+                
+                // 호스트 번호를 네트워크 주소에 더하기
+                // 호스트 번호를 적절한 바이트에 더함 (마지막 바이트부터)
+                int byteIndex = 3;
+                uint num = hostNum;
+                while (byteIndex >= hostStartByte && num > 0)
+                {
+                    uint sum = (uint)finalBytes[byteIndex] + num;
+                    finalBytes[byteIndex] = (byte)(sum & 0xFF);
+                    num = sum >> 8;
+                    byteIndex--;
+                }
+                
                 ips.Add(new System.Net.IPAddress(finalBytes).ToString());
             }
         }
@@ -228,7 +306,7 @@ public partial class DiscoveryProgressDialog : Window
         return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase);
     }
 
-    private async Task DiscoverDeviceAsync(string ip, DiscoveryPollingAgentsDialog.DiscoveryConfig config)
+    private async Task DiscoverDeviceAsync(string ip, DiscoveryPollingAgentsDialog.DiscoveryConfig config, bool needsFilterCheck = false)
     {
         // Ping 확인
         if (config.FindNonSnmpNodes)
@@ -250,7 +328,7 @@ public partial class DiscoveryProgressDialog : Window
             }
         }
 
-        // SNMP 확인
+        // SNMP는 항상 검사 (필터가 없어도 SNMP 검사 필요)
         foreach (var comm in config.Communities)
         {
             if (_cancellationTokenSource.Token.IsCancellationRequested) break;

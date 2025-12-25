@@ -65,11 +65,31 @@
                                     <CheckBox Name="chkEnableServicePolling" Content="Enable Service Polling" IsChecked="True" Margin="0,4"/>
                                 </StackPanel>
                             </GroupBox>
-                            
-                            <GroupBox Header="Find Options" Margin="0,12,0,0">
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+                
+                <!-- Proto Tab -->
+                <TabItem Header="Proto">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
+                        <StackPanel>
+                            <GroupBox Header="Find Options">
                                 <StackPanel Margin="8">
                                     <CheckBox Name="chkFindNonSnmpNodes" Content="Find Non-SNMP (Ping) Nodes" IsChecked="True" Margin="0,4"/>
                                     <CheckBox Name="chkFindRmonDevices" Content="Find RMON Devices" IsChecked="True" Margin="0,4"/>
+                                    
+                                    <GroupBox Header="Find SNMP Versions" Margin="0,8,0,0">
+                                        <Grid Margin="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Grid.Column="0" Name="chkFindSnmpV1" Content="SNMP v1" IsChecked="True" Margin="0,4"/>
+                                            <CheckBox Grid.Column="1" Name="chkFindSnmpV2" Content="SNMP v2c" IsChecked="True" Margin="0,4"/>
+                                            <CheckBox Grid.Column="2" Name="chkFindSnmpV3" Content="SNMP v3" IsChecked="True" Margin="0,4"/>
+                                        </Grid>
+                                    </GroupBox>
                                     
                                     <GroupBox Header="Find TCP Ports" Margin="0,8,0,0">
                                         <Grid Margin="8">
@@ -93,15 +113,6 @@
                     </ScrollViewer>
                 </TabItem>
                 
-                <!-- Proto Tab -->
-                <TabItem Header="Proto">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="12">
-                        <StackPanel>
-                            <TextBlock Text="Protocol Configuration (Todo)" FontStyle="Italic" Foreground="Gray"/>
-                        </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
-                
                 <!-- Seeds Tab -->
                 <TabItem Header="Seeds">
                     <Grid Margin="12">
@@ -113,11 +124,13 @@
                         
                         <StackPanel Grid.Row="0" Margin="0,0,0,12">
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                <TextBlock Text="Seed IP Addr:" VerticalAlignment="Center" Width="100"/>
-                                <TextBox Name="txtSeedIpAddr" Width="150" Margin="0,0,8,0"/>
-                                <TextBlock Text="Seed Netmask:" VerticalAlignment="Center" Width="100"/>
-                                <TextBox Name="txtSeedNetmask" Width="150"/>
+                                <TextBlock Text="Seed IP/CIDR:" VerticalAlignment="Center" Width="100"/>
+                                <TextBox Name="txtSeedIpAddr" Width="200" Margin="0,0,8,0" ToolTip="CIDR format: 192.168.0.0/24 or separate IP and netmask"/>
+                                <TextBlock Text="Netmask (optional):" VerticalAlignment="Center" Width="120"/>
+                                <TextBox Name="txtSeedNetmask" Width="150" ToolTip="Optional if using CIDR format"/>
                             </StackPanel>
+                            <TextBlock Text="Example: 192.168.0.0/24 or 192.168.0.0 with netmask 255.255.254.0" 
+                                       FontStyle="Italic" Foreground="Gray" Margin="100,0,0,0" FontSize="11" TextWrapping="Wrap"/>
                         </StackPanel>
                         
                         <ListBox Name="lstSeeds" Grid.Row="1" Margin="0,0,0,8"/>
@@ -167,9 +180,9 @@
                                 <StackPanel Margin="8">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                         <TextBlock Text="Address Range:" VerticalAlignment="Center" Width="100"/>
-                                        <TextBox Name="txtAddressRange" Width="200"/>
+                                        <TextBox Name="txtAddressRange" Width="200" Margin="0,0,8,0"/>
+                                        <Button Content="Add" Width="70" Click="BtnFilterAddressAdd_Click"/>
                                     </StackPanel>
-                                    <Button Content="Add Address Range" Width="150" HorizontalAlignment="Left" Click="BtnFilterAddressAdd_Click"/>
                                 </StackPanel>
                             </GroupBox>
                             
@@ -177,19 +190,20 @@
                                 <StackPanel Margin="8">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                         <TextBlock Text="Maker Pattern:" VerticalAlignment="Center" Width="100"/>
-                                        <TextBox Name="txtMakerPattern" Width="200" Text="ntt*"/>
+                                        <TextBox Name="txtMakerPattern" Width="200" Text="ntt*" Margin="0,0,8,0"/>
+                                        <Button Content="Add" Width="70" Click="BtnFilterMakerAdd_Click"/>
                                     </StackPanel>
-                                    <Button Content="Add Maker Pattern" Width="150" HorizontalAlignment="Left" Click="BtnFilterMakerAdd_Click"/>
                                 </StackPanel>
                             </GroupBox>
                             
-                            <GroupBox Header="Device Name Filter (sysName)">
+                            <GroupBox Header="Device Pattern Filter (sysName)">
                                 <StackPanel Margin="8">
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                        <TextBlock Text="Device Name Pattern:" VerticalAlignment="Center" Width="100"/>
-                                        <TextBox Name="txtDeviceNamePattern" Width="200" Text="hv*"/>
+                                        <TextBlock Text="Device Pattern:" VerticalAlignment="Center" Width="100"/>
+                                        <TextBox Name="txtDeviceNamePattern" Width="200" Text="hv*" Margin="0,0,8,0"/>
+                                        <TextBlock Text="hv* hc* mv*" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray"/>
+                                        <Button Content="Add" Width="70" Click="BtnFilterDeviceNameAdd_Click"/>
                                     </StackPanel>
-                                    <Button Content="Add Device Name Pattern" Width="180" HorizontalAlignment="Left" Click="BtnFilterDeviceNameAdd_Click"/>
                                 </StackPanel>
                             </GroupBox>
                         </StackPanel>
@@ -231,6 +245,7 @@
             
             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Name="btnDelete" Content="Delete" Width="75" Height="28" Margin="0,0,8,0" Click="BtnDelete_Click" IsEnabled="False"/>
+                <Button Content="Default" Width="75" Height="28" Margin="0,0,8,0" Click="BtnDefault_Click"/>
                 <Button Content="OK" Width="75" Height="28" Margin="0,0,8,0" IsDefault="True" Click="BtnOk_Click"/>
                 <Button Content="Cancel" Width="75" Height="28" Margin="0,0,8,0" IsCancel="True"/>
                 <Button Content="Help" Width="75" Height="28" Click="BtnHelp_Click"/>
