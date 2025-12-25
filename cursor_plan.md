@@ -80,28 +80,29 @@
   - 응답 시간: 3ms ~ 6ms (매우 양호)
 - **결론**: `SnmpClient` 통신 모듈 정상 동작 검증 완료.
 
-### 2025-12-25 (PHASE 2: MIB Parser & Loader 시작)
+### 2025-12-25 (PHASE 2: MIB Parser & Loader)
 - **Mib 파일 확인**: `D:\git\snmpc\Mib` 경로에 장비별 MIB 파일(MVD5000, MVE5000) 존재 확인.
 - **Core 정의**: `IMibService` 인터페이스 정의 완료 (`LoadMibModules`, `GetOidName`, `GetOid`)
-- **Infrastructure**: `MibService` 기본 뼈대 코드 생성 완료
-- **문제 발생**: `SharpSnmpLib` 최신 버전(12.5.7)에서는 `Lextm.SharpSnmpLib.Mib` 네임스페이스 및 `ObjectRegistry`가 제거되거나 분리됨. 빌드 에러 발생.
+- **Infrastructure 구현 (Regex 방식)**:
+  - `SharpSnmpLib`의 `ObjectRegistry` 의존성 제거 (버전 호환성 문제 해결)
+  - `MibService` 내 `Dictionary<string, string>` 기반 매핑 구현
+  - Regex를 이용한 단순 MIB 파싱 구조 준비 (추후 고도화 필요)
+- **문제 해결**: 네임스페이스 오류 해결을 위한 코드 수정 대기 중.
 
 ---
 
 ## 🚀 현재 계획 (Current Plan)
 
-### PHASE 2: MIB Parser & Loader (Regex 기반으로 수정)
-- **목표**: 라이브러리 의존성 없이 MIB 파일에서 `Name <-> OID` 매핑을 추출하는 파서 직접 구현
+### PHASE 2: MIB Parser & Loader (마무리)
+- **목표**: `MibService` 네임스페이스 오류 수정 및 UI 연동
 - **상태**: ⏳ 진행 중
 
 #### 세부 작업 항목
-1.  **Infrastructure 구현**: `MibService`에서 `ObjectRegistry` 관련 코드 제거
-2.  **Regex 파서 구현**:
-    - MIB 파일을 읽어 `OBJECT-TYPE`, `::= { parent value }` 패턴 파싱
-    - `Dictionary<string, string>`에 `OID -> Name`, `Name -> OID` 저장
-3.  **UI 연결**: `MainWindow` 로드 시 MIB 파일 로딩, 결과 출력 시 이름 변환 적용
+1.  **오류 수정**: `MibService.cs`에서 잘못된 `using` 구문 제거
+2.  **UI 연결**: `MainWindow.xaml.cs`에서 `MibService` 인스턴스 생성 및 `Mib` 폴더 로드
+3.  **결과 표시 개선**: `Get` 결과 출력 시 OID 옆에 파싱된 이름 표시
 
 ---
 
 ## 📝 다음 요청 사항 (Next Request)
-- `MibService`를 Regex 기반의 단순 파서로 변경하여 구현해도 될까요?
+- `MibService`의 오류를 수정하고 UI에 연결해도 될까요?
