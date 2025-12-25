@@ -1,0 +1,1704 @@
+MVE5000-TRAP-V2-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    NOTIFICATION-TYPE
+        FROM SNMPv2-SMI
+        mve5000Traps, mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage
+        FROM MVE5000;
+
+mve5000TrapsInfoPowerOn  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Power ON"
+
+        ::= { mve5000Traps 1 }
+mve5000TrapsInfoPowerOff  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Power OFF"
+
+        ::= { mve5000Traps 2 }
+mve5000TrapsInfoPowerResetRestart  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Restarted by operation of RESET button"
+
+        ::= { mve5000Traps 3 }
+mve5000TrapsInfoPowerWebguiRestart  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Restarted by operation of WebGUI (x)"
+
+        ::= { mve5000Traps 4 }
+mve5000TrapsInfoPowerSnmpRestart  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Restarted by operation of SNMP (x)"
+
+        ::= { mve5000Traps 6 }
+mve5000TrapsErrorGeneralEncodeServiceFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Encode service starting failed"
+
+        ::= { mve5000Traps 16 }
+mve5000TrapsErrorGeneralWebServiceFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Web service starting failed"
+
+        ::= { mve5000Traps 17 }
+mve5000TrapsErrorGeneralIpTransmitterFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "IP transmit service starting failed"
+
+        ::= { mve5000Traps 18 }
+mve5000TrapsWarnGeneralSntpClientFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP client starting failed"
+
+        ::= { mve5000Traps 19 }
+mve5000TrapsWarnGeneralSuperimposeInitFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Superimpose data initializing failed"
+
+        ::= { mve5000Traps 20 }
+mve5000TrapsNoticeGeneralCaptionFontNotExist  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Superimpose font data is not found"
+
+        ::= { mve5000Traps 27 }
+mve5000TrapsNoticeGeneralCaptionFontDataIllegal  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Superimpose font data error"
+
+        ::= { mve5000Traps 28 }
+mve5000TrapsNoticeGeneralCaptionFontHandlerCreateFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Superimpose font handler failed to start"
+
+        ::= { mve5000Traps 29 }
+mve5000TrapsNoticeGeneralCaptionGetCharRasterFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Superimpose character raster loading failed"
+
+        ::= { mve5000Traps 30 }
+mve5000TrapsInfoGeneralSntpTimeSetOk  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP time synchronization"
+
+        ::= { mve5000Traps 32 }
+mve5000TrapsNoticeGeneralSntpSvrTimeGetFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP time loading from server failed"
+
+        ::= { mve5000Traps 33 }
+mve5000TrapsNoticeGeneralSntpRtcTimeIllegal  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP time loading from server error"
+
+        ::= { mve5000Traps 34 }
+mve5000TrapsNoticeGeneralSntpRtcTimeSetFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP time setting to RTC failed"
+
+        ::= { mve5000Traps 35 }
+mve5000TrapsNoticeGeneralSntpCpuTimeSetFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP time setting to CPU failed"
+
+        ::= { mve5000Traps 36 }
+mve5000TrapsNoticeGeneralSntpStartFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP task failed to start"
+
+        ::= { mve5000Traps 37 }
+mve5000TrapsNoticeGeneralSntpCreateMsgBufFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP message buffer creation failed"
+
+        ::= { mve5000Traps 38 }
+mve5000TrapsNoticeGeneralSntpCreateTaskFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNTP task creation failed"
+
+        ::= { mve5000Traps 39 }
+mve5000TrapsInfoGeneralLoginSuccess  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Login success (x)"
+
+        ::= { mve5000Traps 40 }
+mve5000TrapsNoticeGeneralLoginFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Login failed"
+
+        ::= { mve5000Traps 41 }
+mve5000TrapsInfoGeneralLogout  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Logout (x)"
+
+        ::= { mve5000Traps 42 }
+mve5000TrapsInfoGeneralLoginNoAuth  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Login no auth"
+
+        ::= { mve5000Traps 43 }
+mve5000TrapsNoticeGeneralAuthChange  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Login authentication is changed"
+
+        ::= { mve5000Traps 44 }
+mve5000TrapsNoticeGeneralAccountChange  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Account is changed (x)"
+
+        ::= { mve5000Traps 45 }
+mve5000TrapsInfoGeneralDateTimeChange  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Change date and time"
+
+        ::= { mve5000Traps 46 }
+mve5000TrapsInfoInoutInputStartOk  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video input select task started"
+
+        ::= { mve5000Traps 48 }
+mve5000TrapsInfoInoutInputSdiSignalDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI input signal is detected"
+
+        ::= { mve5000Traps 49 }
+mve5000TrapsInfoInoutInputAnaSignalDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Analog video input signal is detected"
+
+        ::= { mve5000Traps 50 }
+mve5000TrapsInfoInoutInputHdmiSignalDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDMI input signal is detected"
+
+        ::= { mve5000Traps 51 }
+mve5000TrapsWarnInoutInputStartFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video input select task failed to start"
+
+        ::= { mve5000Traps 52 }
+mve5000TrapsNoticeInoutInputCmdNotProc  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video input command process error"
+
+        ::= { mve5000Traps 53 }
+mve5000TrapsNoticeInoutInputSdiWriteFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI input LSI register writing failed"
+
+        ::= { mve5000Traps 54 }
+mve5000TrapsNoticeInoutInputSdiReadFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI input LSI register reading failed"
+
+        ::= { mve5000Traps 55 }
+mve5000TrapsNoticeInoutInputSdiSetupFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI input LSI parameter setup failed"
+
+        ::= { mve5000Traps 56 }
+mve5000TrapsWarnInoutInputSdiSignalLost  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI input signal is undetected"
+
+        ::= { mve5000Traps 57 }
+mve5000TrapsWarnInoutInputSdiInputUnmatch  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI input format disagrees with parameter(Set:0x!; In:0x!)"
+
+        ::= { mve5000Traps 58 }
+mve5000TrapsWarnInoutInputSdiInputAsi  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ASI Signal is detected in SDI input"
+
+        ::= { mve5000Traps 59 }
+mve5000TrapsNoticeInoutInputAnaWriteFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Analog video input LSI register writing failed"
+
+        ::= { mve5000Traps 64 }
+mve5000TrapsNoticeInoutInputAnaReadFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Analog video input LSI register reading failed"
+
+        ::= { mve5000Traps 65 }
+mve5000TrapsNoticeInoutInputAnaSetupFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Analog video input LSI parameter setup failed"
+
+        ::= { mve5000Traps 66 }
+mve5000TrapsWarnInoutInputAnaSignalLost  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Analog video input signal is undetected"
+
+        ::= { mve5000Traps 67 }
+mve5000TrapsWarnInoutInputAnaInputUnmatch  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Analog video input format disagrees with set(Set:0x!; In:0x!)"
+
+        ::= { mve5000Traps 68 }
+mve5000TrapsWarnInoutInputAnaMacroDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Macrovision is detected in analog video input"
+
+        ::= { mve5000Traps 69 }
+mve5000TrapsNoticeInoutInputHdmiWriteFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDMI input LSI register writing failed(Addr:0x! 0x!; Data:0x!)"
+
+        ::= { mve5000Traps 80 }
+mve5000TrapsNoticeInoutInputHdmiReadFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDMI input LSI register reading failed(Addr:0x! 0x!)"
+
+        ::= { mve5000Traps 81 }
+mve5000TrapsNoticeInoutInputHdmiSetupFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDMI input LSI parameter setup failed"
+
+        ::= { mve5000Traps 82 }
+mve5000TrapsWarnInoutInputHdmiSignalLost  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDMI input signal is undetected(TMDS:0x!; HPA:0x!)"
+
+        ::= { mve5000Traps 83 }
+mve5000TrapsWarnInoutInputHdmiInputUnmatch  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDMI input format disagrees with parameter(Set:0x!; In:0x!)"
+
+        ::= { mve5000Traps 84 }
+mve5000TrapsWarnInoutInputHdmiHdcpDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDCP Signal is detected in HDMI input"
+
+        ::= { mve5000Traps 85 }
+mve5000TrapsInfoInoutInputHdmiAudioDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "HDMI audio input is detected"
+
+        ::= { mve5000Traps 86 }
+mve5000TrapsNoticeInoutInputHdmiNoAudio  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "No LPCM audio data in HDMI input(0x!)"
+
+        ::= { mve5000Traps 87 }
+mve5000TrapsNoticeInoutInputHdmiDviDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DVI signal is detected"
+
+        ::= { mve5000Traps 88 }
+mve5000TrapsNoticeVideoEncoderSyncErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Sync byte phase in output TS packet error"
+
+        ::= { mve5000Traps 96 }
+mve5000TrapsNoticeVideoEncoderPes2HeaderErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PES header is not detect in audio2"
+
+        ::= { mve5000Traps 100 }
+mve5000TrapsNoticeVideoEncoderPes1HeaderErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PES header is not detect in audio1"
+
+        ::= { mve5000Traps 101 }
+mve5000TrapsNoticeVideoEncoderPes2StartErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PES start is not detect in audio2"
+
+        ::= { mve5000Traps 105 }
+mve5000TrapsNoticeVideoEncoderPes1StartErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PES start is not detect in audio1"
+
+        ::= { mve5000Traps 106 }
+mve5000TrapsNoticeVideoEncoderVpesStartErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PES start is not detect in video"
+
+        ::= { mve5000Traps 107 }
+mve5000TrapsErrorVideoEncoderPes2FifoErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FIFO overflow is detected in audio2"
+
+        ::= { mve5000Traps 111 }
+mve5000TrapsErrorVideoEncoderPes1FifoErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FIFO overflow is detected in audio1"
+
+        ::= { mve5000Traps 112 }
+mve5000TrapsErrorVideoEncoderVpesFifoErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FIFO overflow is detected in video"
+
+        ::= { mve5000Traps 113 }
+mve5000TrapsErrorVideoEncoderHostifErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Host interface protocol violation is detected"
+
+        ::= { mve5000Traps 114 }
+mve5000TrapsErrorVideoEncoderLsiCpuErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "LSI embedded CPU watch dog is timeout"
+
+        ::= { mve5000Traps 115 }
+mve5000TrapsNoticeVideoEncoderInitParamErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Encoding initial parameter is incorrect"
+
+        ::= { mve5000Traps 128 }
+mve5000TrapsNoticeVideoEncoderStepOver  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Encode process dynamic step over is detected"
+
+        ::= { mve5000Traps 129 }
+mve5000TrapsNoticeVideoEncoderFsyncReqend  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FSYNC and REQEND multiple interrupt is detected"
+
+        ::= { mve5000Traps 130 }
+mve5000TrapsNoticeVideoEncoderCmstatFsync  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "CMSTAT=0 and FSYNC multiple interrupt is detected"
+
+        ::= { mve5000Traps 131 }
+mve5000TrapsNoticeVideoEncoderCmstatReqend  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "CMSTAT=0 and REQEND multiple interrupt is detected"
+
+        ::= { mve5000Traps 132 }
+mve5000TrapsNoticeVideoEncoderCmstatTooLong  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "CMSTAT=0 status is too long "
+
+        ::= { mve5000Traps 133 }
+mve5000TrapsNoticeVideoEncoderReqendCmirq  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "CMIRQ is detected after REQEND interrupt "
+
+        ::= { mve5000Traps 134 }
+mve5000TrapsNoticeVideoEncoderCmirqProtocol  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "CMIRQ protocol error"
+
+        ::= { mve5000Traps 135 }
+mve5000TrapsNoticeVideoEncoderStreamBufOver  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream buffer overflow"
+
+        ::= { mve5000Traps 136 }
+mve5000TrapsNoticeVideoEncoderTsclkErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TSCLK undetected status is too long "
+
+        ::= { mve5000Traps 137 }
+mve5000TrapsNoticeVideoEncoderVsyncErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "VSYNC undetected status is too long "
+
+        ::= { mve5000Traps 138 }
+mve5000TrapsNoticeVideoEncoderVclkErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "VCLK undetected status is too long "
+
+        ::= { mve5000Traps 139 }
+mve5000TrapsNoticeVideoEncoderVframeErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Frame rate disagreement status is too long "
+
+        ::= { mve5000Traps 140 }
+mve5000TrapsNoticeVideoInputClkFifoFull  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video input clock switching FIFO is full"
+
+        ::= { mve5000Traps 144 }
+mve5000TrapsNoticeVideoOutputClkFifoFull  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video output clock switching FIFO is full"
+
+        ::= { mve5000Traps 145 }
+mve5000TrapsNoticeVideoInputClkFifoEmpty  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video input clock switching FIFO is empty"
+
+        ::= { mve5000Traps 146 }
+mve5000TrapsNoticeVideoOutputClkFifoEmpty  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video output clock switching FIFO is empty"
+
+        ::= { mve5000Traps 147 }
+mve5000TrapsNoticeVideoFsTbcReadErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDRAM reading is undetected after FS/TBC setup"
+
+        ::= { mve5000Traps 148 }
+mve5000TrapsNoticeVideoSdiSyncSignalErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI SYNC signal is undetected"
+
+        ::= { mve5000Traps 149 }
+mve5000TrapsNoticeVideoSdiVideoInputErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI video input error"
+
+        ::= { mve5000Traps 150 }
+mve5000TrapsNoticeVideoAnalogInputErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Analog video input is undetected "
+
+        ::= { mve5000Traps 151 }
+mve5000TrapsNoticeVideoVideoInputErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video input error"
+
+        ::= { mve5000Traps 152 }
+mve5000TrapsNoticeVideoTsInErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TS from ENC LSI detection error"
+
+        ::= { mve5000Traps 153 }
+mve5000TrapsNoticeVideoPllUnlock  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PLL is unlock to input video signal"
+
+        ::= { mve5000Traps 154 }
+mve5000TrapsErrorVideoInternalAccessErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Internal address space access error"
+
+        ::= { mve5000Traps 155 }
+mve5000TrapsErrorVideoDspAccessErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP address space access error"
+
+        ::= { mve5000Traps 156 }
+mve5000TrapsErrorVideoEncLsiAccessErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC LSI address space access error"
+
+        ::= { mve5000Traps 157 }
+mve5000TrapsNoticeVideoClkUnlock  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "CLK Unlock"
+
+        ::= { mve5000Traps 158 }
+mve5000TrapsNoticeVideoFsUnderflow  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FS Underflow(x)"
+
+        ::= { mve5000Traps 159 }
+mve5000TrapsNoticeVideoFsOverflow  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FS Overflow(x)"
+
+        ::= { mve5000Traps 160 }
+mve5000TrapsNoticeVideoTbcUnderflow  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TBC Underflow(x)"
+
+        ::= { mve5000Traps 161 }
+mve5000TrapsNoticeVideoTbcOverflow  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TBC Overflow(x)"
+
+        ::= { mve5000Traps 162 }
+mve5000TrapsErrorVideoCtlDownload  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC LSI initial data download failed"
+
+        ::= { mve5000Traps 176 }
+mve5000TrapsErrorVideoCtlReady  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "READY status after download is undetected in ENC LSI"
+
+        ::= { mve5000Traps 177 }
+mve5000TrapsErrorVideoCtlTsout  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TSOUT status is undetected in ENC LSI"
+
+        ::= { mve5000Traps 178 }
+mve5000TrapsErrorVideoCtlSync  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Sync establish status is undetected in ENC LSI"
+
+        ::= { mve5000Traps 179 }
+mve5000TrapsErrorVideoCtlVrun  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "VRUN status is undetected in ENC LSI"
+
+        ::= { mve5000Traps 180 }
+mve5000TrapsErrorVideoCtlTsout1  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TSOUT1 status is undetected in ENC LSI"
+
+        ::= { mve5000Traps 181 }
+mve5000TrapsErrorVideoCtlReady1  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "READY1 status is undetected in ENC LSI"
+
+        ::= { mve5000Traps 182 }
+mve5000TrapsErrorVideoCtlGetLsiCntl  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Page register access right is not derived from ENC LSI"
+
+        ::= { mve5000Traps 183 }
+mve5000TrapsErrorVideoCtlRetLsiCntl  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Page register access right is not returned to ENC LSI"
+
+        ::= { mve5000Traps 184 }
+mve5000TrapsErrorVideoCtlSetInReady  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC LSI setup failed in READY status"
+
+        ::= { mve5000Traps 185 }
+mve5000TrapsErrorVideoCtlSetInTsout  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC LSI setup failed in TSOUT status"
+
+        ::= { mve5000Traps 186 }
+mve5000TrapsErrorVideoCtlLsiDdrFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC LSI DDR fail error"
+
+        ::= { mve5000Traps 187 }
+mve5000TrapsErrorVideoCtlBusErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Data access failed"
+
+        ::= { mve5000Traps 188 }
+mve5000TrapsInfoVideoEncStartOk  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC control task started"
+
+        ::= { mve5000Traps 192 }
+mve5000TrapsErrorVideoEncStartFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC control task failed to start"
+
+        ::= { mve5000Traps 193 }
+mve5000TrapsErrorVideoEncCmdNotProc  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "ENC control command process error"
+
+        ::= { mve5000Traps 194 }
+mve5000TrapsErrorVideoTimerCreateFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Timer handler for ENC control failed to start"
+
+        ::= { mve5000Traps 195 }
+mve5000TrapsNoticeVideoFpgaVideoFsTbcSync  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video no sync between output and input after FS/TBC setup"
+
+        ::= { mve5000Traps 196 }
+mve5000TrapsNoticeAudioSdiAudioIn  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SDI audio input error"
+
+        ::= { mve5000Traps 208 }
+mve5000TrapsNoticeAudioPes12NoOut  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Audio PES2 output is undetected"
+
+        ::= { mve5000Traps 209 }
+mve5000TrapsNoticeAudioPes11NoOut  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Audio PES1 output is undetected"
+
+        ::= { mve5000Traps 210 }
+mve5000TrapsNoticeAudioPes12Fifoover  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Audio PES2 FIFO overflow"
+
+        ::= { mve5000Traps 211 }
+mve5000TrapsNoticeAudioPes11Fifoover  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Audio PES1 FIFO overflow"
+
+        ::= { mve5000Traps 212 }
+mve5000TrapsErrorAudioCtlDownload  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP farm download failed"
+
+        ::= { mve5000Traps 213 }
+mve5000TrapsErrorAudioCtlWaitRun  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP RUN status after start command is undetected"
+
+        ::= { mve5000Traps 214 }
+mve5000TrapsErrorAudioCtlWaitHalt  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP HALT status after stop command is undetected"
+
+        ::= { mve5000Traps 215 }
+mve5000TrapsErrorAudioCtlCmdSet  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP command is not accepted"
+
+        ::= { mve5000Traps 216 }
+mve5000TrapsErrorAudioCtlHalt  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP HALT status after farm download is undetected"
+
+        ::= { mve5000Traps 217 }
+mve5000TrapsErrorAudioCtlNoRunSt  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP RUN status is undetected"
+
+        ::= { mve5000Traps 218 }
+mve5000TrapsErrorAudioCtlErrorDetect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP error code is detected"
+
+        ::= { mve5000Traps 219 }
+mve5000TrapsNoticeAudioCtlDspNoReadyForCmd  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP command sending error (no ready)"
+
+        ::= { mve5000Traps 224 }
+mve5000TrapsNoticeAudioCtlDspNoReplyForCmd  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP response error"
+
+        ::= { mve5000Traps 225 }
+mve5000TrapsNoticeAudioCtlDspNoReadyForW  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP writing error (no ready)"
+
+        ::= { mve5000Traps 226 }
+mve5000TrapsNoticeAudioCtlDspWriteFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP writing failed"
+
+        ::= { mve5000Traps 227 }
+mve5000TrapsNoticeAudioCtlDspUnknownSectId  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Illegal sector ID is detected in DSP farm file"
+
+        ::= { mve5000Traps 228 }
+mve5000TrapsNoticeAudioCtlDspUnknownEncMode  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP audio ENC mode is illegal"
+
+        ::= { mve5000Traps 229 }
+mve5000TrapsNoticeAudioCtlDspStartFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP failed to start"
+
+        ::= { mve5000Traps 230 }
+mve5000TrapsNoticeAudioCtlDspBootFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DSP boot failed to start"
+
+        ::= { mve5000Traps 231 }
+mve5000TrapsInfoIpStream1TransmitStart  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream1 transmit started (xxxx)"
+
+        ::= { mve5000Traps 336 }
+mve5000TrapsNoticeIpStream1TransmitStop  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream1 transmit stopped"
+
+        ::= { mve5000Traps 337 }
+mve5000TrapsNoticeIpStream1DestUpdate  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream1 destination updated (xxxx)"
+
+        ::= { mve5000Traps 340 }
+mve5000TrapsInfoIpStream2TransmitStart  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream2 transmit started (xxxx)"
+
+        ::= { mve5000Traps 352 }
+mve5000TrapsNoticeIpStream2TransmitStop  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream2 transmit stopped"
+
+        ::= { mve5000Traps 353 }
+mve5000TrapsNoticeIpStream2DestUpdate  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream2 destination updated (xxxx)"
+
+        ::= { mve5000Traps 356 }
+mve5000TrapsNoticeIpStreamTsDown  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TS input stopped"
+
+        ::= { mve5000Traps 368 }
+mve5000TrapsInfoIpStreamTsUp  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "TS input started"
+
+        ::= { mve5000Traps 369 }
+mve5000TrapsNoticeIpGbeUdpcepMakeErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "GbE interface UDP cep making failed"
+
+        ::= { mve5000Traps 370 }
+mve5000TrapsNoticeIpFeUdpcepMakeErr  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FE interface UDP cep making failed"
+
+        ::= { mve5000Traps 371 }
+mve5000TrapsInfoIpRedundantUnuse  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Redundant service is disabled"
+
+        ::= { mve5000Traps 372 }
+mve5000TrapsInfoIpRedundantUse  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Redundant service is enabled (Standby)"
+
+        ::= { mve5000Traps 373 }
+mve5000TrapsInfoIpRedundantChange  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Redundant service status is changed (Active)"
+
+        ::= { mve5000Traps 374 }
+mve5000TrapsInfoIpRedundantRestart  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Redundant service status is changed (Standby)"
+
+        ::= { mve5000Traps 375 }
+mve5000TrapsErrorIpTransmitCreateFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stream transmit task failed to start"
+
+        ::= { mve5000Traps 383 }
+mve5000TrapsErrorNetworkGbeNetworkFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "GbE interface failed to start"
+
+        ::= { mve5000Traps 384 }
+mve5000TrapsErrorNetworkFeNetworkFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FE interface failed to start"
+
+        ::= { mve5000Traps 385 }
+mve5000TrapsInfoNetworkGbeLinkUp  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "GbE interface link is up (x)"
+
+        ::= { mve5000Traps 386 }
+mve5000TrapsInfoNetworkFeLinkUp  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FE interface link is up (x)"
+
+        ::= { mve5000Traps 387 }
+mve5000TrapsNoticeNetworkGbeLinkDown  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "GbE interface link is down"
+
+        ::= { mve5000Traps 388 }
+mve5000TrapsNoticeNetworkFeLinkDown  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FE interface link is down"
+
+        ::= { mve5000Traps 389 }
+mve5000TrapsWarnNetworkGbeDhcpServerNotFound  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DHCP server undetected (xxxx set to GbE interface)"
+
+        ::= { mve5000Traps 390 }
+mve5000TrapsWarnNetworkFeDhcpServerNotFound  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "DHCP server undetected (xxxx set to FE interface)"
+
+        ::= { mve5000Traps 391 }
+mve5000TrapsWarnNetworkDuplicateIpAddress  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "IP address duplicated (xxxx)"
+
+        ::= { mve5000Traps 392 }
+mve5000TrapsInfoNetworkDuplicateIpAddressOff  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "IP address duplication disolved (xxxx)"
+
+        ::= { mve5000Traps 393 }
+mve5000TrapsErrorNetworkPppoeServiceFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE service starting failed"
+
+        ::= { mve5000Traps 400 }
+mve5000TrapsWarnNetworkPppoe1ConnectFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE1 interface connection failed"
+
+        ::= { mve5000Traps 401 }
+mve5000TrapsWarnNetworkPppoe2ConnectFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE2 interface connection failed"
+
+        ::= { mve5000Traps 402 }
+mve5000TrapsInfoNetworkPppoe1ConnectSuccess  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE1 interface connection established (xxxx)"
+
+        ::= { mve5000Traps 403 }
+mve5000TrapsInfoNetworkPppoe2ConnectSuccess  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE2 interface connection established (xxxx)"
+
+        ::= { mve5000Traps 404 }
+mve5000TrapsWarnNetworkPppoe1Disconnect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE1 interface disconnection detected"
+
+        ::= { mve5000Traps 405 }
+mve5000TrapsWarnNetworkPppoe2Disconnect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE2 interface disconnection detected"
+
+        ::= { mve5000Traps 406 }
+mve5000TrapsInfoNetworkPppoe1Reconnect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE1 interface reconnection detected (xxxx)"
+
+        ::= { mve5000Traps 407 }
+mve5000TrapsInfoNetworkPppoe2Reconnect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE2 interface reconnection detected (xxxx)"
+
+        ::= { mve5000Traps 408 }
+mve5000TrapsInfoNetworkOverlappedIpaddressGbe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE session IP address duplicated (xxxx set to GbE interface)"
+
+        ::= { mve5000Traps 409 }
+mve5000TrapsInfoNetworkOverlappedIpaddressFe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "PPPoE session IP address duplicated (xxxx set to FE interface)"
+
+        ::= { mve5000Traps 410 }
+mve5000TrapsInfoNetworkRaAddrChangeGbe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "GbE interface RA address changed"
+
+        ::= { mve5000Traps 432 }
+mve5000TrapsInfoNetworkRaAddrChangeFe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FE interface RA address changed"
+
+        ::= { mve5000Traps 433 }
+mve5000TrapsNoticeNetworkOvermacConfigChangeGbe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "GbE interface override MAC setting changed"
+
+        ::= { mve5000Traps 434 }
+mve5000TrapsNoticeNetworkOvermacConfigChangeFe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FE interface override MAC setting changed"
+
+        ::= { mve5000Traps 435 }
+mve5000TrapsNoticeNetworkPromiscuousConfigChangeGbe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "GbE promiscuous mode setting changed"
+
+        ::= { mve5000Traps 436 }
+mve5000TrapsNoticeNetworkPromiscuousConfigChangeFe  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FE promiscuous mode setting changed"
+
+        ::= { mve5000Traps 437 }
+mve5000TrapsWarnPrefInstallFileIsNotPerfect  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Installed file is invalid"
+
+        ::= { mve5000Traps 518 }
+mve5000TrapsWarnPrefDefaultParamLoadFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Default parameter loading failed"
+
+        ::= { mve5000Traps 521 }
+mve5000TrapsWarnPrefLastParamIsCorrupted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Last parameter was corrupted"
+
+        ::= { mve5000Traps 523 }
+mve5000TrapsWarnPrefLastParamInvalidValue  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Invalid value contained in last parameter was repaired"
+
+        ::= { mve5000Traps 524 }
+mve5000TrapsInfoPrefParamApplied  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Parameters successfully applied"
+
+        ::= { mve5000Traps 525 }
+mve5000TrapsWarnPrefLastParamSaveFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Last parameter saving failed"
+
+        ::= { mve5000Traps 526 }
+mve5000TrapsInfoPrefUserPresetSaved  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "User preset x saved"
+
+        ::= { mve5000Traps 527 }
+mve5000TrapsInfoPrefUserPresetLoaded  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "User preset x loaded"
+
+        ::= { mve5000Traps 528 }
+mve5000TrapsInfoPrefDefaultPresetLoaded  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Default preset x loaded"
+
+        ::= { mve5000Traps 529 }
+mve5000TrapsInfoPrefParamFactoryReset  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Default parameter loaded"
+
+        ::= { mve5000Traps 530 }
+mve5000TrapsWarnPrefUpdaterInitFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Updater initialization failed"
+
+        ::= { mve5000Traps 531 }
+mve5000TrapsInfoPrefUploadStarted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Upload started"
+
+        ::= { mve5000Traps 532 }
+mve5000TrapsInfoPrefUploadCompleted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Upload completed"
+
+        ::= { mve5000Traps 533 }
+mve5000TrapsNoticePrefUploadFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Upload failed"
+
+        ::= { mve5000Traps 534 }
+mve5000TrapsInfoPrefInstallStarted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Firmware updating started"
+
+        ::= { mve5000Traps 535 }
+mve5000TrapsInfoPrefInstallCompleted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Firmware updating completed"
+
+        ::= { mve5000Traps 536 }
+mve5000TrapsErrorPrefInstallFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Firmware updating failed"
+
+        ::= { mve5000Traps 537 }
+mve5000TrapsWarnPrefLicenseKeyIsCorrupted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "License key is corrupted"
+
+        ::= { mve5000Traps 538 }
+mve5000TrapsInfoPrefLicenseFuncIsAllowed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "New license function is allowed"
+
+        ::= { mve5000Traps 539 }
+mve5000TrapsNoticePrefLicenseRegAuthLost  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "License registration authority is lost"
+
+        ::= { mve5000Traps 540 }
+mve5000TrapsNoticePrefLastParamInFileLoadFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Parameter file loading failed"
+
+        ::= { mve5000Traps 542 }
+mve5000TrapsNoticePrefPresetInFileLoadUncompleted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Preset in file loading uncompleted"
+
+        ::= { mve5000Traps 543 }
+mve5000TrapsInfoPrefParamInFileLoadCompleted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Parameter file loading completed"
+
+        ::= { mve5000Traps 544 }
+mve5000TrapsNoticePrefVrateLessThanRecommend  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Video rate is less than recommended value"
+
+        ::= { mve5000Traps 545 }
+mve5000TrapsWarnPrefInvalidParameterWasRepaired  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Invalid parameter was repaired (x)"
+
+        ::= { mve5000Traps 547 }
+mve5000TrapsWarnPrefParamIsAppliedToAfterRestarting  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Parameter is applied to after restarting(x)"
+
+        ::= { mve5000Traps 548 }
+mve5000TrapsWarnDeviceFrontPanelInitFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Front panel initialization failed"
+
+        ::= { mve5000Traps 560 }
+mve5000TrapsWarnDeviceFanStopped  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FAN stopped"
+
+        ::= { mve5000Traps 561 }
+mve5000TrapsNoticeDeviceFanSpeedDrop  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FAN speed dropped"
+
+        ::= { mve5000Traps 562 }
+mve5000TrapsInfoDeviceFanRecoverd  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "FAN fault recovered"
+
+        ::= { mve5000Traps 563 }
+mve5000TrapsWarnDeviceTemperatureHigh  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Temperature is high (x deg.C / x deg.C)"
+
+        ::= { mve5000Traps 564 }
+mve5000TrapsErrorDeviceTemperatureTooHigh  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Temperature error (x deg.C / x deg.C)"
+
+        ::= { mve5000Traps 565 }
+mve5000TrapsInfoDeviceTemperatureRecoverd  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Temperature returned to normal value (x deg.C / x deg.C)"
+
+        ::= { mve5000Traps 566 }
+mve5000TrapsWarnDeviceExtRtcVoltageLow  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "External RTC battery voltage is low"
+
+        ::= { mve5000Traps 567 }
+mve5000TrapsWarnDeviceExtRtcReadFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "External RTC time loading failed"
+
+        ::= { mve5000Traps 568 }
+mve5000TrapsInfoDeviceEdidWriteOk  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "EDID data is written"
+
+        ::= { mve5000Traps 569 }
+mve5000TrapsInfoDeviceEdidExisted  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "EDID correct data already existed"
+
+        ::= { mve5000Traps 570 }
+mve5000TrapsNoticeDeviceEdidWriteFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "EDID data writing failed"
+
+        ::= { mve5000Traps 571 }
+mve5000TrapsNoticeDeviceEdidReadFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "EDID data reading failed"
+
+        ::= { mve5000Traps 572 }
+mve5000TrapsNoticeDeviceEdidVerifyFail  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "EDID written value error"
+
+        ::= { mve5000Traps 573 }
+mve5000TrapsNoticeGeneralPtStartFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Serial Pass-Thru task creation failed"
+
+        ::= { mve5000Traps 601 }
+mve5000TrapsNoticeGeneralPtStreamAddressInvalid  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Serial Pass-Thru address is invalid"
+
+        ::= { mve5000Traps 602 }
+mve5000TrapsNoticeGeneralPtUdpFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Serial Pass-Thru UDP cep making failed"
+
+        ::= { mve5000Traps 603 }
+mve5000TrapsNoticeGeneralPtTcpFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Serial Pass-Thru TCP cep making failed"
+
+        ::= { mve5000Traps 604 }
+mve5000TrapsNoticeGeneralPtConnectAuthFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Failed to connect to server due to Authentication ID"
+
+        ::= { mve5000Traps 605 }
+mve5000TrapsNoticeGeneralPtConnectBusy  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Server is connected to another client"
+
+        ::= { mve5000Traps 606 }
+mve5000TrapsNoticeGeneralPtConnectFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Failed to connect to server"
+
+        ::= { mve5000Traps 607 }
+mve5000TrapsInfoGeneralPtConnectOk  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Establish Connection to Server(xxxx)"
+
+        ::= { mve5000Traps 608 }
+mve5000TrapsNoticeGeneralPtAcceptAuthFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Server denied client due to Authentication ID"
+
+        ::= { mve5000Traps 609 }
+mve5000TrapsNoticeGeneralPtAcceptBusy  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Server denied subsequent client"
+
+        ::= { mve5000Traps 610 }
+mve5000TrapsNoticeGeneralPtAcceptFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Failed to accept client"
+
+        ::= { mve5000Traps 611 }
+mve5000TrapsInfoGeneralPtAcceptOk  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Establish Connection to Client(xxxx)"
+
+        ::= { mve5000Traps 612 }
+mve5000TrapsNoticeGeneralPtDisconected  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Session was abnormally disconnected"
+
+        ::= { mve5000Traps 613 }
+mve5000TrapsNoticeGeneralPtRetryOut  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Stop to connect to server"
+
+        ::= { mve5000Traps 614 }
+mve5000TrapsInfoGeneralPtServiceTimeouot  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Serial Pass-Thru service has timed out"
+
+        ::= { mve5000Traps 615 }
+mve5000TrapsInfoGeneralPtUdpDstChange  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "UDP destination address is changed(xxxx)"
+
+        ::= { mve5000Traps 616 }
+mve5000TrapsInfoGeneralPtUdpDstInit  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "UDP destination address is initialized(xxxx)"
+
+        ::= { mve5000Traps 617 }
+mve5000TrapsInfoGeneralPtServicePort  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Serial Pass Thru service assigned to x port"
+
+        ::= { mve5000Traps 618 }
+mve5000TrapsNoticeGeneralSnmpStartFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNMP service starting failed"
+
+        ::= { mve5000Traps 631 }
+mve5000TrapsNoticeGeneralSnmpAuthFailure  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SNMP Authentication Failure."
+
+        ::= { mve5000Traps 632 }
+mve5000TrapsErrorNetworkNetworkDriverFailure  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Network Control Driver failure."
+
+        ::= { mve5000Traps 640 }
+mve5000TrapsNoticeGeneralCannotLoginSrcAddress  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "Cannot login from this source address (xxxx)"
+
+        ::= { mve5000Traps 650 }
+mve5000TrapsNoticeGeneralSapStartFailed  NOTIFICATION-TYPE
+        OBJECTS         { mve5000TrapDateAndTime, mve5000TrapEvent, mve5000TrapLevel, mve5000TrapCategory, mve5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+             "SAP task creation failed"
+
+        ::= { mve5000Traps 661 }
+
+END

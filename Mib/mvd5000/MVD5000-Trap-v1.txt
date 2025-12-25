@@ -1,0 +1,20 @@
+MVD5000-TRAP-V1-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    NOTIFICATION-TYPE
+        FROM SNMPv2-SMI
+        mvd5000, mvd5000TrapDateAndTime, mvd5000TrapEvent, mvd5000TrapLevel, mvd5000TrapCategory, mvd5000TrapMessage
+        FROM MVD5000;
+
+mvd5000TrapNortify OBJECT IDENTIFIER
+    ::= { mvd5000 0 }
+
+mvd5000Trap            NOTIFICATION-TYPE
+        OBJECTS         { mvd5000TrapDateAndTime, mvd5000TrapEvent, mvd5000TrapLevel, mvd5000TrapCategory, mvd5000TrapMessage }
+        STATUS          current
+        DESCRIPTION
+                "mvd5000 Traps."
+
+        ::= { mvd5000TrapNortify 0 }
+
+END

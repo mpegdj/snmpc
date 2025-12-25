@@ -1,0 +1,3487 @@
+MVE5000 DEFINITIONS ::= BEGIN
+
+--Design notes:
+--Ver04.20
+--
+--
+--
+--
+--
+--
+--
+--
+--
+
+
+IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, Counter32, Gauge32, Counter64,
+        IpAddress, Integer32, TimeTicks,enterprises,
+        NOTIFICATION-TYPE                                               FROM SNMPv2-SMI
+        TEXTUAL-CONVENTION, DisplayString,
+        PhysAddress, TruthValue, RowStatus,
+        TimeStamp, AutonomousType, TestAndIncr, DateAndTime             FROM SNMPv2-TC
+        Ipv6Address                                                     FROM IPV6-TC
+        MODULE-COMPLIANCE, OBJECT-GROUP,
+        NOTIFICATION-GROUP                                              FROM SNMPv2-CONF;
+                      
+     --  The very top of mve5000 branch
+
+nel                OBJECT IDENTIFIER ::= { enterprises 3930 }
+
+
+mve5000 MODULE-IDENTITY
+        LAST-UPDATED "201503060000Z"
+        ORGANIZATION "nel"
+        CONTACT-INFO
+        " "
+        DESCRIPTION
+                "This file defines the private MVE5000 MIB extensions."
+        REVISION   "201503060000Z"
+        DESCRIPTION
+       "SMIv2 version converted from older MIB definitions."
+        ::= { nel 36 }
+
+
+mve5000General OBJECT IDENTIFIER ::= { mve5000 1 }
+mve5000System OBJECT IDENTIFIER ::= { mve5000General 1 }
+mve5000SysDescr OBJECT-TYPE
+    SYNTAX DisplayString
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000System 1 }
+
+mve5000SysMibVersion OBJECT-TYPE
+    SYNTAX DisplayString
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000System 2 }
+
+mve5000SysUpTime OBJECT-TYPE
+    SYNTAX TimeTicks
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000System 3 }
+
+mve5000Version OBJECT IDENTIFIER ::= { mve5000General 2 }
+mve5000VerModel OBJECT-TYPE
+    SYNTAX INTEGER {
+        analog(0),
+        dvbAsi(1),
+        standard(7),
+        analogDcPower(10),
+        dvbAsiDcPower(11),
+        standardDcPower(17)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Version 1 }
+
+mve5000VerFirmwareVersion OBJECT-TYPE
+    SYNTAX DisplayString
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Version 2 }
+
+mve5000VerSerialNumber OBJECT-TYPE
+    SYNTAX DisplayString
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Version 3 }
+
+mve5000VerMacAddressGbe OBJECT-TYPE
+    SYNTAX PhysAddress
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Version 4 }
+
+mve5000VerMacAddressFe OBJECT-TYPE
+    SYNTAX PhysAddress
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Version 5 }
+
+mve5000VerOptions OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "Encoder Option
+                  0x00000001:AAC LC Encode
+                  0x00000002:Super Low Latency
+                  0x00000100:v03.00 Base
+                  0x00000200:Ultra Low Latency
+                  0x01000000:v04.00 Base
+                  0x02000000:TS Pass Thru
+                  0x04000000:SAP
+                 Decoder Option
+                  0x00000001 AAC LC Decode
+                  0x00000002 MPEG2 Video Decode
+                  0x00000100:v03.00 Base
+                  0x01000000:v04.00 Base
+                  0x02000000:TS Pass Thru
+                  0x04000000:SAP
+                  0x08000000:Seamless Protection
+                  0x10000000:PS"
+    ::= { mve5000Version 6 }
+
+mve5000Information OBJECT IDENTIFIER ::= { mve5000 2 }
+mve5000StatusArea OBJECT IDENTIFIER ::= { mve5000Information 1 }
+mve5000StatAreaIcon OBJECT-TYPE
+    SYNTAX INTEGER {
+        green(1),
+        orange(2),
+        red(3)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000StatusArea 1 }
+
+mve5000StatAreaMessage OBJECT-TYPE
+    SYNTAX INTEGER {
+        stopped(0),
+        encoding(1),
+        error(2),
+        tsPassThru(10),
+        transmitingStop(11)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000StatusArea 2 }
+
+mve5000InfoStatus OBJECT IDENTIFIER ::= { mve5000Information 2 }
+mve5000InfoStatInputSource OBJECT-TYPE
+    SYNTAX INTEGER {
+        sdi(0),
+        hdmi(1),
+        analog(2),
+        sdiAnalogAudio(3),
+        hdmiAnalogAudio(4),
+        asi(5)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatus 1 }
+
+mve5000InfoStatInputVideoFormat OBJECT-TYPE
+    SYNTAX INTEGER {
+        1080I29(0),
+        1080I25(1),
+        1080P24(2),
+        720P59(3),
+        1035I29(4),
+        720P50(5),
+        480I29(6),
+        576I25(9),
+        480P59(10),
+        vga(11),
+        576P50(12),
+        1080I30(16),
+        720P60(17),
+        1035I30(18),
+        480I30(19),
+        480P60(20),
+        1080P30(21),
+        1080P29(22),
+        1080P60(23),
+        1080P59(24),
+        1080P23(25),
+        1080P25(26),
+        1080P50(27),
+        lossOfVideo(255)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatus 2 }
+
+mve5000InfoStatInputSignal OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatus 3 }
+
+mve5000InfoStatInputCopyProtection OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatus 4 }
+
+mve5000InfoStatOutputStream1 OBJECT IDENTIFIER ::= { mve5000InfoStatus 21 }
+mve5000InfoStatOutputStream1IpRate OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatOutputStream1 1 }
+
+mve5000InfoStatOutputStream1ArqReceive OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        disabled(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatOutputStream1 11 }
+
+mve5000InfoStatOutputStream1ArqRtt OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "ms"
+    ::= { mve5000InfoStatOutputStream1 12 }
+
+mve5000InfoStatOutputStream2 OBJECT IDENTIFIER ::= { mve5000InfoStatus 22 }
+mve5000InfoStatOutputStream2IpRate OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatOutputStream2 1 }
+
+mve5000InfoStatOutputStream2ArqReceive OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        disabled(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatOutputStream2 11 }
+
+mve5000InfoStatOutputStream2ArqRtt OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "ms"
+    ::= { mve5000InfoStatOutputStream2 12 }
+
+mve5000InfoStatStream1PacketsCounter OBJECT IDENTIFIER ::= { mve5000InfoStatus 31 }
+mve5000InfoStatStream1PacketsCounterMedia OBJECT-TYPE
+    SYNTAX Counter64
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream1PacketsCounter 1 }
+
+mve5000InfoStatStream1PacketsCounterColumFec OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream1PacketsCounter 2 }
+
+mve5000InfoStatStream1PacketsCounterRowFec OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream1PacketsCounter 3 }
+
+mve5000InfoStatStream1PacketsCounterArqReTx OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream1PacketsCounter 11 }
+
+mve5000InfoStatStream1PacketsCounterArqNonReTx OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream1PacketsCounter 12 }
+
+mve5000InfoStatStream2PacketsCounter OBJECT IDENTIFIER ::= { mve5000InfoStatus 32 }
+mve5000InfoStatStream2PacketsCounterMedia OBJECT-TYPE
+    SYNTAX Counter64
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream2PacketsCounter 1 }
+
+mve5000InfoStatStream2PacketsCounterColumFec OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream2PacketsCounter 2 }
+
+mve5000InfoStatStream2PacketsCounterRowFec OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream2PacketsCounter 3 }
+
+mve5000InfoStatStream2PacketsCounterArqReTx OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream2PacketsCounter 11 }
+
+mve5000InfoStatStream2PacketsCounterArqNonReTx OBJECT-TYPE
+    SYNTAX Counter32
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatStream2PacketsCounter 12 }
+
+mve5000InfoStatPacketsCounterClear OBJECT-TYPE
+    SYNTAX INTEGER {
+        clear(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatus 33 }
+
+mve5000InfoStatDetailTemperature OBJECT-TYPE
+    SYNTAX INTEGER {
+        ok(0),
+        warning(1),
+        error(2)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatus 41 }
+
+mve5000InfoStatDetailFanStatus OBJECT-TYPE
+    SYNTAX INTEGER {
+        active(0),
+        slow(1),
+        inactive(2)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InfoStatus 42 }
+
+mve5000Configuration OBJECT IDENTIFIER ::= { mve5000 3 }
+mve5000Input OBJECT IDENTIFIER ::= { mve5000Configuration 1 }
+mve5000InputIntarfaceVideo OBJECT-TYPE
+    SYNTAX INTEGER {
+        sdi(0),
+        hdmi(1),
+        analog(2),
+        sdiAnalogAudio(3),
+        hdmiAnalogAudio(4)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 1 }
+
+mve5000InputIntarfaceAudio OBJECT-TYPE
+    SYNTAX INTEGER {
+        sdi(0),
+        hdmi(1),
+        analog(2),
+        sdiAnalogAudio(3),
+        hdmiAnalogAudio(4)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 2 }
+
+mve5000InputTestSignalVideo OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        scrollColorBar(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 11 }
+
+mve5000InputTestSignalAudio OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        1khzSinwaveMinus18dbfs(1),
+        1khzSinwaveMinus20dbfs(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 12 }
+
+mve5000InputSuperimposeTextDisplay OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        upper(1),
+        lower(2),
+        upperAndLower(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 21 }
+
+mve5000InputSuperimposeUpperText OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 22 }
+
+mve5000InputSuperimposeLowerText OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 23 }
+
+mve5000InputSuperimposeUpperTextSelect OBJECT-TYPE
+    SYNTAX INTEGER {
+        manual(0),
+        dateAndTime(1),
+        time(2),
+        titleBarText(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 24 }
+
+mve5000InputSuperimposeLowerTextSelect OBJECT-TYPE
+    SYNTAX INTEGER {
+        manual(0),
+        dateAndTime(1),
+        time(2),
+        titleBarText(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 25 }
+
+mve5000InputTsPassThroughSdiInSelect OBJECT-TYPE
+    SYNTAX INTEGER {
+        hdSdSdi(0),
+        dvbAsi(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Input 31 }
+
+mve5000InputAdvanced OBJECT IDENTIFIER ::= { mve5000Input 100 }
+mve5000InputVideoSynchronize OBJECT-TYPE
+    SYNTAX INTEGER {
+        tbc(0),
+        fs(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 1 }
+
+mve5000InputVideoSignalUndetected OBJECT-TYPE
+    SYNTAX INTEGER {
+        lastFrame(0),
+        blueScreen(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 2 }
+
+mve5000InputSdiMonitoring OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabledStreamStop(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 3 }
+
+mve5000InputSuperimposeFontSize OBJECT-TYPE
+    SYNTAX INTEGER {
+        minimum(0),
+        small(1),
+        medium(2),
+        large(3),
+        maximum(4)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 11 }
+
+mve5000InputSuperimposeEffect OBJECT-TYPE
+    SYNTAX INTEGER {
+        0per(0),
+        25per(1),
+        50per(2),
+        75per(3),
+        100per(4),
+        100perBorder(5)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 12 }
+
+mve5000InputSuperimposeUpperPosition OBJECT-TYPE
+    SYNTAX INTEGER {
+        left(0),
+        center(1),
+        right(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 13 }
+
+mve5000InputSuperimposeLowerPosition OBJECT-TYPE
+    SYNTAX INTEGER {
+        left(0),
+        center(1),
+        right(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 14 }
+
+mve5000InputHdmiConvertVideoFormat OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        480Pto480I(1),
+        576Pto576I(2),
+        vgato480I(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 21 }
+
+mve5000InputAnalogSetupLevel OBJECT-TYPE
+    SYNTAX INTEGER {
+        0ire(0),
+        75ire(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 31 }
+
+mve5000InputAnalogBrightness OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 32 }
+
+mve5000InputAnalogContrast OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 33 }
+
+mve5000InputAnalogSaturation OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 34 }
+
+mve5000InputAnalogHue OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000InputAdvanced 35 }
+
+mve5000Encode OBJECT IDENTIFIER ::= { mve5000Configuration 2 }
+mve5000EncLatencyMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        standard(0),
+        low(1),
+        superLow(2),
+        ultraLow(4)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Encode 1 }
+
+mve5000EncTsRate OBJECT-TYPE
+    SYNTAX INTEGER(200 .. 50000)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "kbps"
+    ::= { mve5000Encode 2 }
+
+mve5000EncVideo OBJECT IDENTIFIER ::= { mve5000Encode 11 }
+mve5000EncVideoFormat OBJECT-TYPE
+    SYNTAX INTEGER {
+        1920x1080I29(0),
+        1440x1080I29(1),
+        1280x1080I29(2),
+        960x1080I29(3),
+        1920x1080I25(4),
+        1440x1080I25(5),
+        1280x1080I25(6),
+        960x1080I25(7),
+        1280x720P59(8),
+        960x720P59(9),
+        640x720P59(10),
+        1280x720P50(11),
+        960x720P50(12),
+        640x720P50(13),
+        720x480I29(14),
+        352x480I29(18),
+        720x576I25(19),
+        352x576I25(23),
+        352x240I29(27),
+        352x288I25(28)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncVideo 1 }
+
+mve5000EncVideoRate OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncVideo 2 }
+
+mve5000EncAudio1 OBJECT IDENTIFIER ::= { mve5000Encode 12 }
+mve5000EncAudio1Format OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        mpeg1DualMono(1),
+        mpeg1Stereo(2),
+        aac11(3),
+        aac20(4),
+        aac321(5),
+        linearPcm2ch(6)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAudio1 1 }
+
+mve5000EncAudio1Rate2Ch OBJECT-TYPE
+    SYNTAX INTEGER {
+        64kbps(0),
+        96kbps(1),
+        128kbps(2),
+        192kbps(3),
+        256kbps(4),
+        384kbps(5)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAudio1 3 }
+
+mve5000EncAudio1RateMulti OBJECT-TYPE
+    SYNTAX INTEGER {
+        192kbps(0),
+        256kbps(1),
+        384kbps(2),
+       480kbps(3),
+        512kbps(4),
+        640kbps(5)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAudio1 4 }
+
+mve5000EncAudio2 OBJECT IDENTIFIER ::= { mve5000Encode 13 }
+mve5000EncAudio2Format OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        mpeg1DualMono(1),
+        mpeg1Stereo(2),
+        linearPcm2ch(6)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAudio2 1 }
+
+mve5000EncAudio2Rate2Ch OBJECT-TYPE
+    SYNTAX INTEGER {
+        64kbps(0),
+        96kbps(1),
+        128kbps(2),
+        192kbps(3),
+        256kbps(4),
+        384kbps(5)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAudio2 3 }
+
+mve5000EncAdvanced OBJECT IDENTIFIER ::= { mve5000Encode 100 }
+mve5000EncAdvVideo OBJECT IDENTIFIER ::= { mve5000EncAdvanced 1 }
+mve5000EncVideoProfileLevel OBJECT-TYPE
+    SYNTAX INTEGER {
+        main(1),
+        high(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvVideo 1 }
+
+mve5000EncVideoGopM OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 3)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvVideo 2 }
+
+mve5000EncVideoGopGop OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 60)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvVideo 3 }
+
+mve5000EncVideoAdaptiveGop OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        disabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvVideo 4 }
+
+mve5000EncVideoClosedGop OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvVideo 5 }
+
+mve5000EncVideoHrdParameter OBJECT-TYPE
+    SYNTAX INTEGER {
+        insert(0),
+        notInsert(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvVideo 6 }
+
+mve5000EncVideoPcrPsiInsertMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        normalMode(0),
+        lowRateMode(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvVideo 7 }
+
+mve5000EncAdvAudio OBJECT IDENTIFIER ::= { mve5000EncAdvanced 2 }
+mve5000EncAdvAudioDelayUnit OBJECT-TYPE
+    SYNTAX INTEGER {
+        ms(0),
+        frame(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvAudio 1 }
+
+mve5000EncAdvAudio1 OBJECT IDENTIFIER ::= { mve5000EncAdvAudio 11 }
+mve5000EncAdvAudio1AdjustableDelayTime OBJECT-TYPE
+    SYNTAX INTEGER(-100 .. 50)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvAudio1 1 }
+
+mve5000EncAdvAudio1AdjustableDelayFrame OBJECT-TYPE
+    SYNTAX INTEGER(-2 .. 1)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvAudio1 2 }
+
+mve5000EncAdvAudio1SampleBit OBJECT-TYPE
+    SYNTAX INTEGER {
+        16bit(0),
+        20bit(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvAudio1 11 }
+
+mve5000EncAdvAudio2 OBJECT IDENTIFIER ::= { mve5000EncAdvAudio 12 }
+mve5000EncAdvAudio2AdjustableDelayTime OBJECT-TYPE
+    SYNTAX INTEGER(-100 .. 50)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvAudio2 1 }
+
+mve5000EncAdvAudio2AdjustableDelayFrame OBJECT-TYPE
+    SYNTAX INTEGER(-2 .. 1)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvAudio2 2 }
+
+mve5000EncAdvAudio2SampleBit OBJECT-TYPE
+    SYNTAX INTEGER {
+        16bit(0),
+        20bit(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvAudio2 11 }
+
+mve5000EncAdvPid OBJECT IDENTIFIER ::= { mve5000EncAdvanced 3 }
+mve5000EncPidTsId OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvPid 1 }
+
+mve5000EncPidProgramNum OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvPid 2 }
+
+mve5000EncPidPmtPid OBJECT-TYPE
+    SYNTAX INTEGER(16 .. 8190)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvPid 3 }
+
+mve5000EncPidPcrPid OBJECT-TYPE
+    SYNTAX INTEGER(16 .. 8190)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvPid 4 }
+
+mve5000EncPidVideo OBJECT IDENTIFIER ::= { mve5000EncAdvPid 5 }
+mve5000EncPidVideoPid OBJECT-TYPE
+    SYNTAX INTEGER(16 .. 8190)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPidVideo 1 }
+
+mve5000EncPidVideoStreamId OBJECT-TYPE
+    SYNTAX INTEGER(224 .. 239)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPidVideo 2 }
+
+mve5000EncPidAudio1 OBJECT IDENTIFIER ::= { mve5000EncAdvPid 6 }
+mve5000EncPidAudio1Pid OBJECT-TYPE
+    SYNTAX INTEGER(16 .. 8190)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPidAudio1 1 }
+
+mve5000EncPidAudio1StreamId OBJECT-TYPE
+    SYNTAX INTEGER(192 .. 223)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPidAudio1 2 }
+
+mve5000EncPidAudio2 OBJECT IDENTIFIER ::= { mve5000EncAdvPid 7 }
+mve5000EncPidAudio2Pid OBJECT-TYPE
+    SYNTAX INTEGER(16 .. 8190)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPidAudio2 1 }
+
+mve5000EncPidAudio2StreamId OBJECT-TYPE
+    SYNTAX INTEGER(192 .. 223)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPidAudio2 2 }
+
+mve5000EncPidNitPid OBJECT-TYPE
+    SYNTAX INTEGER(16 .. 8190)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvPid 10 }
+
+mve5000EncPidSdtPid OBJECT-TYPE
+    SYNTAX INTEGER(16 .. 8190)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvPid 11 }
+
+mve5000EncAdvPmt OBJECT IDENTIFIER ::= { mve5000EncAdvanced 4 }
+mve5000EncPmtComponentTag OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvPmt 1 }
+
+mve5000EncPmtAudio1 OBJECT IDENTIFIER ::= { mve5000EncAdvPmt 2 }
+mve5000EncPmtAudio1LanguageCode OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        english(1),
+        spanish(2),
+        french(3),
+        german(4),
+        portuguese(5),
+        korean(6),
+        japanese(7),
+        chinese(8),
+        dutch(9),
+        italian(10),
+        danish(11),
+        norwegian(12),
+        swedish(13),
+        finnish(14),
+        russian(15),
+        hindi(16),
+        arabic(17),
+        malay(18),
+        undetermined(19)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPmtAudio1 1 }
+
+mve5000EncPmtAudio2 OBJECT IDENTIFIER ::= { mve5000EncAdvPmt 3 }
+mve5000EncPmtAudio2LanguageCode OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        english(1),
+        spanish(2),
+        french(3),
+        german(4),
+        portuguese(5),
+        korean(6),
+        japanese(7),
+        chinese(8),
+        dutch(9),
+        italian(10),
+        danish(11),
+        norwegian(12),
+        swedish(13),
+        finnish(14),
+        russian(15),
+        hindi(16),
+        arabic(17),
+        malay(18),
+        undetermined(19)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncPmtAudio2 1 }
+
+mve5000EncAdvNit OBJECT IDENTIFIER ::= { mve5000EncAdvanced 5 }
+mve5000EncNitInsert OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 1 }
+
+mve5000EncNitNetworkId OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 2 }
+
+mve5000EncNitNetworkName OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..16))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 3 }
+
+mve5000EncNitFrequency OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(1..9))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 4 }
+
+mve5000EncNitOrbitalPosition OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(1..5))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 5 }
+
+mve5000EncNitWestEastFlag OBJECT-TYPE
+    SYNTAX INTEGER {
+        western(0),
+        eastern(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 6 }
+
+mve5000EncNitPolarization OBJECT-TYPE
+    SYNTAX INTEGER {
+        linearHorizontal(0),
+        linearVertical(1),
+        circularLeft(2),
+        circularRight(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 7 }
+
+mve5000EncNitModulationType OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        qpsk(1),
+        8psk(2),
+        16qam(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 8 }
+
+mve5000EncNitSymbolRate OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(1..8))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 9 }
+
+mve5000EncNitFecInner OBJECT-TYPE
+    SYNTAX INTEGER {
+        12conv(1),
+        23conv(2),
+        34conv(3),
+        56conv(4),
+        78conv(5),
+        89conv(6),
+        35conv(7),
+        45conv(8),
+        910conv(9),
+        noConv(15)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 10 }
+
+mve5000EncNitCarrier OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..5))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 11 }
+
+mve5000EncNitTelephoneNumber OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..17))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 12 }
+
+mve5000EncNitUserInformation OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..15))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 13 }
+
+mve5000EncNitLongitude OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(1..9))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 14 }
+
+mve5000EncNitLatitude OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(1..8))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvNit 15 }
+
+mve5000EncAdvSdt OBJECT IDENTIFIER ::= { mve5000EncAdvanced 6 }
+mve5000EncSdtInsert OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvSdt 1 }
+
+mve5000EncSdtServiceType OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvSdt 2 }
+
+mve5000EncSdtProviderName OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..16))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvSdt 3 }
+
+mve5000EncSdtServiceName OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..16))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000EncAdvSdt 4 }
+
+mve5000Output OBJECT IDENTIFIER ::= { mve5000Configuration 4 }
+mve5000OutputIpTsTransmitionMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        standardTs(0),
+        timestampedTs(1),
+        advancedTs(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Output 1 }
+
+mve5000OutputIpNumberOfTransmitTs OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 7)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Output 2 }
+
+mve5000OutputAdvanced OBJECT IDENTIFIER ::= { mve5000Output 100 }
+mve5000OutputDvbAsiMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        packet(0),
+        burst(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000OutputAdvanced 1 }
+
+mve5000OutputPacketLength OBJECT-TYPE
+    SYNTAX INTEGER {
+        188byte(0),
+        204byte(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000OutputAdvanced 2 }
+
+mve5000Stream1 OBJECT IDENTIFIER ::= { mve5000Configuration 5 }
+mve5000Stream1Transmission OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        disabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1 1 }
+
+mve5000Stream1IpVersion OBJECT-TYPE
+    SYNTAX INTEGER {
+        ipv4(0),
+        ipv6(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1 2 }
+
+mve5000Stream1Protocol OBJECT-TYPE
+    SYNTAX INTEGER {
+        rtp(0),
+        udp(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1 3 }
+
+mve5000Stream1PortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65531)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1 4 }
+
+mve5000Stream1TransmitInterface OBJECT-TYPE
+    SYNTAX INTEGER {
+        gbe(0),
+        fe(1),
+        pppoe1(2),
+        pppoe2(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1 5 }
+
+mve5000Stream1IpPacketLength OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "byte"
+    ::= { mve5000Stream1 6 }
+
+mve5000Stream1Ipv4 OBJECT IDENTIFIER ::= { mve5000Stream1 11 }
+mve5000Stream1Ipv4DstAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Ipv4 2 }
+
+mve5000Stream1Ipv6 OBJECT IDENTIFIER ::= { mve5000Stream1 12 }
+mve5000Stream1Ipv6InterfaceAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Ipv6 1 }
+
+mve5000Stream1Ipv6DstAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Ipv6 2 }
+
+mve5000Stream1ErrorCorrectionMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        noErrorCorrect(0),
+        fec(1),
+        arq(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1 21 }
+
+mve5000Stream1Advanced OBJECT IDENTIFIER ::= { mve5000Stream1 100 }
+mve5000Stream1Output OBJECT IDENTIFIER ::= { mve5000Stream1Advanced 1 }
+mve5000Stream1OutputMediaPacketPayloadType OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Output 1 }
+
+mve5000Stream1OutputIpv4Tos OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Output 11 }
+
+mve5000Stream1OutputIpv4Ttl OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Output 12 }
+
+mve5000Stream1OutputIpv6TrafficClass OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Output 21 }
+
+mve5000Stream1OutputIpv6HopLimit OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Output 22 }
+
+mve5000Stream1OutputCheckProtocol OBJECT-TYPE
+    SYNTAX INTEGER {
+        arpOnly(0),
+        arpPlusPing(1),
+        arpFirstOnly(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1Output 31 }
+
+mve5000Stream1OutputCheckInterval OBJECT-TYPE
+    SYNTAX INTEGER(5 .. 30)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "sec"
+    ::= { mve5000Stream1Output 32 }
+
+mve5000Stream1OutputCheckRetryCount OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 5)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "times"
+    ::= { mve5000Stream1Output 33 }
+
+mve5000Stream1OutputShapingIncreaseRatio OBJECT-TYPE
+    SYNTAX INTEGER(101 .. 200)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "percent"
+    ::= { mve5000Stream1Output 42 }
+
+mve5000Stream1OutputTransmittingIpRate OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "kbps"
+    ::= { mve5000Stream1Output 43 }
+
+mve5000Stream1OutputShapingRate OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "kbps"
+    ::= { mve5000Stream1Output 44 }
+
+mve5000Stream1ErrorCorrection OBJECT IDENTIFIER ::= { mve5000Stream1Advanced 2 }
+mve5000Stream1ErrFecDimension OBJECT-TYPE
+    SYNTAX INTEGER {
+        1d(1),
+        2d(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 1 }
+
+mve5000Stream1ErrFecColumNumber OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 20)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 2 }
+
+mve5000Stream1ErrFecRowNumber OBJECT-TYPE
+    SYNTAX INTEGER(4 .. 20)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 3 }
+
+mve5000Stream1ErrFecRedundancy OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 4 }
+
+mve5000Stream1ErrFecTransmissionType OBJECT-TYPE
+    SYNTAX INTEGER {
+        annexA(0),
+        annexB(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 5 }
+
+mve5000Stream1ErrFecColumPacketConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        manual(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 11 }
+
+mve5000Stream1FecColumPacketPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 12 }
+
+mve5000Stream1ErrFecColumPacketPayloadType OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 13 }
+
+mve5000Stream1ErrFecRowConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        manual(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 21 }
+
+mve5000Stream1ErrFecRowPacketPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 22 }
+
+mve5000Stream1ErrFecRowPacketPayloadType OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 23 }
+
+mve5000Stream1ErrArqPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream1ErrorCorrection 32 }
+
+mve5000Stream2 OBJECT IDENTIFIER ::= { mve5000Configuration 6 }
+mve5000Stream2Transmission OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+       disabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2 1 }
+
+mve5000Stream2IpVersion OBJECT-TYPE
+    SYNTAX INTEGER {
+        ipv4(0),
+        ipv6(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2 2 }
+
+mve5000Stream2Protocol OBJECT-TYPE
+    SYNTAX INTEGER {
+        rtp(0),
+        udp(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2 3 }
+
+mve5000Stream2PortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65531)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2 4 }
+
+mve5000Stream2TransmitInterface OBJECT-TYPE
+    SYNTAX INTEGER {
+        gbe(0),
+        fe(1),
+        pppoe1(2),
+        pppoe2(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2 5 }
+
+mve5000Stream2IpPacketLength OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "byte"
+    ::= { mve5000Stream2 6 }
+
+mve5000Stream2Ipv4 OBJECT IDENTIFIER ::= { mve5000Stream2 11 }
+mve5000Stream2Ipv4DstAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Ipv4 2 }
+
+mve5000Stream2Ipv6 OBJECT IDENTIFIER ::= { mve5000Stream2 12 }
+mve5000Stream2Ipv6InterfaceAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Ipv6 1 }
+
+mve5000Stream2Ipv6DstAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Ipv6 2 }
+
+mve5000Stream2ErrorCorrectionMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        noErrorCorrect(0),
+        fec(1),
+        arq(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2 21 }
+
+mve5000Stream2Advanced OBJECT IDENTIFIER ::= { mve5000Stream2 100 }
+mve5000Stream2Output OBJECT IDENTIFIER ::= { mve5000Stream2Advanced 1 }
+mve5000Stream2OutputMediaPacketPayloadType OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Output 1 }
+
+mve5000Stream2OutputStream1Copy OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Output 2 }
+
+mve5000Stream2OutputIpv4Tos OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Output 11 }
+
+mve5000Stream2OutputIpv4Ttl OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Output 12 }
+
+mve5000Stream2OutputIpv6TrafficClass OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Output 21 }
+
+mve5000Stream2OutputIpv6HopLimit OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 255)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Output 22 }
+
+mve5000Stream2OutputCheckProtocol OBJECT-TYPE
+    SYNTAX INTEGER {
+        arpOnly(0),
+        arpPlusPing(1),
+        arpFirstOnly(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2Output 31 }
+
+mve5000Stream2OutputCheckInterval OBJECT-TYPE
+    SYNTAX INTEGER(5 .. 30)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "sec"
+    ::= { mve5000Stream2Output 32 }
+
+mve5000Stream2OutputCheckRetryCount OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 5)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "times"
+    ::= { mve5000Stream2Output 33 }
+
+mve5000Stream2OutputShapingIncreaseRatio OBJECT-TYPE
+    SYNTAX INTEGER(101 .. 200)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION "percent"
+    ::= { mve5000Stream2Output 42 }
+
+mve5000Stream2OutputTransmittingIpRate OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "kbps"
+    ::= { mve5000Stream2Output 43 }
+
+mve5000Stream2OutputShapingRate OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION "kbps"
+    ::= { mve5000Stream2Output 44 }
+
+mve5000Stream2ErrorCorrection OBJECT IDENTIFIER ::= { mve5000Stream2Advanced 2 }
+mve5000Stream2ErrFecDimension OBJECT-TYPE
+    SYNTAX INTEGER {
+        1d(1),
+        2d(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 1 }
+
+mve5000Stream2ErrFecColumNumber OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 20)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 2 }
+
+mve5000Stream2ErrFecRowNumber OBJECT-TYPE
+    SYNTAX INTEGER(4 .. 20)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 3 }
+
+mve5000Stream2ErrFecRedundancy OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 4 }
+
+mve5000Stream2ErrFecTransmissionType OBJECT-TYPE
+    SYNTAX INTEGER {
+        annexA(0),
+        annexB(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 5 }
+
+mve5000Stream2ErrFecColumPacketConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        manual(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 11 }
+
+mve5000Stream2FecColumPacketPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 12 }
+
+mve5000Stream2ErrFecColumPacketPayloadType OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 13 }
+
+mve5000Stream2ErrFecRowPacketConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        manual(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 21 }
+
+mve5000Stream2ErrFecRowPacketPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 22 }
+
+mve5000Stream2ErrFecRowPacketPayloadType OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 23 }
+
+mve5000Stream2ErrArqPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Stream2ErrorCorrection 32 }
+
+mve5000Network OBJECT IDENTIFIER ::= { mve5000 4 }
+mve5000NetGbe OBJECT IDENTIFIER ::= { mve5000Network 1 }
+mve5000NetGbeIpv4AddressConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        manually(0),
+        usingDhcp(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbe 1 }
+
+mve5000NetGbeIpv4IpAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbe 3 }
+
+mve5000NetGbeIpv4SubnetMask OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbe 4 }
+
+mve5000NetGbeIpv4Gateway OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbe 5 }
+
+mve5000NetGbeIpv6LinkLocalAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbe 11 }
+
+mve5000NetGbeIpv6LinkLocalDad OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbe 12 }
+
+mve5000NetGbeLinkStatus OBJECT-TYPE
+    SYNTAX INTEGER {
+        linkDown(0),
+        10Half(1),
+        10Full(2),
+        100Half(3),
+        100Full(4),
+        1000Half(5),
+        1000Full(6)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbe 21 }
+
+mve5000NetGbeAdvanced OBJECT IDENTIFIER ::= { mve5000NetGbe 100 }
+mve5000NetGbeIpv6AddressConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        usingStatelessAutoConfig(0),
+        manually(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 1 }
+
+mve5000NetGbeIpv6Manual1 OBJECT IDENTIFIER ::= { mve5000NetGbeAdvanced 3 }
+mve5000NetGbeIpv6Manual1Address OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6Manual1 1 }
+
+mve5000NetGbeIpv6Manual1Prefix OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6Manual1 2 }
+
+mve5000NetGbeIpv6Manual1Dad OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6Manual1 3 }
+
+mve5000NetGbeIpv6Manual2 OBJECT IDENTIFIER ::= { mve5000NetGbeAdvanced 4 }
+mve5000NetGbeIpv6Manual2Address OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6Manual2 1 }
+
+mve5000NetGbeIpv6Manual2Prefix OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6Manual2 2 }
+
+mve5000NetGbeIpv6Manual2Dad OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6Manual2 3 }
+
+mve5000NetGbeIpv6RaListTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000NetGbeIpv6RaListEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 11 }
+
+mve5000NetGbeIpv6RaListEntry OBJECT-TYPE
+    SYNTAX Mve5000NetGbeIpv6RaListEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000NetGbeIpv6RaListIndex }
+    ::= { mve5000NetGbeIpv6RaListTable 1 }
+
+Mve5000NetGbeIpv6RaListEntry ::=
+    SEQUENCE {
+      mve5000NetGbeIpv6RaListIndex  INTEGER,
+      mve5000NetGbeIpv6RaListIpAddress  Ipv6Address,
+      mve5000NetGbeIpv6RaListType  INTEGER,
+      mve5000NetGbeIpv6RaListRouterAddress  Ipv6Address,
+      mve5000NetGbeIpv6RaListNotes  INTEGER
+    }
+
+mve5000NetGbeIpv6RaListIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..6)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6RaListEntry 1 }
+
+mve5000NetGbeIpv6RaListIpAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6RaListEntry 2 }
+
+mve5000NetGbeIpv6RaListType OBJECT-TYPE
+    SYNTAX INTEGER {
+        unspecified(0),
+        linkLocal(1),
+        siteLocal(2),
+        global(3),
+        multicast(4)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6RaListEntry 3 }
+
+mve5000NetGbeIpv6RaListRouterAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6RaListEntry 4 }
+
+mve5000NetGbeIpv6RaListNotes OBJECT-TYPE
+    SYNTAX INTEGER {
+        unDuplicate(0),
+        duplicateStream1(1),
+        duplicateStream2(2),
+        duplicateStream1And2(3)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeIpv6RaListEntry 5 }
+
+mve5000NetGbeIpv6Gateway OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 21 }
+
+mve5000NetGbeIpv6InterfaceIdMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        autoConfig(0),
+        manually(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 31 }
+
+mve5000NetGbeIpv6InterfaceId OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..19))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 32 }
+
+mve5000NetGbeIpv6DadEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        limited(1),
+        disabled(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 33 }
+
+mve5000NetGbeEtherLinkSpeedDuplex OBJECT-TYPE
+    SYNTAX INTEGER {
+        100Half(0),
+        100Full(1),
+        auto(2),
+        10Half(3),
+        10Full(4),
+        1000Half(5),
+        1000Full(6)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 41 }
+
+mve5000NetGbeEtherMacOverWriteEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 43 }
+
+mve5000NetGbeEtherMacOverWriteAddress OBJECT-TYPE
+    SYNTAX PhysAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 44 }
+
+mve5000NetGbeEtherPromiscuousMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetGbeAdvanced 45 }
+
+mve5000NetFe OBJECT IDENTIFIER ::= { mve5000Network 3 }
+mve5000NetFeIpv4AddressConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        manually(0),
+        usingDhcp(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFe 1 }
+
+mve5000NetFeIpv4IpAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFe 3 }
+
+mve5000NetFeIpv4SubnetMask OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFe 4 }
+
+mve5000NetFeIpv4Gateway OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFe 5 }
+
+mve5000NetFeIpv6LinkLocalAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFe 11 }
+
+mve5000NetFeIpv6LinkLocalDad OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFe 12 }
+
+mve5000NetFeLinkStatus OBJECT-TYPE
+    SYNTAX INTEGER {
+        linkDown(0),
+        10Half(1),
+        10Full(2),
+        100Half(3),
+        100Full(4)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFe 21 }
+
+mve5000NetFeAdvanced OBJECT IDENTIFIER ::= { mve5000NetFe 100 }
+mve5000NetFeIpv6AddressConfiguration OBJECT-TYPE
+    SYNTAX INTEGER {
+        usingStatelessAutoConfig(0),
+        manually(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 1 }
+
+mve5000NetFeIpv6Manual1 OBJECT IDENTIFIER ::= { mve5000NetFeAdvanced 3 }
+mve5000NetFeIpv6Manual1Address OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6Manual1 1 }
+
+mve5000NetFeIpv6Manual1Prefix OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6Manual1 2 }
+
+mve5000NetFeIpv6Manual1Dad OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6Manual1 3 }
+
+mve5000NetFeIpv6Manual2 OBJECT IDENTIFIER ::= { mve5000NetFeAdvanced 4 }
+mve5000NetFeIpv6Manual2Address OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6Manual2 1 }
+
+mve5000NetFeIpv6Manual2Prefix OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 127)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6Manual2 2 }
+
+mve5000NetFeIpv6Manual2Dad OBJECT-TYPE
+    SYNTAX INTEGER {
+        undetected(0),
+        detected(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6Manual2 3 }
+
+mve5000NetFeIpv6RaListTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000NetFeIpv6RaListEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 11 }
+
+mve5000NetFeIpv6RaListEntry OBJECT-TYPE
+    SYNTAX Mve5000NetFeIpv6RaListEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000NetFeIpv6RaListIndex }
+    ::= { mve5000NetFeIpv6RaListTable 1 }
+
+Mve5000NetFeIpv6RaListEntry ::=
+    SEQUENCE {
+      mve5000NetFeIpv6RaListIndex  INTEGER,
+      mve5000NetFeIpv6RaListIpAddress  Ipv6Address,
+      mve5000NetFeIpv6RaListType  INTEGER,
+      mve5000NetFeIpv6RaListRouterAddress  Ipv6Address,
+      mve5000NetFeIpv6RaListNotes  INTEGER
+    }
+
+mve5000NetFeIpv6RaListIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..6)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6RaListEntry 1 }
+
+mve5000NetFeIpv6RaListIpAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6RaListEntry 2 }
+
+mve5000NetFeIpv6RaListType OBJECT-TYPE
+    SYNTAX INTEGER {
+        unspecified(0),
+        linkLocal(1),
+        siteLocal(2),
+        global(3),
+        multicast(4)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6RaListEntry 3 }
+
+mve5000NetFeIpv6RaListRouterAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6RaListEntry 4 }
+
+mve5000NetFeIpv6RaListNotes OBJECT-TYPE
+    SYNTAX INTEGER {
+        unDuplicate(0),
+        duplicateStream1(1),
+        duplicateStream2(2),
+        duplicateStream1And2(3)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeIpv6RaListEntry 5 }
+
+mve5000NetFeIpv6Gatway OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 21 }
+
+mve5000NetFeIpv6InterfaceIdMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        autoConfig(0),
+        manually(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 31 }
+
+mve5000NetFeIpv6InterfaceId OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..19))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 32 }
+
+mve5000NetFeIpv6DadEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        limited(1),
+        disabled(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 33 }
+
+mve5000NetFeEtherLinkSpeedDuplex OBJECT-TYPE
+    SYNTAX INTEGER {
+        100Half(0),
+        100Full(1),
+        auto(2),
+        10Half(3),
+        10Full(4)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 41 }
+
+mve5000NetFeEtherMacOverWriteEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 43 }
+
+mve5000NetFeEtherMacOverWriteAddress OBJECT-TYPE
+    SYNTAX PhysAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 44 }
+
+mve5000NetFeEtherPromiscuousMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000NetFeAdvanced 45 }
+
+mve5000NetworkService OBJECT IDENTIFIER ::= { mve5000 5 }
+mve5000SnmpTrap OBJECT IDENTIFIER ::= { mve5000NetworkService 2 }
+mve5000SnmpTrapVersion OBJECT-TYPE
+    SYNTAX INTEGER {
+        snmpv2(0),
+        snmpv1(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrap 1 }
+
+mve5000SnmpTrapPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(162 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrap 2 }
+
+mve5000SnmpTrapInterface OBJECT-TYPE
+    SYNTAX INTEGER {
+        gbe(0),
+        fe(1),
+        pppoe1(2),
+        pppoe2(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrap 3 }
+
+mve5000SnmpTrapIpv6InterfaceAddressSelect OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        linkLocal(1),
+        manual1(2),
+        manual2(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrap 4 }
+
+mve5000SnmpTrapDstTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000SnmpTrapDstEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrap 11 }
+
+mve5000SnmpTrapDstEntry OBJECT-TYPE
+    SYNTAX Mve5000SnmpTrapDstEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000SnmpTrapDstIndex }
+    ::= { mve5000SnmpTrapDstTable 1 }
+
+Mve5000SnmpTrapDstEntry ::=
+    SEQUENCE {
+      mve5000SnmpTrapDstIndex  INTEGER,
+      mve5000SnmpTrapDstServiceEnable  INTEGER,
+      mve5000SnmpTrapDstCommunityName  DisplayString,
+      mve5000SnmpTrapDstProtocol  INTEGER,
+      mve5000SnmpTrapDstIpv4Address  IpAddress,
+      mve5000SnmpTrapDstIpv6Address  Ipv6Address
+    }
+
+mve5000SnmpTrapDstIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..8)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrapDstEntry 1 }
+
+mve5000SnmpTrapDstServiceEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        disabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrapDstEntry 2 }
+
+mve5000SnmpTrapDstCommunityName OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrapDstEntry 3 }
+
+mve5000SnmpTrapDstProtocol OBJECT-TYPE
+    SYNTAX INTEGER {
+        ipv4(0),
+        ipv6(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrapDstEntry 4 }
+
+mve5000SnmpTrapDstIpv4Address OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrapDstEntry 5 }
+
+mve5000SnmpTrapDstIpv6Address OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SnmpTrapDstEntry 6 }
+
+mve5000Syslog OBJECT IDENTIFIER ::= { mve5000NetworkService 3 }
+mve5000SyslogServiceEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Syslog 1 }
+
+mve5000SyslogPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(514 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Syslog 2 }
+
+mve5000SyslogInterface OBJECT-TYPE
+    SYNTAX INTEGER {
+        gbe(0),
+        fe(1),
+        pppoe1(2),
+        pppoe2(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Syslog 3 }
+
+mve5000SyslogIpv6InterfaceAddressSelect OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        linkLocal(1),
+        manual1(2),
+        manual2(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Syslog 4 }
+
+mve5000SyslogDstTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000SyslogDstEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Syslog 11 }
+
+mve5000SyslogDstEntry OBJECT-TYPE
+    SYNTAX Mve5000SyslogDstEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000SyslogDstIndex }
+    ::= { mve5000SyslogDstTable 1 }
+
+Mve5000SyslogDstEntry ::=
+    SEQUENCE {
+      mve5000SyslogDstIndex  INTEGER,
+      mve5000SyslogDstServiceEnable  INTEGER,
+      mve5000SyslogDstProtocol  INTEGER,
+      mve5000SyslogDstIpv4Address  IpAddress,
+      mve5000SyslogDstIpv6Address  Ipv6Address
+    }
+
+mve5000SyslogDstIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..8)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SyslogDstEntry 1 }
+
+mve5000SyslogDstServiceEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SyslogDstEntry 2 }
+
+mve5000SyslogDstProtocol OBJECT-TYPE
+    SYNTAX INTEGER {
+        ipv4(0),
+        ipv6(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SyslogDstEntry 3 }
+
+mve5000SyslogDstIpv4Address OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SyslogDstEntry 4 }
+
+mve5000SyslogDstIpv6Address OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SyslogDstEntry 5 }
+
+mve5000PassThru OBJECT IDENTIFIER ::= { mve5000NetworkService 4 }
+mve5000PassThruMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        udp(1),
+        tcpServer(2),
+        tpcClient(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 1 }
+
+mve5000PassThruInterface OBJECT-TYPE
+    SYNTAX INTEGER {
+        gbe(0),
+        fe(1),
+        pppoe1(2),
+        pppoe2(3)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 3 }
+
+mve5000PassThruPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 4 }
+
+mve5000PassThruControlConnect OBJECT-TYPE
+    SYNTAX INTEGER {
+        connect(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 5 }
+
+mve5000PassThruControlDisconnect OBJECT-TYPE
+    SYNTAX INTEGER {
+        disconnect(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 6 }
+
+mve5000PassThruActualStatus OBJECT-TYPE
+    SYNTAX INTEGER {
+        error(0),
+        reloadParam(1),
+        waiting(2),
+        connecting(3),
+        established(4),
+        closing(5)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 7 }
+
+mve5000PassThruIpv4DstAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 12 }
+
+mve5000PassThruSerialBaudRate OBJECT-TYPE
+    SYNTAX INTEGER {
+        1200bps(0),
+        2400bps(1),
+        4800bps(2),
+        9600bps(3),
+        14400bps(4),
+        19200bps(5),
+        38400bps(6),
+        57600bps(7),
+        115200bps(8)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 31 }
+
+mve5000PassThruSerialDataBit OBJECT-TYPE
+    SYNTAX INTEGER {
+        8bit(0),
+        7bit(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 32 }
+
+mve5000PassThruSerialParity OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        odd(1),
+        even(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 33 }
+
+mve5000PassThruSerialStopBit OBJECT-TYPE
+    SYNTAX INTEGER {
+        1bit(0),
+        2bit(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 34 }
+
+mve5000PassThruSerialFlowControl OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        xonXoff(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThru 35 }
+
+mve5000PassThruAdvanced OBJECT IDENTIFIER ::= { mve5000PassThru 100 }
+mve5000PassThruClientStartMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        auto(0),
+        manual(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThruAdvanced 1 }
+
+mve5000PassThruServerListenMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        acceptForAll(0),
+        acceptForDestination(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThruAdvanced 2 }
+
+mve5000PassThruAuthentificationEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        enabled(0),
+        disabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThruAdvanced 11 }
+
+mve5000PassThruAuthentificationId OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..8))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThruAdvanced 12 }
+
+mve5000PassThruConnectTimeout OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 300)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThruAdvanced 21 }
+
+mve5000PassThruConnectRetryCount OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 99)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThruAdvanced 22 }
+
+mve5000PassThruServiceTimeout OBJECT-TYPE
+    SYNTAX INTEGER(0 .. 30)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PassThruAdvanced 23 }
+
+mve5000HttpCommand OBJECT IDENTIFIER ::= { mve5000NetworkService 5 }
+mve5000HttpCommandEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000HttpCommand 1 }
+
+mve5000Redundancy OBJECT IDENTIFIER ::= { mve5000NetworkService 6 }
+mve5000RedundancyServiceEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Redundancy 1 }
+
+mve5000RedundancyCheckInterval OBJECT-TYPE
+    SYNTAX INTEGER(5 .. 30)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Redundancy 2 }
+
+mve5000RedundancyRetryCount OBJECT-TYPE
+    SYNTAX INTEGER(1 .. 5)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Redundancy 3 }
+
+mve5000RedundancyEncListTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000RedundancyEncListEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Redundancy 11 }
+
+mve5000RedundancyEncListEntry OBJECT-TYPE
+    SYNTAX Mve5000RedundancyEncListEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000RedundancyEncListIndex }
+    ::= { mve5000RedundancyEncListTable 1 }
+
+Mve5000RedundancyEncListEntry ::=
+    SEQUENCE {
+      mve5000RedundancyEncListIndex  INTEGER,
+      mve5000RedundancyEncListEnable  INTEGER,
+      mve5000RedundancyEncListInterface  INTEGER,
+      mve5000RedundancyEncListVersion  INTEGER,
+      mve5000RedundancyEncListIpv4DstAddress  IpAddress,
+      mve5000RedundancyEncListIpv6DstAddress  Ipv6Address,
+      mve5000RedundancyEncListPrest  INTEGER
+    }
+
+mve5000RedundancyEncListIndex OBJECT-TYPE
+    SYNTAX INTEGER
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000RedundancyEncListEntry 1 }
+
+mve5000RedundancyEncListEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000RedundancyEncListEntry 2 }
+
+mve5000RedundancyEncListInterface OBJECT-TYPE
+    SYNTAX INTEGER {
+        gbe(0),
+        fe(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000RedundancyEncListEntry 3 }
+
+mve5000RedundancyEncListVersion OBJECT-TYPE
+    SYNTAX INTEGER {
+        ipv4(0),
+        ipv6(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000RedundancyEncListEntry 4 }
+
+mve5000RedundancyEncListIpv4DstAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000RedundancyEncListEntry 5 }
+
+mve5000RedundancyEncListIpv6DstAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000RedundancyEncListEntry 6 }
+
+mve5000RedundancyEncListPrest OBJECT-TYPE
+    SYNTAX INTEGER {
+        usr1(1),
+        usr2(2),
+        usr3(3),
+        usr4(4),
+        usr5(5),
+        usr6(6),
+        usr7(7),
+        usr8(8),
+         usr9(17),
+        usr10(18),
+        usr11(19),
+        usr12(20),
+        usr13(21),
+        usr14(22),
+        usr15(23),
+        usr16(24)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000RedundancyEncListEntry 7 }
+
+mve5000Sap OBJECT IDENTIFIER ::= { mve5000NetworkService 7 }
+mve5000SapServiceEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Sap 1 }
+
+mve5000SapPortNumber OBJECT-TYPE
+    SYNTAX INTEGER(1024 .. 65535)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Sap 2 }
+
+mve5000SapSendInterval OBJECT-TYPE
+    SYNTAX INTEGER(5 .. 30)
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Sap 3 }
+
+mve5000SapSessionTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000SapSessionEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Sap 11 }
+
+mve5000SapSessionEntry OBJECT-TYPE
+    SYNTAX Mve5000SapSessionEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000SapSessionIndex }
+    ::= { mve5000SapSessionTable 1 }
+
+Mve5000SapSessionEntry ::=
+    SEQUENCE {
+      mve5000SapSessionIndex  INTEGER,
+      mve5000SapSessionName  DisplayString,
+      mve5000SapSessionInformation  DisplayString,
+      mve5000SapSessionGroupAddressMode  INTEGER,
+      mve5000SapSessionIpv4DstAddress  IpAddress,
+      mve5000SapSessionIpv6DstAddress  Ipv6Address,
+      mve5000SapSessionGroupDstAddress  DisplayString
+    }
+
+mve5000SapSessionIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..2)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapSessionEntry 1 }
+
+mve5000SapSessionName OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..16))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapSessionEntry 2 }
+
+mve5000SapSessionInformation OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapSessionEntry 3 }
+
+mve5000SapSessionGroupAddressMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        manual(0),
+        auto(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapSessionEntry 4 }
+
+mve5000SapSessionIpv4DstAddress OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapSessionEntry 5 }
+
+mve5000SapSessionIpv6DstAddress OBJECT-TYPE
+    SYNTAX Ipv6Address
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapSessionEntry 6 }
+
+mve5000SapSessionGroupDstAddress OBJECT-TYPE
+    SYNTAX DisplayString
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapSessionEntry 7 }
+
+mve5000SapAdvanced OBJECT IDENTIFIER ::= { mve5000Sap 100 }
+mve5000SapUserName OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapAdvanced 1 }
+
+mve5000SapUrl OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapAdvanced 2 }
+
+mve5000SapEmailAddress OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapAdvanced 3 }
+
+mve5000SapPhoneNumber OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..32))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000SapAdvanced 4 }
+
+mve5000Administration OBJECT IDENTIFIER ::= { mve5000 6 }
+mve5000AdminAccounts OBJECT IDENTIFIER ::= { mve5000Administration 1 }
+mve5000AdminAccountsUserPermissionsGuest OBJECT-TYPE
+    SYNTAX INTEGER {
+        displayOnly(0),
+        canBeChanged(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminAccounts 1 }
+
+mve5000AdminClock OBJECT IDENTIFIER ::= { mve5000Administration 3 }
+mve5000AdminClockDateAndTime OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..19))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminClock 1 }
+
+mve5000AdminClockTimeZone OBJECT-TYPE
+    SYNTAX INTEGER {
+        utcPlus0900(0),
+        utcPlus0930(1),
+        utcPlus1000(2),
+        utcPlus1030(3),
+        utcPlus1100(4),
+        utcPlus1130(5),
+        utcPlus1200(6),
+        utcPlus1245(7),
+        utcPlus1300(8),
+        utcPlus1400(9),
+        utcMinus1200(10),
+        utcMinus1100(11),
+        utcMinus1000(12),
+        utcMinus0930(13),
+        utcMinus0900(14),
+        utcMinus0800(15),
+        utcMinus0700(16),
+        utcMinus0600(17),
+        utcMinus0500(18),
+        utcMinus0400(19),
+        utcMinus0330(20),
+        utcMinus0300(21),
+        utcMinus0200(22),
+        utcMinus0100(23),
+        utc(24),
+        utcPlus0100(25),
+        utcPlus0200(26),
+        utcPlus0300(27),
+        utcPlus0330(28),
+        utcPlus0400(29),
+        utcPlus0430(30),
+        utcPlus0500(31),
+        utcPlus0530(32),
+        utcPlus0545(33),
+        utcPlus0600(34),
+        utcPlus0630(35),
+        utcPlus0700(36),
+        utcPlus0800(37),
+        utcPlus0845(38)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminClock 11 }
+
+mve5000AdminClockTimeSyncAutomatically OBJECT-TYPE
+    SYNTAX INTEGER {
+        no(0),
+        yes(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminClock 21 }
+
+mve5000AdminClockTimeSyncInterface OBJECT-TYPE
+    SYNTAX INTEGER {
+         auto(0),
+        gbe(1),
+        fe(2),
+       pppoe1(3),
+        pppoe2(4)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminClock 23 }
+
+mve5000AdminClockTimeSyncInterval OBJECT-TYPE
+    SYNTAX INTEGER {
+        1Hour(0),
+        1Day(1),
+        1Week(2)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminClock 25 }
+
+mve5000AdminClockTimeSyncNtpServerIpv4Address OBJECT-TYPE
+    SYNTAX IpAddress
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminClock 32 }
+
+mve5000AdminClockTimeSyncNow OBJECT-TYPE
+    SYNTAX INTEGER {
+        syncNow(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminClock 51 }
+
+mve5000AdminSystem OBJECT IDENTIFIER ::= { mve5000Administration 5 }
+mve5000AdminSysRestartDevice OBJECT-TYPE
+    SYNTAX INTEGER {
+        reset(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AdminSystem 1 }
+
+mve5000Preferences OBJECT IDENTIFIER ::= { mve5000 7 }
+mve5000PrefPreset OBJECT IDENTIFIER ::= { mve5000Preferences 2 }
+mve5000PrefPresetSelectPreset OBJECT-TYPE
+    SYNTAX INTEGER {
+        notUsed(0),
+        usr1(1),
+        usr2(2),
+        usr3(3),
+        usr4(4),
+        usr5(5),
+        usr6(6),
+        usr7(7),
+        usr8(8),
+        sys1(9),
+         usr9(17),
+        usr10(18),
+        usr11(19),
+        usr12(20),
+        usr13(21),
+        usr14(22),
+        usr15(23),
+        usr16(24)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPreset 1 }
+
+mve5000PrefPresetChanged OBJECT-TYPE
+    SYNTAX INTEGER {
+        notChanged(0),
+        changed(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPreset 2 }
+
+mve5000PrefPresetSystemPresetTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000PrefPresetSystemPresetEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPreset 3 }
+
+mve5000PrefPresetSystemPresetEntry OBJECT-TYPE
+    SYNTAX Mve5000PrefPresetSystemPresetEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000PrefPresetSystemPresetIndex }
+    ::= { mve5000PrefPresetSystemPresetTable 1 }
+
+Mve5000PrefPresetSystemPresetEntry ::=
+    SEQUENCE {
+      mve5000PrefPresetSystemPresetIndex  INTEGER,
+      mve5000PrefPresetSystemPresetComment  DisplayString
+    }
+
+mve5000PrefPresetSystemPresetIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..1)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPresetSystemPresetEntry 1 }
+
+mve5000PrefPresetSystemPresetComment OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..64))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPresetSystemPresetEntry 2 }
+
+mve5000PrefPresetUserPresetTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000PrefPresetUserPresetEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPreset 4 }
+
+mve5000PrefPresetUserPresetEntry OBJECT-TYPE
+    SYNTAX Mve5000PrefPresetUserPresetEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000PrefPresetUserPresetIndex }
+    ::= { mve5000PrefPresetUserPresetTable 1 }
+
+Mve5000PrefPresetUserPresetEntry ::=
+    SEQUENCE {
+      mve5000PrefPresetUserPresetIndex  INTEGER,
+      mve5000PrefPresetUserPresetStatus  INTEGER,
+      mve5000PrefPresetUserPresetRegister  INTEGER,
+      mve5000PrefPresetUserPresetComment  DisplayString,
+      mve5000PrefPresetUserPresetDelete  INTEGER
+    }
+
+mve5000PrefPresetUserPresetIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..16)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPresetUserPresetEntry 1 }
+
+mve5000PrefPresetUserPresetStatus OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        registered(1)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPresetUserPresetEntry 2 }
+
+mve5000PrefPresetUserPresetRegister OBJECT-TYPE
+    SYNTAX INTEGER {
+        registerUserPreset(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPresetUserPresetEntry 3 }
+
+mve5000PrefPresetUserPresetComment OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..64))
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPresetUserPresetEntry 4 }
+
+mve5000PrefPresetUserPresetDelete OBJECT-TYPE
+    SYNTAX INTEGER {
+        deleteUserPreset(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefPresetUserPresetEntry 5 }
+
+mve5000PrefAutoApplyPreset OBJECT IDENTIFIER ::= { mve5000Preferences 3 }
+mve5000PrefAutoApplyPresetMode OBJECT-TYPE
+    SYNTAX INTEGER {
+        manual(0),
+        auto(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefAutoApplyPreset 1 }
+
+mve5000PrefAutoApplyPresetTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000PrefAutoApplyPresetEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefAutoApplyPreset 11 }
+
+mve5000PrefAutoApplyPresetEntry OBJECT-TYPE
+    SYNTAX Mve5000PrefAutoApplyPresetEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000PrefAutoApplyPresetIndex }
+    ::= { mve5000PrefAutoApplyPresetTable 1 }
+
+Mve5000PrefAutoApplyPresetEntry ::=
+    SEQUENCE {
+      mve5000PrefAutoApplyPresetIndex  INTEGER,
+      mve5000PrefAutoApplyPresetVideoFormat  INTEGER,
+      mve5000PrefAutoApplyPresetEnable  INTEGER
+    }
+
+mve5000PrefAutoApplyPresetIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..16)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefAutoApplyPresetEntry 1 }
+
+mve5000PrefAutoApplyPresetVideoFormat OBJECT-TYPE
+    SYNTAX INTEGER {
+        1080I29(0),
+        1080I25(1),
+        720P59(3),
+        720P50(5),
+        480I29(8),
+        576I25(9),
+        480P59(10),
+        vgaP60(11),
+        576p50(12),
+        notSupported(255)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefAutoApplyPresetEntry 2 }
+
+mve5000PrefAutoApplyPresetEnable OBJECT-TYPE
+    SYNTAX INTEGER {
+        disabled(0),
+        enabled(1)
+    }
+    MAX-ACCESS read-write
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000PrefAutoApplyPresetEntry 3 }
+
+mve5000AlarmTable OBJECT-TYPE
+    SYNTAX SEQUENCE OF Mve5000AlarmEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000 11 }
+
+mve5000AlarmEntry OBJECT-TYPE
+    SYNTAX Mve5000AlarmEntry
+    MAX-ACCESS not-accessible
+    STATUS current
+    DESCRIPTION ""
+    INDEX { mve5000AlarmIndex }
+    ::= { mve5000AlarmTable 1 }
+
+Mve5000AlarmEntry ::=
+    SEQUENCE {
+      mve5000AlarmIndex  INTEGER,
+      mve5000AlarmDateAndTime  DisplayString,
+      mve5000AlarmEvent  INTEGER,
+      mve5000AlarmLevel  INTEGER,
+      mve5000AlarmCategory  INTEGER,
+      mve5000AlarmMessage  DisplayString
+    }
+
+mve5000AlarmIndex OBJECT-TYPE
+    SYNTAX INTEGER(1..64)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AlarmEntry 1 }
+
+mve5000AlarmDateAndTime OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..19))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AlarmEntry 2 }
+
+mve5000AlarmEvent OBJECT-TYPE
+    SYNTAX INTEGER(1..1000)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AlarmEntry 3 }
+
+mve5000AlarmLevel OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        emeg(1),
+        alert(2),
+        crit(3),
+        error(4),
+        warn(5),
+        notice(6),
+        info(7)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AlarmEntry 4 }
+
+mve5000AlarmCategory OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        power(1),
+        general(2),
+        inOut(3),
+        video(4),
+        audio(5),
+        ip(6),
+        network(7),
+        pref(8),
+        device(9)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AlarmEntry 5 }
+
+mve5000AlarmMessage OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..64))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000AlarmEntry 6 }
+
+mve5000Trap OBJECT IDENTIFIER ::= { mve5000 12 }
+mve5000TrapDateAndTime OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..19))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Trap 1 }
+
+mve5000TrapEvent OBJECT-TYPE
+    SYNTAX INTEGER(1..1000)
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Trap 2 }
+
+mve5000TrapLevel OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        emeg(1),
+        alert(2),
+        crit(3),
+        error(4),
+        warn(5),
+        notice(6),
+        info(7)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Trap 3 }
+
+mve5000TrapCategory OBJECT-TYPE
+    SYNTAX INTEGER {
+        none(0),
+        power(1),
+        general(2),
+        inOut(3),
+        video(4),
+        audio(5),
+        ip(6),
+        network(7),
+        pref(8),
+        device(9)
+    }
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Trap 4 }
+
+mve5000TrapMessage OBJECT-TYPE
+    SYNTAX DisplayString(SIZE(0..64))
+    MAX-ACCESS read-only
+    STATUS current
+    DESCRIPTION ""
+    ::= { mve5000Trap 5 }
+
+mve5000TrapsPrefix OBJECT IDENTIFIER ::= { mve5000 13 }
+mve5000Traps OBJECT IDENTIFIER ::= { mve5000TrapsPrefix 0 }
+END
