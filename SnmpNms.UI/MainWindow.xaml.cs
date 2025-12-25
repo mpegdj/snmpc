@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Windows;
+using System.Windows.Media;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using SnmpNms.Infrastructure;
@@ -14,6 +15,7 @@ public partial class MainWindow : Window
 {
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
+    private readonly IPollingService _pollingService;
 
     public MainWindow()
     {
@@ -22,9 +24,68 @@ public partial class MainWindow : Window
         // DI 컨테이너 없이 수동 주입
         _snmpClient = new SnmpClient();
         _mibService = new MibService();
+        _pollingService = new PollingService(_snmpClient);
+
+        // Polling 이벤트 연결
+        _pollingService.OnPollingResult += PollingService_OnPollingResult;
 
         // MIB 파일 로드 (Mib 폴더가 실행 파일 위치 또는 상위에 있다고 가정)
         LoadMibs();
+    }
+
+    private void PollingService_OnPollingResult(object? sender, PollingResult e)
+    {
+        // UI 스레드에서 업데이트
+        Dispatcher.Invoke(() =>
+        {
+            if (e.Status == DeviceStatus.Up)
+            {
+                lblStatus.Content = $"Up ({DateTime.Now:HH:mm:ss})";
+                lblStatus.Foreground = Brushes.Green;
+                // Polling 로그는 너무 많을 수 있으므로 상태 변경 시에만 찍거나, 별도 로그창 사용 권장
+                // 여기서는 간단하게 시간 갱신
+                // txtResult.AppendText($"[Poll] {e.Target.IpAddress} is Alive ({e.ResponseTime}ms)\n");
+            }
+            else
+            {
+                lblStatus.Content = $"Down ({DateTime.Now:HH:mm:ss})";
+                lblStatus.Foreground = Brushes.Red;
+                txtResult.AppendText($"[Poll] {e.Target.IpAddress} is Down: {e.Message}\n");
+                txtResult.ScrollToEnd();
+            }
+        });
+    }
+
+    private void ChkAutoPoll_Checked(object sender, RoutedEventArgs e)
+    {
+        var target = new UiSnmpTarget
+        {
+            IpAddress = txtIp.Text,
+            Community = txtCommunity.Text,
+            Version = SnmpVersion.V2c,
+            Timeout = 3000
+        };
+
+        _pollingService.AddTarget(target);
+        _pollingService.Start();
+        txtResult.AppendText($"[System] Auto Polling Started for {target.IpAddress}\n");
+    }
+
+    private void ChkAutoPoll_Unchecked(object sender, RoutedEventArgs e)
+    {
+        _pollingService.Stop();
+        // 현재는 단일 타겟만 가정하여 전체 중지 후 제거 (또는 IP 기준으로 제거 가능)
+        // 여기서는 간단하게 Stop만 호출하거나, 입력된 IP를 제거
+        var target = new UiSnmpTarget
+        {
+            IpAddress = txtIp.Text,
+            Port = 161 
+        };
+        _pollingService.RemoveTarget(target);
+        
+        txtResult.AppendText($"[System] Auto Polling Stopped\n");
+        lblStatus.Content = "Unknown";
+        lblStatus.Foreground = Brushes.Gray;
     }
 
     private void LoadMibs()
