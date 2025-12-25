@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mapView="clr-namespace:SnmpNms.UI.Views.MapView"
+        xmlns:eventLog="clr-namespace:SnmpNms.UI.Views.EventLog"
         Title="SnmpNms" Height="800" Width="1200"
         MinHeight="650" MinWidth="980">
     <DockPanel>
@@ -325,56 +326,34 @@
             <GroupBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Header="Event Log Tool" Margin="8">
                 <TabControl>
                     <TabItem Header="Current">
-                        <TextBox Name="txtResult"
-                                 IsReadOnly="True"
-                                 VerticalScrollBarVisibility="Auto"
-                                 AcceptsReturn="True"
-                                 TextWrapping="NoWrap"/>
+                        <eventLog:EventLogTabControl DataContext="{Binding CurrentLog}"/>
                     </TabItem>
                     <TabItem Header="History">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="History view (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding HistoryLog}"/>
                     </TabItem>
                     <TabItem Header="Custom 1">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom1Log}"/>
                     </TabItem>
                     <TabItem Header="Custom 2">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom2Log}"/>
                     </TabItem>
                     <TabItem Header="Custom 3">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom3Log}"/>
                     </TabItem>
                     <TabItem Header="Custom 4">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom4Log}"/>
                     </TabItem>
                     <TabItem Header="Custom 5">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom5Log}"/>
                     </TabItem>
                     <TabItem Header="Custom 6">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom6Log}"/>
                     </TabItem>
                     <TabItem Header="Custom 7">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom7Log}"/>
                     </TabItem>
                     <TabItem Header="Custom 8">
-                        <Grid Margin="12">
-                            <TextBlock TextWrapping="Wrap" Text="Custom filter tab (Todo)"/>
-                        </Grid>
+                        <eventLog:EventLogTabControl DataContext="{Binding Custom8Log}"/>
                     </TabItem>
                 </TabControl>
             </GroupBox>

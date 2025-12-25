@@ -65,8 +65,7 @@ public partial class MainWindow : Window
             {
                 lblStatus.Content = $"Down - {e.Target.IpAddress} ({DateTime.Now:HH:mm:ss})";
                 lblStatus.Foreground = Brushes.Red;
-                txtResult.AppendText($"[Poll] {e.Target.IpAddress} is Down: {e.Message}\n");
-                txtResult.ScrollToEnd();
+                _vm.AddEvent(EventSeverity.Error, $"{e.Target.IpAddress}:{e.Target.Port}", $"[Poll] Down: {e.Message}");
             }
         });
     }
@@ -77,7 +76,7 @@ public partial class MainWindow : Window
 
         _pollingService.AddTarget(target);
         _pollingService.Start();
-        txtResult.AppendText($"[System] Auto Polling Started for {target.IpAddress}\n");
+        _vm.AddEvent(EventSeverity.Info, target.DisplayName, "[System] Auto Polling Started");
     }
 
     private void ChkAutoPoll_Unchecked(object sender, RoutedEventArgs e)
@@ -86,7 +85,7 @@ public partial class MainWindow : Window
         _pollingService.RemoveTarget(target);
         _pollingService.Stop(); // 현재는 단순화를 위해 전체 Stop
         
-        txtResult.AppendText($"[System] Auto Polling Stopped\n");
+        _vm.AddSystemInfo("[System] Auto Polling Stopped");
         lblStatus.Content = "Unknown";
         lblStatus.Foreground = Brushes.Gray;
     }
@@ -123,22 +122,22 @@ public partial class MainWindow : Window
             try
             {
                 _mibService.LoadMibModules(projectRoot);
-                txtResult.AppendText($"[System] Loaded MIBs from {projectRoot}\n");
+                _vm.AddSystemInfo($"[System] Loaded MIBs from {projectRoot}");
             }
             catch (Exception ex)
             {
-                txtResult.AppendText($"[System] Failed to load MIBs: {ex.Message}\n");
+                _vm.AddEvent(EventSeverity.Warning, null, $"[System] Failed to load MIBs: {ex.Message}");
             }
         }
         else
         {
-            txtResult.AppendText($"[System] MIB directory not found: {projectRoot}\n");
+            _vm.AddEvent(EventSeverity.Warning, null, $"[System] MIB directory not found: {projectRoot}");
         }
     }
 
     private async void BtnGet_Click(object sender, RoutedEventArgs e)
     {
-        txtResult.AppendText($"\nSending SNMP GET request to {txtIp.Text}...\n");
+        _vm.AddEvent(EventSeverity.Info, $"{txtIp.Text}:161", $"Sending SNMP GET request to {txtIp.Text}...");
         btnGet.IsEnabled = false;
 
         try
@@ -160,7 +159,7 @@ public partial class MainWindow : Window
                 var convertedOid = _mibService.GetOid(oid);
                 if (convertedOid != oid)
                 {
-                    txtResult.AppendText($"[System] Converted '{oid}' to '{convertedOid}'\n");
+                    _vm.AddSystemInfo($"[System] Converted '{oid}' to '{convertedOid}'");
                     oid = convertedOid;
                 }
             }
@@ -180,17 +179,16 @@ public partial class MainWindow : Window
                     
                     sb.AppendLine($"{displayName} = {v.TypeCode}: {v.Value}");
                 }
-                txtResult.AppendText(sb.ToString());
-                txtResult.ScrollToEnd();
+                _vm.AddEvent(EventSeverity.Info, $"{target.IpAddress}:{target.Port}", sb.ToString().TrimEnd());
             }
             else
             {
-                txtResult.AppendText($"Failed: {result.ErrorMessage}\n");
+                _vm.AddEvent(EventSeverity.Error, $"{target.IpAddress}:{target.Port}", $"Failed: {result.ErrorMessage}");
             }
         }
         catch (Exception ex)
         {
-            txtResult.AppendText($"Error: {ex.Message}\n");
+            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", $"Error: {ex.Message}");
         }
         finally
         {
@@ -209,14 +207,14 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(ip))
         {
-            txtResult.AppendText("[System] AddDevice: IP is empty.\n");
+            _vm.AddSystemInfo("[System] AddDevice: IP is empty.");
             return;
         }
 
         // 중복 방지(동일 ip:port)
         if (_vm.Devices.Any(d => d.IpAddress == ip && d.Port == 161))
         {
-            txtResult.AppendText($"[System] Device already exists: {ip}:161\n");
+            _vm.AddSystemInfo($"[System] Device already exists: {ip}:161");
             return;
         }
 
@@ -231,15 +229,14 @@ public partial class MainWindow : Window
 
         _vm.Devices.Add(dev);
         _vm.SelectedDevice = dev;
-        txtResult.AppendText($"[System] Device added: {dev.DisplayName}\n");
-        txtResult.ScrollToEnd();
+        _vm.AddEvent(EventSeverity.Info, dev.DisplayName, "[System] Device added");
     }
 
     private void RemoveDevice_Click(object sender, RoutedEventArgs e)
     {
         if (tvDevices.SelectedItem is not UiSnmpTarget selected)
         {
-            txtResult.AppendText("[System] RemoveDevice: no device selected.\n");
+            _vm.AddSystemInfo("[System] RemoveDevice: no device selected.");
             return;
         }
 
@@ -247,8 +244,7 @@ public partial class MainWindow : Window
         _vm.Devices.Remove(selected);
         _vm.SelectedDevice = _vm.Devices.FirstOrDefault();
 
-        txtResult.AppendText($"[System] Device removed: {selected.DisplayName}\n");
-        txtResult.ScrollToEnd();
+        _vm.AddEvent(EventSeverity.Info, selected.DisplayName, "[System] Device removed");
     }
 
     private void TvDevices_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -259,23 +255,21 @@ public partial class MainWindow : Window
         txtIp.Text = dev.IpAddress;
         txtCommunity.Text = dev.Community;
 
-        txtResult.AppendText($"[System] Selected device: {dev.DisplayName}\n");
-        txtResult.ScrollToEnd();
+        _vm.AddEvent(EventSeverity.Info, dev.DisplayName, "[System] Selected device");
     }
 
     private void StartPoll_Click(object sender, RoutedEventArgs e)
     {
         if (_vm.SelectedDevice is null)
         {
-            txtResult.AppendText("[System] StartPoll: no device selected.\n");
+            _vm.AddSystemInfo("[System] StartPoll: no device selected.");
             return;
         }
 
         _pollingService.AddTarget(_vm.SelectedDevice);
         _pollingService.Start();
         chkAutoPoll.IsChecked = true;
-        txtResult.AppendText($"[System] Polling started for {_vm.SelectedDevice.DisplayName}\n");
-        txtResult.ScrollToEnd();
+        _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.DisplayName, "[System] Polling started");
     }
 
     private void StopPoll_Click(object sender, RoutedEventArgs e)
@@ -286,21 +280,19 @@ public partial class MainWindow : Window
         }
         _pollingService.Stop();
         chkAutoPoll.IsChecked = false;
-        txtResult.AppendText("[System] Polling stopped\n");
-        txtResult.ScrollToEnd();
+        _vm.AddSystemInfo("[System] Polling stopped");
     }
 
     private void ClearLog_Click(object sender, RoutedEventArgs e)
     {
-        txtResult.Clear();
+        _vm.ClearEvents();
     }
 
     private void MenuExit_Click(object sender, RoutedEventArgs e) => Close();
 
     private void MenuRefresh_Click(object sender, RoutedEventArgs e)
     {
-        txtResult.AppendText("[System] Refresh requested\n");
-        txtResult.ScrollToEnd();
+        _vm.AddSystemInfo("[System] Refresh requested");
     }
 
     private void MenuSnmpTest_Click(object sender, RoutedEventArgs e)

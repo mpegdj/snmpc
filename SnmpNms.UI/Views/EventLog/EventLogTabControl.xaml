@@ -1,0 +1,68 @@
+<UserControl x:Class="SnmpNms.UI.Views.EventLog.EventLogTabControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Filter Bar -->
+        <Border Grid.Row="0" Background="#F7F7F7" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Scope" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,6,0"/>
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding AvailableScopes}"
+                          SelectedItem="{Binding Scope, Mode=TwoWay}"
+                          Margin="0,0,0,0"/>
+
+                <TextBlock Grid.Column="3" Text="Severity" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,6,0"/>
+                <ComboBox Grid.Column="4"
+                          ItemsSource="{Binding AvailableSeverities}"
+                          SelectedItem="{Binding Severity, Mode=TwoWay}"/>
+
+                <TextBlock Grid.Column="6" Text="Search" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,6,0"/>
+                <TextBox Grid.Column="7"
+                         Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="device 또는 message 검색"/>
+            </Grid>
+        </Border>
+
+        <!-- Grid -->
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding View}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  CanUserResizeRows="False"
+                  RowHeaderWidth="0">
+            <DataGrid.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="TextWrapping" Value="NoWrap"/>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="90"/>
+                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="90"/>
+                <DataGridTextColumn Header="Device" Binding="{Binding Device}" Width="140"/>
+                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>
+
+

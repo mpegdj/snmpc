@@ -277,3 +277,36 @@ C) 개발툴 우선(MIB Browser/Walk/Get 중심)
 - **변경된 파일 목록(사이드바 대체)**
   - `SnmpNms.UI/MainWindow.xaml`
   - `Doc/4_dev_chtgpt.md`
+
+---
+
+## 2025-12-25 (시간 미확인) — Event Log Tool “필터링” 구현(전체/선택장비/Severity/검색) + 탭별 독립 필터
+
+- **작업내용**
+  - 하단 Event Log를 `TextBox AppendText` 방식에서 **구조화된 이벤트 리스트(DataGrid)**로 전환.
+  - `Current/History/Custom1~Custom8` 각 탭에 **독립 필터**를 부여:
+    - **Scope**: `All` / `SelectedDevice`
+    - **Severity**: `Any / Info / Warning / Error`
+    - **Search**: device/message 문자열 검색
+  - 기존 UI의 “로그 출력” 코드를 `_vm.AddEvent(...)`로 리다이렉트해, Polling/GET/장비 추가/선택 등 이벤트가 표 형태로 누적되도록 변경.
+  - 빌드 확인: `SnmpNms.sln` Debug 빌드 **성공(오류/경고 0)**.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/Models/EventLogEntry.cs` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/ViewModels/EventLogFilterViewModel.cs` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/ViewModels/MainViewModel.cs` : (Events/필터VM 추가, AddEvent/ClearEvents 추가)
+  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml.cs` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/MainWindow.xaml` : (Event Log Tool 탭을 공용 컨트롤로 교체)
+  - `SnmpNms.UI/MainWindow.xaml.cs` : (txtResult 제거, AddEvent 기반으로 로그 기록)
+  - `Doc/4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
+
+- **변경된 파일 목록(사이드바 대체)**
+  - `SnmpNms.UI/Models/EventLogEntry.cs`
+  - `SnmpNms.UI/ViewModels/EventLogFilterViewModel.cs`
+  - `SnmpNms.UI/ViewModels/MainViewModel.cs`
+  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml`
+  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml.cs`
+  - `SnmpNms.UI/MainWindow.xaml`
+  - `SnmpNms.UI/MainWindow.xaml.cs`
+  - `Doc/4_dev_chtgpt.md`
