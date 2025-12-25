@@ -18,7 +18,7 @@
 ### 1.2 Object Properties 구성(탭)
 
 - **General**
-  - Name, Address, Icon(`auto.ico`), Description, Node Groups(텍스트)
+  - Address(상단), Name, Icon(`auto.ico`), Description, Node Groups(텍스트)
 - **Access**
   - Read Access Mode, Read/Write Mode, Read/Write Community(입력)
 - **Attributes**
@@ -37,7 +37,7 @@
 
 - General 탭(Address 옆)의 **Ping 버튼** 클릭 시 `Ping Log` 창을 띄움
 - `Ping Log` 창은 **열려있는 동안 연속 Ping(1초 간격)** 을 시간과 함께 누적 출력
-- 상단 버튼: **Stop** (Stop 클릭 또는 창 닫기 시 Ping 중지)
+- 상단 버튼: **Stop / Close** (Stop 클릭 또는 창 닫기 시 Ping 중지)
 
 ---
 
@@ -51,8 +51,20 @@
 
 ### 2.2 하단 버튼 레이아웃
 
-- `OK/Cancel`은 **창 하단(오른쪽) 고정**
+- `OK/Cancel`은 **창 하단(가운데) 고정**
 - `Ping`은 **General(Address) 영역으로 이동**하여 하단 여백/우측 빈 공간 문제를 해소
+
+### 2.3 Lookup 결과 “이름 표시” 정리
+
+- `UiSnmpTarget`에 `Alias`(표시 이름) / `EndpointKey`(고유키=`IP:Port`)를 분리
+- UI 표/트리 표시는 `Alias`를 우선 사용하고, 이벤트/상태 업데이트는 `EndpointKey`를 사용
+
+---
+
+## 5) Device 탭(디버깅용)
+
+- “Device” 탭을 `DataGrid`(엑셀 스타일)로 구성
+- 기본 컬럼: IP, Name(Alias), Port, Subnet, Status, Version, Community, Timeout, Retries
 
 ---
 

@@ -279,3 +279,46 @@
 - **변경사항(파일/라인)**
   - `SnmpNms.UI/Views/MapView/MapViewControl.xaml` : (Loaded 이벤트 연결)
   - `SnmpNms.UI/Views/MapView/MapViewControl.xaml.cs` : (Subnet 창 렌더링/중복 오픈 방지/Default 자동 오픈)
+
+---
+
+## 2025-12-26 (시간 미확인) — Device 탭 디버깅 UI: DataGrid(엑셀 스타일) + 스크롤바 + 컬럼 고정/정렬
+
+- **작업내용**
+  - Device 탭을 2분할(리스트/상세) 대신 DataGrid 1개로 통합해 “엑셀처럼” 장비 목록을 한 화면에서 확인 가능하게 개선.
+  - 가로/세로 스크롤바 표시 및 컬럼 순서를 IP → Name → Port 중심으로 정리.
+  - Name 컬럼은 창 리사이즈에 흔들리지 않도록 고정 폭으로 설정.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/ViewModels/MainViewModel.cs` : (DeviceNodes/SelectedDeviceNode 추가)
+  - `SnmpNms.UI/MainWindow.xaml` : (Device 탭 DataGrid 구성/스크롤/컬럼 폭 고정)
+  - `SnmpNms.UI/MainWindow.xaml.cs` : (트리 선택/삭제 시 SelectedDeviceNode/DeviceNodes 동기화)
+
+---
+
+## 2025-12-26 (시간 미확인) — Lookup 이름 반영: Alias/EndpointKey 도입으로 “이름이 주소로 보임” 해결
+
+- **작업내용**
+  - Lookup으로 얻은 이름이 UI(트리/Device 탭)에서 주소로만 보이던 원인 제거.
+  - `UiSnmpTarget`에 `Alias`(표시 이름)과 `EndpointKey`(고유키=`IP:Port`)를 분리.
+  - UI 표시명은 `Alias` 우선, 이벤트/상태 업데이트/타겟 찾기는 `EndpointKey` 기반으로 고정해 안정성 유지.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/Models/UiSnmpTarget.cs` : (Alias/EndpointKey 추가, DisplayName 정책 변경)
+  - `SnmpNms.UI/MainWindow.xaml.cs` : (Device 추가 시 Alias 저장, FindTargetByKey/이벤트 키를 EndpointKey로 전환)
+  - `SnmpNms.UI/Models/MapNode.cs` : (Alias 변경 시 DisplayName 갱신)
+
+---
+
+## 2025-12-26 (시간 미확인) — Map Object Properties 레이아웃/동작 정리
+
+- **작업내용**
+  - General 탭에서 입력 흐름을 “Address(상단) → Name(하단)” 순서로 정리.
+  - PingLogWindow: Stop 옆에 Close 버튼 추가.
+  - Lookup Debug/Preview: 기본은 SNMP만 시도하고, SNMP 실패 시에만 Ping 진단 로그를 수행하도록 개선.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/Views/Dialogs/MapObjectPropertiesDialog.xaml` : (Address/Name 순서 변경, OK/Cancel 하단 배치 안정화)
+  - `SnmpNms.UI/Views/Dialogs/MapObjectPropertiesDialog.xaml.cs` : (SNMP 실패 시에만 Ping 진단 추가)
+  - `SnmpNms.UI/Views/Dialogs/PingLogWindow.xaml` : (Close 버튼 추가)
+  - `SnmpNms.UI/Views/Dialogs/PingLogWindow.xaml.cs` : (Close_Click 추가)
