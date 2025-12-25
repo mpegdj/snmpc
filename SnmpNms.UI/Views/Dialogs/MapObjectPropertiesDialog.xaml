@@ -40,16 +40,12 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
-                             Text="{Binding ObjectName, UpdateSourceTrigger=PropertyChanged}"/>
-
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Address:" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Address:" VerticalAlignment="Center"/>
                     <TextBox x:Name="txtAddress"
-                             Grid.Row="1" Grid.Column="1" Margin="0,2,8,0"
+                             Grid.Row="0" Grid.Column="1" Margin="0,2,8,0"
                              Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
                              KeyDown="Address_KeyDown"/>
-                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,2,0,0">
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,2,0,0">
                         <Button Content="Lookup"
                                 Padding="8,2"
                                 Margin="0,0,0,6"
@@ -61,10 +57,14 @@
                                 IsEnabled="{Binding IsLookupEnabled}"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
                                Margin="0,2,0,6"
                                Foreground="#666"
                                Text="{Binding LookupStatus}"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Name:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
+                             Text="{Binding ObjectName, UpdateSourceTrigger=PropertyChanged}"/>
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Icon:" VerticalAlignment="Center"/>
                     <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,2,8,6"

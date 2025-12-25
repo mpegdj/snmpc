@@ -265,3 +265,17 @@
   - `SnmpNms.UI/Views/Dialogs/PingLogWindow.xaml` : (Clear→Stop, Loaded/Closing 이벤트 연결)
   - `SnmpNms.UI/Views/Dialogs/PingLogWindow.xaml.cs` : (연속 Ping 루프 + Stop/Closing cancel)
   - `SnmpNms.UI/Views/Dialogs/MapObjectPropertiesDialog.xaml.cs` : (Ping_Click에서 4회 루프 제거, 창 열기만 수행)
+
+---
+
+## 2025-12-26 (시간 미확인) — Map View: Subnet 창에 Map Objects 표시(Children 바인딩)로 “+add 후 맵에 안 보임” 해결
+
+- **작업내용**
+  - 기존 Map View 내부 창이 “Todo 텍스트만 표시”하던 상태라, 트리/로그에만 추가되고 맵에는 아무것도 보이지 않았음.
+  - `MapViewControl`에서 Subnet 내부 창을 열 때, 해당 Subnet의 `MapNode.Children`를 `ItemsControl`로 렌더링하도록 구현.
+  - `ObservableCollection` 바인딩 기반이라, +add(OK) 시 **추가된 Device/Subnet/Goto가 즉시 Map View 창에 반영**됨.
+  - 초기 화면에서 `Default` subnet 창을 자동으로 열도록 변경.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml` : (Loaded 이벤트 연결)
+  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml.cs` : (Subnet 창 렌더링/중복 오픈 방지/Default 자동 오픈)

@@ -61,7 +61,7 @@
 
         <ToolBarTray DockPanel.Dock="Top">
             <ToolBar>
-                <Button Style="{StaticResource IconButton}" ToolTip="Add Device" Click="AddDevice_Click">
+                <Button Style="{StaticResource IconButton}" ToolTip="Add Device" Click="EditAddDeviceObject_Click">
                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE710;"/>
                 </Button>
                 <Button Style="{StaticResource IconButton}" ToolTip="Remove Device" Click="RemoveDevice_Click">
@@ -236,24 +236,45 @@
                             </TabItem>
 
                             <TabItem Header="Device">
-                                <Grid Margin="12">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-                                    <TextBlock FontSize="18" FontWeight="Bold" Text="Device Detail"/>
-                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
-                                        <TextBlock Text="IP: " FontWeight="Bold"/>
-                                        <TextBlock Text="{Binding SelectedDevice.IpAddress, FallbackValue='-'}" Margin="0,0,16,0"/>
-                                        <TextBlock Text="Community: " FontWeight="Bold"/>
-                                        <TextBlock Text="{Binding SelectedDevice.Community, FallbackValue='-'}" Margin="0,0,16,0"/>
-                                        <TextBlock Text="Version: " FontWeight="Bold"/>
-                                        <TextBlock Text="{Binding SelectedDevice.Version, FallbackValue='-'}"/>
-                                    </StackPanel>
-                                    <TextBlock Grid.Row="2" Margin="0,16,0,0" TextWrapping="Wrap"
-                                               Text="이 탭은 추후 Interface/Inventory/Config(SET)/MIB 변수 뷰로 확장 예정."/>
-                                </Grid>
+                                <DockPanel Margin="12">
+                                    <TextBlock DockPanel.Dock="Top" Foreground="#666" Margin="0,0,0,8"
+                                               Text="Map DB에 등록된 디바이스를 엑셀처럼 표로 표시합니다. (선택=현재 선택 장비)"/>
+
+                                    <DataGrid ItemsSource="{Binding DeviceNodes}"
+                                              SelectedItem="{Binding SelectedDeviceNode, Mode=TwoWay}"
+                                              AutoGenerateColumns="False"
+                                              IsReadOnly="True"
+                                              CanUserReorderColumns="True"
+                                              CanUserResizeColumns="True"
+                                              CanUserSortColumns="True"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Visible"
+                                              ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                              GridLinesVisibility="All"
+                                              HeadersVisibility="Column"
+                                              SelectionMode="Single"
+                                              SelectionUnit="FullRow">
+                                        <DataGrid.Columns>
+                                            <DataGridTemplateColumn Header="●" Width="28" IsReadOnly="True">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Rectangle Width="10" Height="10" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   Fill="{Binding EffectiveStatus, Converter={StaticResource DeviceStatusToBrushConverter}}"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+
+                                            <DataGridTextColumn Header="IP" Binding="{Binding Target.IpAddress}" Width="120"/>
+                                            <DataGridTextColumn Header="Name" Binding="{Binding Target.Alias}" Width="220"/>
+                                            <DataGridTextColumn Header="Port" Binding="{Binding Target.Port}" Width="60"/>
+                                            <DataGridTextColumn Header="Subnet" Binding="{Binding Parent.Name}" Width="120"/>
+                                            <DataGridTextColumn Header="Status" Binding="{Binding Target.Status}" Width="90"/>
+                                            <DataGridTextColumn Header="Version" Binding="{Binding Target.Version}" Width="90"/>
+                                            <DataGridTextColumn Header="Community" Binding="{Binding Target.Community}" Width="110"/>
+                                            <DataGridTextColumn Header="Timeout(ms)" Binding="{Binding Target.Timeout}" Width="90"/>
+                                            <DataGridTextColumn Header="Retries" Binding="{Binding Target.Retries}" Width="70"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </DockPanel>
                             </TabItem>
 
                             <TabItem Header="Alarms">

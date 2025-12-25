@@ -92,13 +92,14 @@ public partial class MainWindow : Window
                 {
                     IpAddress = dlg.Result.IpOrHost,
                     Port = dlg.Result.Port,
+                    Alias = dlg.Result.Name,
                     Community = dlg.Result.ReadCommunity,
                     Version = dlg.Result.SnmpVersion,
                     Timeout = dlg.Result.TimeoutMs,
                     Retries = dlg.Result.Retries
                 };
                 _vm.AddDeviceToSubnet(target, parent);
-                _vm.AddEvent(EventSeverity.Info, target.DisplayName, $"[Map] Device added: {dlg.Result.Name}");
+                _vm.AddEvent(EventSeverity.Info, target.EndpointKey, $"[Map] Device added: {target.DisplayName} ({target.EndpointKey})");
                 break;
             }
             case MapObjectType.Subnet:
@@ -165,7 +166,7 @@ public partial class MainWindow : Window
 
     private static UiSnmpTarget? FindTargetByKey(MapNode node, string key)
     {
-        if (node.Target is not null && string.Equals(node.Target.DisplayName, key, StringComparison.OrdinalIgnoreCase))
+        if (node.Target is not null && string.Equals(node.Target.EndpointKey, key, StringComparison.OrdinalIgnoreCase))
             return node.Target;
 
         foreach (var c in node.Children)
@@ -182,7 +183,7 @@ public partial class MainWindow : Window
 
         _pollingService.AddTarget(target);
         _pollingService.Start();
-        _vm.AddEvent(EventSeverity.Info, target.DisplayName, "[System] Auto Polling Started");
+        _vm.AddEvent(EventSeverity.Info, target.EndpointKey, "[System] Auto Polling Started");
     }
 
     private void ChkAutoPoll_Unchecked(object sender, RoutedEventArgs e)
@@ -302,43 +303,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void AddDevice_Click(object sender, RoutedEventArgs e)
-    {
-        var ip = (txtAddIp.Text ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(ip))
-        {
-            // txtIp에 값이 있으면 그걸로 추가도 허용
-            ip = (txtIp.Text ?? "").Trim();
-        }
-
-        if (string.IsNullOrWhiteSpace(ip))
-        {
-            _vm.AddSystemInfo("[System] AddDevice: IP is empty.");
-            return;
-        }
-
-        // 중복 방지(동일 ip:port)
-        var key = $"{ip}:161";
-        if (FindTargetByKey(_vm.RootSubnet, key) is not null)
-        {
-            _vm.AddSystemInfo($"[System] Device already exists: {ip}:161");
-            return;
-        }
-
-        var dev = new UiSnmpTarget
-        {
-            IpAddress = ip,
-            Community = (txtCommunity.Text ?? "public").Trim(),
-            Version = SnmpVersion.V2c,
-            Timeout = 3000,
-            Port = 161
-        };
-
-        _vm.AddDeviceToSubnet(dev);
-        _vm.SelectedDevice = dev;
-        _vm.AddEvent(EventSeverity.Info, dev.DisplayName, "[System] Device added");
-    }
-
     private void RemoveDevice_Click(object sender, RoutedEventArgs e)
     {
         // Map Tree에서 선택된 디바이스 노드 제거
@@ -351,9 +315,10 @@ public partial class MainWindow : Window
 
         _pollingService.RemoveTarget(selectedDeviceNode.Target);
         selectedDeviceNode.Parent.RemoveChild(selectedDeviceNode);
+        _vm.RemoveDeviceNode(selectedDeviceNode);
         _vm.SelectedDevice = null;
 
-        _vm.AddEvent(EventSeverity.Info, selectedDeviceNode.Target.DisplayName, "[System] Device removed");
+        _vm.AddEvent(EventSeverity.Info, selectedDeviceNode.Target.EndpointKey, "[System] Device removed");
     }
 
     // --- Map Selection Tree interactions (SNMPc style) ---
@@ -421,7 +386,7 @@ public partial class MainWindow : Window
 
             d.Parent.RemoveChild(d);
             targetNode.AddChild(d);
-            _vm.AddEvent(EventSeverity.Info, d.Target?.DisplayName, $"[Map] Moved to subnet: {targetNode.DisplayName}");
+            _vm.AddEvent(EventSeverity.Info, d.Target?.EndpointKey, $"[Map] Moved to subnet: {targetNode.DisplayName}");
         }
 
         targetNode.IsExpanded = true;
@@ -528,6 +493,7 @@ public partial class MainWindow : Window
             if (node.NodeType == MapNodeType.Device && node.Target is not null)
             {
                 _vm.SelectedDevice = node.Target;
+                _vm.SelectedDeviceNode = node;
                 txtIp.Text = node.Target.IpAddress;
                 txtCommunity.Text = node.Target.Community;
             }
@@ -535,6 +501,8 @@ public partial class MainWindow : Window
         else
         {
             _vm.SelectedMapNodes.Remove(node);
+            if (node.NodeType == MapNodeType.Device && ReferenceEquals(_vm.SelectedDeviceNode, node))
+                _vm.SelectedDeviceNode = null;
         }
     }
 
@@ -575,6 +543,7 @@ public partial class MainWindow : Window
 
             if (node.Target is not null) _pollingService.RemoveTarget(node.Target);
             node.Parent.RemoveChild(node);
+            if (node.NodeType == MapNodeType.Device) _vm.RemoveDeviceNode(node);
             _vm.AddSystemInfo($"[Map] Deleted: {node.DisplayName}");
         }
 
@@ -593,7 +562,7 @@ public partial class MainWindow : Window
         _pollingService.AddTarget(_vm.SelectedDevice);
         _pollingService.Start();
         chkAutoPoll.IsChecked = true;
-        _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.DisplayName, "[System] Polling started");
+        _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.EndpointKey, "[System] Polling started");
     }
 
     private void StopPoll_Click(object sender, RoutedEventArgs e)

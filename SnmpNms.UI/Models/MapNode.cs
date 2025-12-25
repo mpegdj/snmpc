@@ -98,6 +98,11 @@ public class MapNode : INotifyPropertyChanged
                     RecomputeEffectiveStatus();
                     Parent?.RecomputeEffectiveStatus();
                 }
+                else if (args.PropertyName is nameof(UiSnmpTarget.Alias) or nameof(UiSnmpTarget.IpAddress) or nameof(UiSnmpTarget.Port))
+                {
+                    // Device 표시명(DisplayName)이 바뀔 수 있으므로 UI 갱신
+                    OnPropertyChanged(nameof(DisplayName));
+                }
             };
         }
 

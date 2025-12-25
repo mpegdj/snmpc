@@ -15,6 +15,24 @@ public class MainViewModel : INotifyPropertyChanged
     // Map Selection multi-select (SNMPc: ctrl/shift)
     public ObservableCollection<MapNode> SelectedMapNodes { get; } = new();
 
+    // Debug/UX: Device tab list (all device nodes)
+    public ObservableCollection<MapNode> DeviceNodes { get; } = new();
+
+    private MapNode? _selectedDeviceNode;
+    public MapNode? SelectedDeviceNode
+    {
+        get => _selectedDeviceNode;
+        set
+        {
+            if (ReferenceEquals(_selectedDeviceNode, value)) return;
+            _selectedDeviceNode = value;
+            OnPropertyChanged();
+
+            // keep existing bindings working (Device tab details / SNMP Test)
+            SelectedDevice = value?.Target;
+        }
+    }
+
     public ObservableCollection<EventLogEntry> Events { get; } = new();
 
     private UiSnmpTarget? _selectedDevice;
@@ -76,7 +94,15 @@ public class MainViewModel : INotifyPropertyChanged
         subnet ??= DefaultSubnet;
         var node = new MapNode(MapNodeType.Device, target.DisplayName, target);
         subnet.AddChild(node);
+        if (!DeviceNodes.Contains(node)) DeviceNodes.Add(node);
         return node;
+    }
+
+    public void RemoveDeviceNode(MapNode node)
+    {
+        if (node.NodeType != MapNodeType.Device) return;
+        DeviceNodes.Remove(node);
+        if (ReferenceEquals(SelectedDeviceNode, node)) SelectedDeviceNode = null;
     }
 
     public MapNode AddSubnet(string name, MapNode? parentSubnet = null)
