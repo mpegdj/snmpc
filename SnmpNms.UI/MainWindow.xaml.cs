@@ -372,12 +372,25 @@ public partial class MainWindow : Window
         }
     }
 
-    private void MapNode_Delete_Click(object sender, RoutedEventArgs e) => DeleteSelectedNodes();
+    // ContextMenu는 XAML 컴파일 시 IComponentConnector.Connect(connectionId)에서
+    // MenuItem 이벤트를 상위 컨테이너(TabItem 등)에 AddHandler로 연결하려고 하다가
+    // connectionId/target 타입 불일치(InvalidCast: MenuItem -> TabItem)를 유발할 수 있어
+    // Click 이벤트 대신 CommandBinding으로 처리한다.
 
-    private void MapNode_OpenMap_Click(object sender, RoutedEventArgs e)
+    private void CmdMapDelete_Executed(object sender, ExecutedRoutedEventArgs e)
     {
-        var node = GetContextMenuNode(sender);
-        if (node is null) return;
+        // 우클릭 시 선택이 보장되지 않으므로, 파라미터로 받은 노드를 우선 선택시키고 삭제
+        if (e.Parameter is MapNode node)
+        {
+            ClearMapSelection();
+            SelectNode(node, true);
+        }
+        DeleteSelectedNodes();
+    }
+
+    private void CmdMapOpen_Executed(object sender, ExecutedRoutedEventArgs e)
+    {
+        if (e.Parameter is not MapNode node) return;
         if (node.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet)
         {
             mapViewControl?.OpenSubnet(node.DisplayName);
@@ -385,29 +398,25 @@ public partial class MainWindow : Window
         }
     }
 
-    private void MapNode_Properties_Click(object sender, RoutedEventArgs e)
+    private void CmdMapProperties_Executed(object sender, ExecutedRoutedEventArgs e)
     {
-        var node = GetContextMenuNode(sender);
-        if (node is null) return;
+        if (e.Parameter is not MapNode node) return;
         _vm.AddSystemInfo($"[Map] Properties (Todo): {node.DisplayName}");
     }
 
-    private void MapNode_QuickPoll_Click(object sender, RoutedEventArgs e)
+    private void CmdMapQuickPoll_Executed(object sender, ExecutedRoutedEventArgs e)
     {
-        var node = GetContextMenuNode(sender);
-        if (node?.Target is null) return;
+        if (e.Parameter is not MapNode node) return;
+        if (node.Target is null) return;
         _vm.AddSystemInfo($"[Map] Quick Poll (Todo): {node.Target.DisplayName}");
     }
 
-    private void MapNode_MibTable_Click(object sender, RoutedEventArgs e)
+    private void CmdMapMibTable_Executed(object sender, ExecutedRoutedEventArgs e)
     {
-        var node = GetContextMenuNode(sender);
-        if (node?.Target is null) return;
+        if (e.Parameter is not MapNode node) return;
+        if (node.Target is null) return;
         _vm.AddSystemInfo($"[Map] MIB Table (Todo): {node.Target.DisplayName}");
     }
-
-    private static MapNode? GetContextMenuNode(object sender)
-        => (sender as FrameworkElement)?.DataContext as MapNode;
 
     private MapNode? FindNodeFromOriginalSource(object? originalSource)
     {

@@ -5,8 +5,16 @@
         xmlns:eventLog="clr-namespace:SnmpNms.UI.Views.EventLog"
         xmlns:conv="clr-namespace:SnmpNms.UI.Converters"
         xmlns:models="clr-namespace:SnmpNms.UI.Models"
+        xmlns:local="clr-namespace:SnmpNms.UI"
         Title="SnmpNms" Height="800" Width="1200"
         MinHeight="650" MinWidth="980">
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static local:MainWindowCommands.MapProperties}" Executed="CmdMapProperties_Executed"/>
+        <CommandBinding Command="{x:Static local:MainWindowCommands.MapOpen}" Executed="CmdMapOpen_Executed"/>
+        <CommandBinding Command="{x:Static local:MainWindowCommands.MapQuickPoll}" Executed="CmdMapQuickPoll_Executed"/>
+        <CommandBinding Command="{x:Static local:MainWindowCommands.MapMibTable}" Executed="CmdMapMibTable_Executed"/>
+        <CommandBinding Command="{x:Static local:MainWindowCommands.MapDelete}" Executed="CmdMapDelete_Executed"/>
+    </Window.CommandBindings>
     <DockPanel>
         <DockPanel.Resources>
             <!-- Simple icon button style using Segoe MDL2 Assets (built-in on Windows) -->
@@ -154,17 +162,27 @@
                                 <TreeView.ItemContainerStyle>
                                     <Style TargetType="TreeViewItem">
                                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
-                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=OneWay}"/>
                                         <Setter Property="ContextMenu">
                                             <Setter.Value>
-                                                <ContextMenu>
-                                                    <MenuItem Header="Properties (Todo)" Click="MapNode_Properties_Click"/>
-                                                    <MenuItem Header="Open Map View" Click="MapNode_OpenMap_Click"/>
+                                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <MenuItem Header="Properties (Todo)"
+                                                              Command="{x:Static local:MainWindowCommands.MapProperties}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Open Map View"
+                                                              Command="{x:Static local:MainWindowCommands.MapOpen}"
+                                                              CommandParameter="{Binding}"/>
                                                     <Separator/>
-                                                    <MenuItem Header="Quick Poll (Todo)" Click="MapNode_QuickPoll_Click"/>
-                                                    <MenuItem Header="MIB Table (Todo)" Click="MapNode_MibTable_Click"/>
+                                                    <MenuItem Header="Quick Poll (Todo)"
+                                                              Command="{x:Static local:MainWindowCommands.MapQuickPoll}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="MIB Table (Todo)"
+                                                              Command="{x:Static local:MainWindowCommands.MapMibTable}"
+                                                              CommandParameter="{Binding}"/>
                                                     <Separator/>
-                                                    <MenuItem Header="Delete" Click="MapNode_Delete_Click"/>
+                                                    <MenuItem Header="Delete"
+                                                              Command="{x:Static local:MainWindowCommands.MapDelete}"
+                                                              CommandParameter="{Binding}"/>
                                                 </ContextMenu>
                                             </Setter.Value>
                                         </Setter>
