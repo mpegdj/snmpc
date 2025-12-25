@@ -5,105 +5,70 @@
 ## 📅 작업 로그 (History)
 
 ### 2025-12-25 (프로젝트 초기화)
-- **초기 생성**: .NET 9.0 WPF 프로젝트 `SnmpManager` 생성
-  ```bash
-  dotnet new wpf -n SnmpManager
-  ```
+- **초기 생성**: `SnmpManager` WPF 프로젝트 생성
 - **라이브러리 추가**: `Lextm.SharpSnmpLib` 설치
-  ```bash
-  dotnet add SnmpManager/SnmpManager.csproj package Lextm.SharpSnmpLib
-  ```
-- **PoC 구현**: 기본 UI(`MainWindow.xaml`) 및 SNMP GET 기능(`MainWindow.xaml.cs`) 구현 및 테스트 완료
-- **문서화**: `devops.md`에 개발 환경 및 초기 구현 내용 기록
-- **Git 설정**: 표준 .NET용 `.gitignore` 파일 생성
-  ```bash
-  dotnet new gitignore
-  ```
+- **PoC 구현**: 기본 UI 및 SNMP GET 기능 구현
+- **문서화**: `devops.md` 생성
+- **Git 설정**: `.gitignore` 생성
 
 ### 2025-12-25 (PHASE 0: 솔루션 구조 재편)
-- **솔루션 생성**
-  ```bash
-  dotnet new sln -n SnmpNms
-  ```
-- **프로젝트 생성 (Core, Infrastructure)**
-  ```bash
-  dotnet new classlib -n SnmpNms.Core
-  dotnet new classlib -n SnmpNms.Infrastructure
-  ```
-- **솔루션에 프로젝트 추가**
-  ```bash
-  dotnet sln SnmpNms.sln add SnmpNms.Core/SnmpNms.Core.csproj SnmpNms.Infrastructure/SnmpNms.Infrastructure.csproj
-  ```
-- **기존 UI 프로젝트 이동 및 이름 변경**
-  ```bash
-  move SnmpManager SnmpNms.UI
-  mv SnmpNms.UI/SnmpManager.csproj SnmpNms.UI/SnmpNms.UI.csproj
-  dotnet sln SnmpNms.sln add SnmpNms.UI/SnmpNms.UI.csproj
-  ```
-- **참조 관계 설정**
-  ```bash
-  # UI -> Core, Infrastructure
-  dotnet add SnmpNms.UI/SnmpNms.UI.csproj reference SnmpNms.Core/SnmpNms.Core.csproj SnmpNms.Infrastructure/SnmpNms.Infrastructure.csproj
-  
-  # Infrastructure -> Core
-  dotnet add SnmpNms.Infrastructure/SnmpNms.Infrastructure.csproj reference SnmpNms.Core/SnmpNms.Core.csproj
-  ```
-- **패키지 정리 (Infrastructure에만 SNMP 라이브러리 설치)**
-  ```bash
-  # Infrastructure에 설치
-  dotnet add SnmpNms.Infrastructure/SnmpNms.Infrastructure.csproj package Lextm.SharpSnmpLib
-  
-  # UI에서는 제거 (직접 의존성 끊기)
-  dotnet remove SnmpNms.UI/SnmpNms.UI.csproj package Lextm.SharpSnmpLib
-  ```
-- **빌드 확인**
-  ```bash
-  dotnet build SnmpNms.sln
-  ```
+- **솔루션 생성**: `SnmpNms.sln`
+- **프로젝트 분리**: `Core`, `Infrastructure`, `UI`
+- **참조 관계 설정**: UI -> Infrastructure -> Core
+- **패키지 정리**: Infrastructure에만 SNMP 라이브러리 설치
 
 ### 2025-12-25 (PHASE 1: SnmpClient Core 구현)
-- **Core 정의 (인터페이스 및 모델)**
-  - `ISnmpTarget`, `ISnmpClient`
-  - `SnmpResult`, `SnmpVariable`, `SnmpVersion` (Enum)
-- **Infrastructure 구현 (실제 통신 로직)**
-  - `SnmpClient`: `SharpSnmpLib`의 `Messenger` 클래스를 활용하여 비동기(`Task.Run`) 패턴으로 `Get`, `GetNext`, `Walk` 구현
-- **UI 리팩토링 및 연결**
-  - `UiSnmpTarget`: `ISnmpTarget` 구현체 추가
-  - `MainWindow.xaml.cs`: `ISnmpClient`를 사용하여 SNMP 요청 수행하도록 변경
-  - 네임스페이스 정리 (`SnmpManager` -> `SnmpNms.UI`)
-- **최종 빌드**: 정상 동작 확인 완료
-- **초기 실행 테스트**: 프로그램 실행 성공. 로컬 호스트(`127.0.0.1`) 테스트 시 `Connection forcibly closed` 오류 확인 (정상: 로컬 SNMP 서비스 미가동 상태).
+- **Core 정의**:
+  - `SnmpNms.Core/Interfaces/ISnmpTarget.cs`
+  - `SnmpNms.Core/Interfaces/ISnmpClient.cs`
+  - `SnmpNms.Core/Models/SnmpResult.cs`
+  - `SnmpNms.Core/Models/SnmpVariable.cs`
+  - `SnmpNms.Core/Models/SnmpVersion.cs`
+- **Infrastructure 구현**:
+  - `SnmpNms.Infrastructure/SnmpClient.cs`
+- **UI 연결**:
+  - `SnmpNms.UI/Models/UiSnmpTarget.cs`
+  - `SnmpNms.UI/MainWindow.xaml.cs` (네임스페이스 정리)
 
 ### 2025-12-25 (PHASE 1.5: 통신 테스트 검증)
-- **외부 장비 테스트**: LAN에 있는 Encoder/Decoder 장비(`192.168.0.100`, `192.168.0.101`) 대상으로 SNMP GET 성공.
-  - 응답 결과: `NEL MVE5000`, `NEL MVD5000` (sysDescr)
-  - 응답 시간: 3ms ~ 6ms (매우 양호)
-- **결론**: `SnmpClient` 통신 모듈 정상 동작 검증 완료.
+- **테스트**: LAN 장비 대상 통신 성공 확인
 
 ### 2025-12-25 (PHASE 2: MIB Parser & Loader)
-- **Mib 파일 확인**: `D:\git\snmpc\Mib` 경로에 장비별 MIB 파일(MVD5000, MVE5000) 존재 확인.
-- **Core 정의**: `IMibService` 인터페이스 정의 완료 (`LoadMibModules`, `GetOidName`, `GetOid`)
-- **Infrastructure 구현 (Regex 방식)**:
-  - `SharpSnmpLib`의 `ObjectRegistry` 의존성 제거 (버전 호환성 문제 해결)
-  - `MibService` 내 `Dictionary<string, string>` 기반 매핑 구현
-  - Regex를 이용한 단순 MIB 파싱 구조 준비 (추후 고도화 필요)
-- **UI 연결**: `MainWindow`에서 MIB 폴더 로드 및 결과 표시 로직 추가
-- **테스트 결과**: `sysDescr` 등 기본 MIB뿐만 아니라 `1.3.6.1.2.1.1.3` (sysUpTime) 요청 시 이름 변환 동작 확인됨.
+- **Core 정의**:
+  - `SnmpNms.Core/Interfaces/IMibService.cs`
+- **Infrastructure 구현**:
+  - `SnmpNms.Infrastructure/MibService.cs` (Regex 기반 구현)
+- **UI 연결**:
+  - `SnmpNms.UI/MainWindow.xaml.cs` (MIB 로드 및 이름 변환 적용)
+
+### 2025-12-25 17:40 (PHASE 3: Polling Scheduler 구현)
+- **Core 정의**:
+    - `SnmpNms.Core/Models/DeviceStatus.cs`: `Up`, `Down`, `Unknown` Enum 정의
+    - `SnmpNms.Core/Models/PollingResult.cs`: Target, Status, ResponseTime, Message 포함
+    - `SnmpNms.Core/Interfaces/IPollingService.cs`: `Start`, `Stop`, `AddTarget`, `OnPollingResult` 정의
+- **Infrastructure 구현**:
+    - `SnmpNms.Infrastructure/PollingService.cs`: 
+      - `System.Timers.Timer` 기반(기본 3초). `ISnmpClient`를 사용하여 `sysUpTime` 주기적 조회.
+      - 비동기(`Task.WhenAll`)로 다수 장비 동시 Polling 구조 구현
 
 ---
 
 ## 🚀 현재 계획 (Current Plan)
 
-### PHASE 3: Polling Scheduler 구현 (Implementation)
-- **목표**: 주기적으로 장비 상태를 감시(Polling)하여 Alive/Dead 상태 판단 기능 추가
-- **상태**: ⏳ 대기 중
+### PHASE 3: Polling Scheduler (UI 연결)
+- **목표**: UI에서 Polling 기능을 켜고(Start) 상태 변화(Alive/Dead)를 실시간으로 확인
+- **상태**: ⏳ 진행 중
 
-#### 세부 작업 항목
-1.  **Core 정의**: `IPollingService` 인터페이스 정의
-2.  **Infrastructure 구현**: `PollingScheduler` 구현 (Timer 기반, 3초 주기)
-3.  **UI 연결**: 'Auto Poll' 체크박스 추가 및 상태 표시(Alive/Dead) 연동
+#### 변경 예정 파일 목록
+1.  **`SnmpNms.UI/MainWindow.xaml`**:
+    - `Auto Poll` CheckBox 추가
+    - `Status` Label 추가 (색상 표시용)
+2.  **`SnmpNms.UI/MainWindow.xaml.cs`**:
+    - `IPollingService` 초기화 (`PollingService`)
+    - 체크박스 이벤트 핸들러 구현 (`Start/Stop`, `Add/RemoveTarget`)
+    - `OnPollingResult` 이벤트 핸들러 구현 (UI 업데이트)
 
 ---
 
 ## 📝 다음 요청 사항 (Next Request)
-- `SnmpNms.Core` 프로젝트에 `IPollingService` 인터페이스를 정의해도 될까요?
+- `SnmpNms.UI/MainWindow.xaml`에 체크박스를 추가하고 로직을 연결해도 될까요?

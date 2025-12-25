@@ -8,6 +8,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -24,8 +25,16 @@
         <Label Grid.Row="2" Grid.Column="0" Content="OID:"/>
         <TextBox Grid.Row="2" Grid.Column="1" Name="txtOid" Text="1.3.6.1.2.1.1.1.0" Margin="2"/>
 
-        <Button Grid.Row="3" Grid.Column="1" Name="btnGet" Content="Get" Click="BtnGet_Click" Margin="2" HorizontalAlignment="Right" Width="100"/>
+        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="2">
+            <CheckBox Name="chkAutoPoll" Content="Auto Poll (3s)" VerticalAlignment="Center" Margin="0,0,10,0" Checked="ChkAutoPoll_Checked" Unchecked="ChkAutoPoll_Unchecked"/>
+            <Button Name="btnGet" Content="Get" Click="BtnGet_Click" Width="100"/>
+        </StackPanel>
 
-        <TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Name="txtResult" Margin="2" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"/>
+        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="2">
+            <Label Content="Status: " FontWeight="Bold"/>
+            <Label Name="lblStatus" Content="Unknown" Foreground="Gray" FontWeight="Bold"/>
+        </StackPanel>
+
+        <TextBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Name="txtResult" Margin="2" IsReadOnly="True" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"/>
     </Grid>
 </Window>
