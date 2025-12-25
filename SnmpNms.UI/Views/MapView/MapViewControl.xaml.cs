@@ -20,6 +20,11 @@ public partial class MapViewControl : UserControl
         CascadeWindows();
     }
 
+    public void OpenSubnet(string subnetName)
+    {
+        AddInternalWindow($"Subnet: {subnetName}", "Map objects will be shown here (Todo).");
+    }
+
     public void CascadeWindows()
     {
         const double startX = 20;

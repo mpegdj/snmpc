@@ -1,5 +1,7 @@
 ﻿using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
@@ -18,6 +20,9 @@ public partial class MainWindow : Window
     private readonly IMibService _mibService;
     private readonly IPollingService _pollingService;
     private readonly MainViewModel _vm;
+
+    private Point _dragStartPoint;
+    private MapNode? _selectionAnchor;
 
     public MainWindow()
     {
@@ -44,8 +49,9 @@ public partial class MainWindow : Window
             Version = SnmpVersion.V2c,
             Timeout = 3000
         };
-        _vm.Devices.Add(defaultDevice);
+        _vm.AddDeviceToSubnet(defaultDevice);
         _vm.SelectedDevice = defaultDevice;
+        _vm.AddSystemInfo("[System] Map Selection Tree ready (Root Subnet/Default).");
     }
 
     private void PollingService_OnPollingResult(object? sender, PollingResult e)
@@ -57,6 +63,7 @@ public partial class MainWindow : Window
             {
                 lblStatus.Content = $"Up - {e.Target.IpAddress} ({DateTime.Now:HH:mm:ss})";
                 lblStatus.Foreground = Brushes.Green;
+                SetDeviceStatus($"{e.Target.IpAddress}:{e.Target.Port}", DeviceStatus.Up);
                 // Polling 로그는 너무 많을 수 있으므로 상태 변경 시에만 찍거나, 별도 로그창 사용 권장
                 // 여기서는 간단하게 시간 갱신
                 // txtResult.AppendText($"[Poll] {e.Target.IpAddress} is Alive ({e.ResponseTime}ms)\n");
@@ -65,9 +72,30 @@ public partial class MainWindow : Window
             {
                 lblStatus.Content = $"Down - {e.Target.IpAddress} ({DateTime.Now:HH:mm:ss})";
                 lblStatus.Foreground = Brushes.Red;
+                SetDeviceStatus($"{e.Target.IpAddress}:{e.Target.Port}", DeviceStatus.Down);
                 _vm.AddEvent(EventSeverity.Error, $"{e.Target.IpAddress}:{e.Target.Port}", $"[Poll] Down: {e.Message}");
             }
         });
+    }
+
+    private void SetDeviceStatus(string deviceKey, DeviceStatus status)
+    {
+        var target = FindTargetByKey(_vm.RootSubnet, deviceKey);
+        if (target is not null) target.Status = status;
+        _vm.RootSubnet.RecomputeEffectiveStatus();
+    }
+
+    private static UiSnmpTarget? FindTargetByKey(MapNode node, string key)
+    {
+        if (node.Target is not null && string.Equals(node.Target.DisplayName, key, StringComparison.OrdinalIgnoreCase))
+            return node.Target;
+
+        foreach (var c in node.Children)
+        {
+            var found = FindTargetByKey(c, key);
+            if (found is not null) return found;
+        }
+        return null;
     }
 
     private void ChkAutoPoll_Checked(object sender, RoutedEventArgs e)
@@ -212,7 +240,8 @@ public partial class MainWindow : Window
         }
 
         // 중복 방지(동일 ip:port)
-        if (_vm.Devices.Any(d => d.IpAddress == ip && d.Port == 161))
+        var key = $"{ip}:161";
+        if (FindTargetByKey(_vm.RootSubnet, key) is not null)
         {
             _vm.AddSystemInfo($"[System] Device already exists: {ip}:161");
             return;
@@ -227,35 +256,243 @@ public partial class MainWindow : Window
             Port = 161
         };
 
-        _vm.Devices.Add(dev);
+        _vm.AddDeviceToSubnet(dev);
         _vm.SelectedDevice = dev;
         _vm.AddEvent(EventSeverity.Info, dev.DisplayName, "[System] Device added");
     }
 
     private void RemoveDevice_Click(object sender, RoutedEventArgs e)
     {
-        if (tvDevices.SelectedItem is not UiSnmpTarget selected)
+        // Map Tree에서 선택된 디바이스 노드 제거
+        var selectedDeviceNode = _vm.SelectedMapNodes.FirstOrDefault(n => n.NodeType == MapNodeType.Device);
+        if (selectedDeviceNode?.Target is null || selectedDeviceNode.Parent is null)
         {
             _vm.AddSystemInfo("[System] RemoveDevice: no device selected.");
             return;
         }
 
-        _pollingService.RemoveTarget(selected);
-        _vm.Devices.Remove(selected);
-        _vm.SelectedDevice = _vm.Devices.FirstOrDefault();
+        _pollingService.RemoveTarget(selectedDeviceNode.Target);
+        selectedDeviceNode.Parent.RemoveChild(selectedDeviceNode);
+        _vm.SelectedDevice = null;
 
-        _vm.AddEvent(EventSeverity.Info, selected.DisplayName, "[System] Device removed");
+        _vm.AddEvent(EventSeverity.Info, selectedDeviceNode.Target.DisplayName, "[System] Device removed");
     }
 
-    private void TvDevices_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    // --- Map Selection Tree interactions (SNMPc style) ---
+    private void TvDevices_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.NewValue is not UiSnmpTarget dev) return;
+        _dragStartPoint = e.GetPosition(tvDevices);
 
-        _vm.SelectedDevice = dev;
-        txtIp.Text = dev.IpAddress;
-        txtCommunity.Text = dev.Community;
+        var node = FindNodeFromOriginalSource(e.OriginalSource);
+        if (node is null) return;
 
-        _vm.AddEvent(EventSeverity.Info, dev.DisplayName, "[System] Selected device");
+        var ctrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+        var shift = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
+        if (!ctrl && !shift)
+        {
+            ClearMapSelection();
+            SelectNode(node, true);
+            _selectionAnchor = node;
+        }
+        else if (ctrl)
+        {
+            SelectNode(node, !node.IsSelected);
+            _selectionAnchor = node;
+        }
+        else if (shift)
+        {
+            SelectRange(node);
+        }
+
+        e.Handled = true; // 기본 TreeView 단일 선택 동작 차단
+    }
+
+    private void TvDevices_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed) return;
+
+        var pos = e.GetPosition(tvDevices);
+        if (Math.Abs(pos.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(pos.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        var selected = _vm.SelectedMapNodes.Where(n => n.NodeType == MapNodeType.Device).ToList();
+        if (selected.Count == 0) return;
+
+        DragDrop.DoDragDrop(tvDevices, new DataObject("SnmpNms.MapNodes", selected), DragDropEffects.Move);
+    }
+
+    private void TvDevices_Drop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent("SnmpNms.MapNodes")) return;
+        var dragged = e.Data.GetData("SnmpNms.MapNodes") as List<MapNode>;
+        if (dragged is null || dragged.Count == 0) return;
+
+        var targetNode = FindNodeFromOriginalSource(e.OriginalSource);
+        if (targetNode is null) return;
+
+        // 드롭 대상은 Root/Subnet만 허용
+        if (targetNode.NodeType is not (MapNodeType.RootSubnet or MapNodeType.Subnet))
+            return;
+
+        foreach (var d in dragged)
+        {
+            if (d.Parent is null) continue;
+            if (ReferenceEquals(d.Parent, targetNode)) continue;
+
+            d.Parent.RemoveChild(d);
+            targetNode.AddChild(d);
+            _vm.AddEvent(EventSeverity.Info, d.Target?.DisplayName, $"[Map] Moved to subnet: {targetNode.DisplayName}");
+        }
+
+        targetNode.IsExpanded = true;
+        _vm.RootSubnet.RecomputeEffectiveStatus();
+    }
+
+    private void TvDevices_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Delete) return;
+        DeleteSelectedNodes();
+        e.Handled = true;
+    }
+
+    private void MapNodeText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount != 2) return;
+        var node = (sender as FrameworkElement)?.DataContext as MapNode;
+        if (node is null) return;
+
+        // Double-click subnet name -> open subnet as Map View internal window
+        if (node.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet)
+        {
+            mapViewControl?.OpenSubnet(node.DisplayName);
+            mapViewControl?.CascadeWindows();
+            _vm.AddSystemInfo($"[Map] Open subnet: {node.DisplayName}");
+        }
+    }
+
+    private void MapNode_Delete_Click(object sender, RoutedEventArgs e) => DeleteSelectedNodes();
+
+    private void MapNode_OpenMap_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetContextMenuNode(sender);
+        if (node is null) return;
+        if (node.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet)
+        {
+            mapViewControl?.OpenSubnet(node.DisplayName);
+            mapViewControl?.CascadeWindows();
+        }
+    }
+
+    private void MapNode_Properties_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetContextMenuNode(sender);
+        if (node is null) return;
+        _vm.AddSystemInfo($"[Map] Properties (Todo): {node.DisplayName}");
+    }
+
+    private void MapNode_QuickPoll_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetContextMenuNode(sender);
+        if (node?.Target is null) return;
+        _vm.AddSystemInfo($"[Map] Quick Poll (Todo): {node.Target.DisplayName}");
+    }
+
+    private void MapNode_MibTable_Click(object sender, RoutedEventArgs e)
+    {
+        var node = GetContextMenuNode(sender);
+        if (node?.Target is null) return;
+        _vm.AddSystemInfo($"[Map] MIB Table (Todo): {node.Target.DisplayName}");
+    }
+
+    private static MapNode? GetContextMenuNode(object sender)
+        => (sender as FrameworkElement)?.DataContext as MapNode;
+
+    private MapNode? FindNodeFromOriginalSource(object? originalSource)
+    {
+        var dep = originalSource as DependencyObject;
+        while (dep is not null)
+        {
+            if (dep is TreeViewItem tvi)
+                return tvi.DataContext as MapNode;
+            dep = VisualTreeHelper.GetParent(dep);
+        }
+        return null;
+    }
+
+    private void ClearMapSelection()
+    {
+        foreach (var n in _vm.SelectedMapNodes.ToList())
+        {
+            n.IsSelected = false;
+        }
+        _vm.SelectedMapNodes.Clear();
+    }
+
+    private void SelectNode(MapNode node, bool selected)
+    {
+        node.IsSelected = selected;
+        if (selected)
+        {
+            if (!_vm.SelectedMapNodes.Contains(node))
+                _vm.SelectedMapNodes.Add(node);
+
+            if (node.NodeType == MapNodeType.Device && node.Target is not null)
+            {
+                _vm.SelectedDevice = node.Target;
+                txtIp.Text = node.Target.IpAddress;
+                txtCommunity.Text = node.Target.Community;
+            }
+        }
+        else
+        {
+            _vm.SelectedMapNodes.Remove(node);
+        }
+    }
+
+    private void SelectRange(MapNode node)
+    {
+        if (_selectionAnchor is null || _selectionAnchor.Parent is null || node.Parent is null ||
+            !ReferenceEquals(_selectionAnchor.Parent, node.Parent))
+        {
+            ClearMapSelection();
+            SelectNode(node, true);
+            _selectionAnchor = node;
+            return;
+        }
+
+        var siblings = _selectionAnchor.Parent.Children;
+        var a = siblings.IndexOf(_selectionAnchor);
+        var b = siblings.IndexOf(node);
+        if (a < 0 || b < 0) return;
+
+        var start = Math.Min(a, b);
+        var end = Math.Max(a, b);
+
+        ClearMapSelection();
+        for (var i = start; i <= end; i++)
+            SelectNode(siblings[i], true);
+    }
+
+    private void DeleteSelectedNodes()
+    {
+        var selected = _vm.SelectedMapNodes.ToList();
+        if (selected.Count == 0) return;
+
+        foreach (var node in selected)
+        {
+            if (node.Parent is null) continue;
+            if (node.NodeType is MapNodeType.RootSubnet) continue;
+            if (node.NodeType is MapNodeType.Subnet && node.Children.Count > 0) continue; // 비어있을 때만 삭제
+
+            if (node.Target is not null) _pollingService.RemoveTarget(node.Target);
+            node.Parent.RemoveChild(node);
+            _vm.AddSystemInfo($"[Map] Deleted: {node.DisplayName}");
+        }
+
+        ClearMapSelection();
+        _vm.RootSubnet.RecomputeEffectiveStatus();
     }
 
     private void StartPoll_Click(object sender, RoutedEventArgs e)

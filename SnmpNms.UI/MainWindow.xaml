@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mapView="clr-namespace:SnmpNms.UI.Views.MapView"
         xmlns:eventLog="clr-namespace:SnmpNms.UI.Views.EventLog"
+        xmlns:conv="clr-namespace:SnmpNms.UI.Converters"
+        xmlns:models="clr-namespace:SnmpNms.UI.Models"
         Title="SnmpNms" Height="800" Width="1200"
         MinHeight="650" MinWidth="980">
     <DockPanel>
@@ -25,6 +27,8 @@
                 <Setter Property="VerticalAlignment" Value="Center"/>
                 <Setter Property="HorizontalAlignment" Value="Center"/>
             </Style>
+
+            <conv:DeviceStatusToBrushConverter x:Key="DeviceStatusToBrushConverter"/>
         </DockPanel.Resources>
 
         <Menu DockPanel.Dock="Top">
@@ -131,13 +135,41 @@
                             </StackPanel>
 
                             <TreeView Name="tvDevices"
-                                      ItemsSource="{Binding Devices}"
-                                      SelectedItemChanged="TvDevices_SelectedItemChanged">
-                                <TreeView.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding DisplayName}"/>
-                                    </DataTemplate>
-                                </TreeView.ItemTemplate>
+                                      ItemsSource="{Binding MapRoots}"
+                                      AllowDrop="True"
+                                      PreviewMouseLeftButtonDown="TvDevices_PreviewMouseLeftButtonDown"
+                                      PreviewMouseMove="TvDevices_PreviewMouseMove"
+                                      Drop="TvDevices_Drop"
+                                      PreviewKeyDown="TvDevices_PreviewKeyDown">
+                                <TreeView.Resources>
+                                    <HierarchicalDataTemplate DataType="{x:Type models:MapNode}" ItemsSource="{Binding Children}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Rectangle Width="10" Height="10" Margin="0,0,6,0"
+                                                       Fill="{Binding EffectiveStatus, Converter={StaticResource DeviceStatusToBrushConverter}}"/>
+                                            <TextBlock Text="{Binding DisplayName}"
+                                                       MouseLeftButtonDown="MapNodeText_MouseLeftButtonDown"/>
+                                        </StackPanel>
+                                    </HierarchicalDataTemplate>
+                                </TreeView.Resources>
+                                <TreeView.ItemContainerStyle>
+                                    <Style TargetType="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                        <Setter Property="ContextMenu">
+                                            <Setter.Value>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Properties (Todo)" Click="MapNode_Properties_Click"/>
+                                                    <MenuItem Header="Open Map View" Click="MapNode_OpenMap_Click"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Quick Poll (Todo)" Click="MapNode_QuickPoll_Click"/>
+                                                    <MenuItem Header="MIB Table (Todo)" Click="MapNode_MibTable_Click"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Delete" Click="MapNode_Delete_Click"/>
+                                                </ContextMenu>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </TreeView.ItemContainerStyle>
                             </TreeView>
                         </DockPanel>
                     </TabItem>

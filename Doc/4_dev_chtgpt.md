@@ -203,12 +203,6 @@ C) 개발툴 우선(MIB Browser/Walk/Get 중심)
   - `SnmpNms.UI.md` : `L1-L(끝)` (신규 생성)
   - `4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
 
-- **변경된 파일 목록(사이드바 대체)**
-  - `SnmpNms.Core.md`
-  - `SnmpNms.Infrastructure.md`
-  - `SnmpNms.UI.md`
-  - `4_dev_chtgpt.md`
-
 ---
 
 ## 2025-12-25 (20:13) — 메인 GUI(SNMPc 스타일) 셸 구축
@@ -229,14 +223,6 @@ C) 개발툴 우선(MIB Browser/Walk/Get 중심)
   - `SnmpNms.UI/ViewModels/MainViewModel.cs` : `L1-L(끝)` (신규 생성)
   - `SnmpNms.UI/Models/UiSnmpTarget.cs` : (DisplayName 추가)
   - `4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
-
-- **변경된 파일 목록(사이드바 대체)**
-  - `SnmpNms.UI/MainWindow.xaml`
-  - `SnmpNms.UI/MainWindow.xaml.cs`
-  - `SnmpNms.UI/ViewModels/MainViewModel.cs`
-  - `SnmpNms.UI/Models/UiSnmpTarget.cs`
-  - `4_dev_chtgpt.md`
-
 ---
 
 ## 2025-12-25 (시간 미확인) — 문서 `Doc/` 폴더로 정리 + Map View(Cascade) / Event Log 탭 확장
@@ -252,13 +238,6 @@ C) 개발툴 우선(MIB Browser/Walk/Get 중심)
   - `SnmpNms.UI/Views/MapView/MapViewControl.xaml` : `L1-L(끝)` (신규 생성)
   - `SnmpNms.UI/Views/MapView/MapViewControl.xaml.cs` : `L1-L(끝)` (신규 생성)
   - `Doc/4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
-
-- **변경된 파일 목록(사이드바 대체)**
-  - `SnmpNms.UI/MainWindow.xaml`
-  - `SnmpNms.UI/MainWindow.xaml.cs`
-  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml`
-  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml.cs`
-  - `Doc/4_dev_chtgpt.md`
 
 ---
 
@@ -280,7 +259,7 @@ C) 개발툴 우선(MIB Browser/Walk/Get 중심)
 
 ---
 
-## 2025-12-25 (시간 미확인) — Event Log Tool “필터링” 구현(전체/선택장비/Severity/검색) + 탭별 독립 필터
+## 2025-12-25 (21:15) — Event Log Tool “필터링” 구현(전체/선택장비/Severity/검색) + 탭별 독립 필터
 
 - **작업내용**
   - 하단 Event Log를 `TextBox AppendText` 방식에서 **구조화된 이벤트 리스트(DataGrid)**로 전환.
@@ -301,12 +280,28 @@ C) 개발툴 우선(MIB Browser/Walk/Get 중심)
   - `SnmpNms.UI/MainWindow.xaml.cs` : (txtResult 제거, AddEvent 기반으로 로그 기록)
   - `Doc/4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
 
-- **변경된 파일 목록(사이드바 대체)**
-  - `SnmpNms.UI/Models/EventLogEntry.cs`
-  - `SnmpNms.UI/ViewModels/EventLogFilterViewModel.cs`
-  - `SnmpNms.UI/ViewModels/MainViewModel.cs`
-  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml`
-  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml.cs`
-  - `SnmpNms.UI/MainWindow.xaml`
-  - `SnmpNms.UI/MainWindow.xaml.cs`
-  - `Doc/4_dev_chtgpt.md`
+---
+
+## 2025-12-25 (21:25) — Map Selection Tree(SNMPc 매뉴얼 동작) 구현
+
+- **작업내용**
+  - Map Selection Tree를 “단일 디바이스 리스트”에서 **Subnet/Device/Goto 계층 트리**로 전환.
+  - SNMPc 매뉴얼 동작을 최소 구현:
+    - **상태 색상**: 디바이스는 자신의 상태(Up/Down/Unknown), Subnet/Root는 하위 객체 중 **가장 높은 우선순위 상태**(Down > Unknown > Up) 표시
+    - **더블클릭(Subnet)**: Map View 내부 창으로 Open + Cascade 정렬
+    - **Ctrl/Shift 다중 선택**
+    - **Delete 키**: 선택 객체 삭제(서브넷은 비어있을 때만)
+    - **Drag & Drop**: 선택된 디바이스(복수 가능)를 다른 Subnet으로 이동
+    - **우클릭 메뉴**: Properties/Open Map/Quick Poll/MIB Table/Delete (일부 Todo)
+  - 빌드 확인: `SnmpNms.sln` Debug 빌드 **성공(오류/경고 0)**.
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/Models/MapNode.cs` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/Converters/DeviceStatusToBrushConverter.cs` : `L1-L(끝)` (신규 생성)
+  - `SnmpNms.UI/Models/UiSnmpTarget.cs` : (Status 추가 + INotifyPropertyChanged)
+  - `SnmpNms.UI/ViewModels/MainViewModel.cs` : (MapRoots/RootSubnet/SelectedMapNodes 추가)
+  - `SnmpNms.UI/MainWindow.xaml` : (Map Tree HierarchicalDataTemplate + 이벤트 핸들러/컨텍스트메뉴)
+  - `SnmpNms.UI/MainWindow.xaml.cs` : (다중선택/삭제/드래그드롭/더블클릭/상태 업데이트 구현)
+  - `SnmpNms.UI/Views/MapView/MapViewControl.xaml.cs` : (OpenSubnet 추가)
+  - `Doc/4_dev_chtgpt.md` : (하단에 로그 엔트리 추가)
+

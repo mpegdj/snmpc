@@ -7,7 +7,13 @@ namespace SnmpNms.UI.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {
-    public ObservableCollection<UiSnmpTarget> Devices { get; } = new();
+    // Map Selection Tree roots (SNMPc: Root Subnet)
+    public ObservableCollection<MapNode> MapRoots { get; } = new();
+    public MapNode RootSubnet { get; }
+    public MapNode DefaultSubnet { get; }
+
+    // Map Selection multi-select (SNMPc: ctrl/shift)
+    public ObservableCollection<MapNode> SelectedMapNodes { get; } = new();
 
     public ObservableCollection<EventLogEntry> Events { get; } = new();
 
@@ -36,6 +42,11 @@ public class MainViewModel : INotifyPropertyChanged
 
     public MainViewModel()
     {
+        RootSubnet = new MapNode(MapNodeType.RootSubnet, "Root Subnet");
+        DefaultSubnet = new MapNode(MapNodeType.Subnet, "Default");
+        RootSubnet.AddChild(DefaultSubnet);
+        MapRoots.Add(RootSubnet);
+
         // 각 탭마다 독립 필터(스코프/Severity/검색)를 갖는다.
         CurrentLog = new EventLogFilterViewModel("Current", Events, () => SelectedDevice, this);
         HistoryLog = new EventLogFilterViewModel("History", Events, () => SelectedDevice, this);
@@ -59,6 +70,14 @@ public class MainViewModel : INotifyPropertyChanged
     public void AddSystemInfo(string message) => AddEvent(EventSeverity.Info, null, message);
 
     public void ClearEvents() => Events.Clear();
+
+    public MapNode AddDeviceToSubnet(UiSnmpTarget target, MapNode? subnet = null)
+    {
+        subnet ??= DefaultSubnet;
+        var node = new MapNode(MapNodeType.Device, target.DisplayName, target);
+        subnet.AddChild(node);
+        return node;
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
