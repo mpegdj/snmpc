@@ -18,7 +18,7 @@
             </ToolBar>
         </ToolBarTray>
 
-        <Border Grid.Row="1" Margin="8" BorderBrush="#DDD" BorderThickness="1" Background="#0E6B6B" CornerRadius="4">
+        <Border Grid.Row="1" Margin="8" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="1" Background="#0E6B6B" CornerRadius="4">
             <Canvas Name="MdiCanvas"/>
         </Border>
     </Grid>

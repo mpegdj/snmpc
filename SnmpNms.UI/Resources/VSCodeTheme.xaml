@@ -30,8 +30,8 @@
     <SolidColorBrush x:Key="VSCodeTabBorder" Color="#3c3c3c"/>
     
     <!-- Border Colors -->
-    <SolidColorBrush x:Key="VSCodeBorder" Color="#3c3c3c"/>
-    <SolidColorBrush x:Key="VSCodeDivider" Color="#3c3c3c"/>
+    <SolidColorBrush x:Key="VSCodeBorder" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="VSCodeDivider" Color="#E0E0E0"/>
     
     <!-- Activity Bar Button Style -->
     <Style x:Key="ActivityBarButtonStyle" TargetType="Button">
@@ -55,7 +55,7 @@
     <Style x:Key="ActivityBarButtonActiveStyle" TargetType="Button" BasedOn="{StaticResource ActivityBarButtonStyle}">
         <Setter Property="Background" Value="{StaticResource VSCodeSelection}"/>
         <Setter Property="BorderBrush" Value="{StaticResource VSCodeAccent}"/>
-        <Setter Property="BorderThickness" Value="0,0,0,3"/>
+        <Setter Property="BorderThickness" Value="0,0,3,0"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{StaticResource VSCodeSelection}"/>

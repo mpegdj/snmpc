@@ -18,7 +18,7 @@
         <TextBlock Grid.Row="0" Text="MIB Files to Compile:" FontWeight="Bold" Margin="0,0,0,8"/>
 
         <!-- MIB Files List -->
-        <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1" Margin="0,0,0,8">
+        <Border Grid.Row="1" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="1" Margin="0,0,0,8">
             <ListBox Name="listMibFiles" SelectionMode="Extended">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
@@ -38,7 +38,7 @@
         <!-- History/Log Tab -->
         <TabControl Grid.Row="3" Margin="0,0,0,8">
             <TabItem Header="History">
-                <Border BorderBrush="#CCCCCC" BorderThickness="1">
+                <Border BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="1">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                         <TextBlock Name="txtHistory" TextWrapping="Wrap" Padding="8" FontFamily="Consolas" FontSize="11"/>
                     </ScrollViewer>

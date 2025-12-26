@@ -8,7 +8,7 @@
         </Grid.RowDefinitions>
 
         <!-- Filter Bar -->
-        <Border Grid.Row="0" Background="#F7F7F7" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="8">
+        <Border Grid.Row="0" Background="#F7F7F7" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>

@@ -93,8 +93,8 @@ public partial class MainWindow : Window
         var eventLogControl = new EventLogTabControl { DataContext = _vm.CurrentLog };
         bottomPanel.SetEventLogContent(eventLogControl);
 
-        // Activity Bar 이벤트 연결
-        activityBar.ViewChanged += ActivityBar_ViewChanged;
+        // Sidebar (Activity Bar 포함) 이벤트 연결
+        sidebar.ViewChanged += ActivityBar_ViewChanged;
     }
 
     private void ActivityBar_ViewChanged(object? sender, ActivityBarView view)
@@ -295,8 +295,6 @@ public partial class MainWindow : Window
         {
             if (e.Status == DeviceStatus.Up)
             {
-                lblStatus.Content = $"Up - {e.Target.IpAddress} ({DateTime.Now:HH:mm:ss})";
-                lblStatus.Foreground = Brushes.Green;
                 SetDeviceStatus($"{e.Target.IpAddress}:{e.Target.Port}", DeviceStatus.Up);
                 // Polling 로그는 너무 많을 수 있으므로 상태 변경 시에만 찍거나, 별도 로그창 사용 권장
                 // 여기서는 간단하게 시간 갱신
@@ -304,8 +302,6 @@ public partial class MainWindow : Window
             }
             else
             {
-                lblStatus.Content = $"Down - {e.Target.IpAddress} ({DateTime.Now:HH:mm:ss})";
-                lblStatus.Foreground = Brushes.Red;
                 SetDeviceStatus($"{e.Target.IpAddress}:{e.Target.Port}", DeviceStatus.Down);
                 _vm.AddEvent(EventSeverity.Error, $"{e.Target.IpAddress}:{e.Target.Port}", $"[Poll] Down: {e.Message}");
             }
@@ -348,8 +344,6 @@ public partial class MainWindow : Window
         _pollingService.Stop(); // 현재는 단순화를 위해 전체 Stop
         
         _vm.AddSystemInfo("[System] Auto Polling Stopped");
-        lblStatus.Content = "Unknown";
-        lblStatus.Foreground = Brushes.Gray;
     }
 
     private UiSnmpTarget BuildTargetFromInputs(bool minimal = false)

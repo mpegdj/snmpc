@@ -14,32 +14,47 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <!-- Header -->
+        <!-- Header with Activity Bar -->
         <Border Grid.Row="0" 
                 Style="{StaticResource PanelHeaderStyle}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" 
-                          Text="{Binding HeaderText, FallbackValue=EXPLORER}" 
-                          Foreground="{StaticResource VSCodeForeground}"
-                          VerticalAlignment="Center"
-                          Margin="12,0,0,0"
-                          FontSize="11"
-                          FontWeight="SemiBold"/>
-                <Button Grid.Column="1"
-                       x:Name="btnToggle"
-                       Style="{StaticResource PanelToggleButtonStyle}"
-                       Click="BtnToggle_Click"
-                       ToolTip="Toggle Sidebar">
-                    <TextBlock Text="&#xE700;" 
-                              FontFamily="Segoe MDL2 Assets"
-                              FontSize="12"
-                              Foreground="{StaticResource VSCodeForeground}"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Activity Bar Buttons -->
+                <Button x:Name="btnMap" 
+                        Style="{StaticResource ActivityBarButtonActiveStyle}"
+                        Click="BtnMap_Click"
+                        ToolTip="Map"
+                        Width="35" Height="35">
+                    <TextBlock x:Name="iconMap" Style="{StaticResource ActivityBarIconActiveStyle}" Text="&#xE700;" FontSize="16"/>
                 </Button>
-            </Grid>
+                <Button x:Name="btnMib" 
+                        Style="{StaticResource ActivityBarButtonStyle}"
+                        Click="BtnMib_Click"
+                        ToolTip="MIB"
+                        Width="35" Height="35">
+                    <TextBlock x:Name="iconMib" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE8A5;" FontSize="16"/>
+                </Button>
+                <Button x:Name="btnSearch" 
+                        Style="{StaticResource ActivityBarButtonStyle}"
+                        Click="BtnSearch_Click"
+                        ToolTip="Search"
+                        Width="35" Height="35">
+                    <TextBlock x:Name="iconSearch" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;" FontSize="16"/>
+                </Button>
+                <Button x:Name="btnEventLog" 
+                        Style="{StaticResource ActivityBarButtonStyle}"
+                        Click="BtnEventLog_Click"
+                        ToolTip="Event Log"
+                        Width="35" Height="35">
+                    <TextBlock x:Name="iconEventLog" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;" FontSize="16"/>
+                </Button>
+                <Button x:Name="btnSettings" 
+                        Style="{StaticResource ActivityBarButtonStyle}"
+                        Click="BtnSettings_Click"
+                        ToolTip="Settings"
+                        Width="35" Height="35">
+                    <TextBlock x:Name="iconSettings" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;" FontSize="16"/>
+                </Button>
+            </StackPanel>
         </Border>
         
         <!-- Content Area -->

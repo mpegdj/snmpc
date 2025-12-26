@@ -108,53 +108,32 @@
             </ToolBar>
         </ToolBarTray>
 
-        <!-- VS Code Style Layout -->
+        <!-- 하단: Log View -->
+        <views:BottomPanel DockPanel.Dock="Bottom" Height="220" MinHeight="120"
+                           x:Name="bottomPanel"/>
+
+        <!-- 중앙: Sidebar + Editor -->
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="48"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="5"/>
-                <RowDefinition Height="220" MinHeight="120"/>
-            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="280"/>
-                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="1"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Activity Bar (상단 가로) -->
-            <views:ActivityBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
-                              x:Name="activityBar"
-                              ViewChanged="ActivityBar_ViewChanged"/>
-
-            <!-- Sidebar (Activity Bar 아래) -->
-            <views:Sidebar Grid.Row="1" Grid.Column="0" Grid.RowSpan="3"
+            <!-- Sidebar (Activity Bar 포함) -->
+            <views:Sidebar Grid.Column="0"
                            x:Name="sidebar"
                            HeaderText="EXPLORER"/>
 
-            <!-- Splitter between Sidebar and Editor -->
-            <GridSplitter Grid.Row="1" Grid.Column="1" Grid.RowSpan="3"
-                         Width="5"
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="2"
+                         Width="1"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"
                          Background="{StaticResource VSCodeDivider}"/>
 
-            <!-- Editor Area (중앙) -->
-            <Grid Grid.Row="1" Grid.Column="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="48"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- View Window (we keep our existing tabs as one main view) -->
-                <Border Grid.Column="0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top"
-                                   Text="View Window Area"
-                                   Padding="10,6"
-                                   FontWeight="Bold"
-                                   Background="#F7F7F7"/>
-                        <TabControl Name="tabMain" Margin="0" SelectionChanged="TabMain_SelectionChanged">
+            <!-- Editor Area -->
+            <TabControl Grid.Column="3" Name="tabMain" SelectionChanged="TabMain_SelectionChanged">
                             <TabItem Header="Dashboard">
                                 <Grid Margin="12">
                                     <TextBlock FontSize="18" FontWeight="Bold" Text="Dashboard (Coming soon)"/>
@@ -223,7 +202,7 @@
                             <TabItem Header="MIB Table" Name="tabMibTable">
                                 <DockPanel Margin="12">
                                     <!-- 상단: MIB 테이블 선택 및 디바이스 정보 -->
-                                    <Border DockPanel.Dock="Top" BorderBrush="#DDD" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8">
+                                    <Border DockPanel.Dock="Top" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -264,7 +243,7 @@
                                               SelectionMode="Single"
                                               SelectionUnit="FullRow"
                                               Background="#FFFFFF"
-                                              BorderBrush="#E0E0E0"
+                                              BorderBrush="{StaticResource VSCodeDivider}"
                                               BorderThickness="1">
                                     </DataGrid>
                                 </DockPanel>
@@ -311,70 +290,6 @@
                                 </Grid>
                             </TabItem>
                         </TabControl>
-                    </DockPanel>
-                </Border>
-
-                <!-- Right: Edit Button Bar (placeholder) -->
-                <Border Grid.Column="1" Margin="8,0,0,0" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Top"
-                                   Text="Edit"
-                                   Padding="6"
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"
-                                   Background="#F7F7F7"/>
-                        <StackPanel Margin="6" HorizontalAlignment="Center">
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Device Object" Click="EditAddDeviceObject_Click">
-                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE710;"/>
-                            </Button>
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Subnet" Click="EditAddSubnet_Click">
-                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8D2;"/>
-                            </Button>
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Goto" Click="EditAddGoto_Click">
-                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8A7;"/>
-                            </Button>
-                            <Separator/>
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Geo Subnet (Todo)">
-                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE81D;"/>
-                            </Button>
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Link Between Objects (Todo)">
-                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE71B;"/>
-                            </Button>
-                            <Button Style="{StaticResource IconButton}" ToolTip="Add Network Object (Todo)">
-                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8D4;"/>
-                            </Button>
-                        </StackPanel>
-                    </DockPanel>
-                </Border>
-            </Grid>
-
-            <!-- Splitter between Editor and Panel -->
-            <GridSplitter Grid.Row="2" Grid.Column="2"
-                         Height="5"
-                         HorizontalAlignment="Stretch"
-                         VerticalAlignment="Stretch"
-                         Background="{StaticResource VSCodeDivider}"
-                         ResizeDirection="Rows"
-                         ResizeBehavior="PreviousAndNext"/>
-
-            <!-- Bottom Panel (Event Log) -->
-            <views:BottomPanel Grid.Row="3" Grid.Column="2"
-                               x:Name="bottomPanel"/>
-
         </Grid>
-
-        <!-- Status Bar -->
-        <StatusBar DockPanel.Dock="Bottom" Style="{StaticResource VSCodeStatusBarStyle}">
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Status: " FontWeight="Bold"/>
-                    <Label Name="lblStatus" Content="Unknown" Foreground="White" FontWeight="Bold"/>
-                </StackPanel>
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
-                <TextBlock Text="{Binding SelectedDevice.DisplayName, FallbackValue='(no device selected)'}" Foreground="White"/>
-            </StatusBarItem>
-        </StatusBar>
     </DockPanel>
 </Window>
