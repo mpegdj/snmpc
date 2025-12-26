@@ -140,6 +140,8 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
         <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
         <Style.Resources>
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
@@ -165,9 +167,8 @@
     <!-- Panel Header Style -->
     <Style x:Key="PanelHeaderStyle" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource VSCodeSidebarBackground}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource VSCodeBorder}"/>
-        <Setter Property="BorderThickness" Value="0,1,0,0"/>
-        <Setter Property="Height" Value="35"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Height" Value="28"/>
     </Style>
     
     <!-- Panel Toggle Button Style -->

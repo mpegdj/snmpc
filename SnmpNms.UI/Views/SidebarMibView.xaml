@@ -7,7 +7,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="280"
              Background="{StaticResource VSCodeSidebarBackground}">
-    <DockPanel Margin="8">
+    <DockPanel>
         <TreeView Name="treeMib"
                   Background="Transparent"
                   Foreground="{StaticResource VSCodeForeground}">
@@ -40,6 +40,9 @@
                 <Style TargetType="TreeViewItem" BasedOn="{StaticResource VSCodeTreeViewItemStyle}">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=OneWay}"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu>

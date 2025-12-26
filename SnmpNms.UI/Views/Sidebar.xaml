@@ -23,36 +23,36 @@
                         Style="{StaticResource ActivityBarButtonActiveStyle}"
                         Click="BtnMap_Click"
                         ToolTip="Map"
-                        Width="35" Height="35">
-                    <TextBlock x:Name="iconMap" Style="{StaticResource ActivityBarIconActiveStyle}" Text="&#xE700;" FontSize="16"/>
+                        Width="28" Height="28">
+                    <TextBlock x:Name="iconMap" Style="{StaticResource ActivityBarIconActiveStyle}" Text="&#xE700;" FontSize="14"/>
                 </Button>
                 <Button x:Name="btnMib" 
                         Style="{StaticResource ActivityBarButtonStyle}"
                         Click="BtnMib_Click"
                         ToolTip="MIB"
-                        Width="35" Height="35">
-                    <TextBlock x:Name="iconMib" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE8A5;" FontSize="16"/>
+                        Width="28" Height="28">
+                    <TextBlock x:Name="iconMib" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE8A5;" FontSize="14"/>
                 </Button>
                 <Button x:Name="btnSearch" 
                         Style="{StaticResource ActivityBarButtonStyle}"
                         Click="BtnSearch_Click"
                         ToolTip="Search"
-                        Width="35" Height="35">
-                    <TextBlock x:Name="iconSearch" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;" FontSize="16"/>
+                        Width="28" Height="28">
+                    <TextBlock x:Name="iconSearch" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;" FontSize="14"/>
                 </Button>
                 <Button x:Name="btnEventLog" 
                         Style="{StaticResource ActivityBarButtonStyle}"
                         Click="BtnEventLog_Click"
                         ToolTip="Event Log"
-                        Width="35" Height="35">
-                    <TextBlock x:Name="iconEventLog" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;" FontSize="16"/>
+                        Width="28" Height="28">
+                    <TextBlock x:Name="iconEventLog" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;" FontSize="14"/>
                 </Button>
                 <Button x:Name="btnSettings" 
                         Style="{StaticResource ActivityBarButtonStyle}"
                         Click="BtnSettings_Click"
                         ToolTip="Settings"
-                        Width="35" Height="35">
-                    <TextBlock x:Name="iconSettings" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;" FontSize="16"/>
+                        Width="28" Height="28">
+                    <TextBlock x:Name="iconSettings" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;" FontSize="14"/>
                 </Button>
             </StackPanel>
         </Border>

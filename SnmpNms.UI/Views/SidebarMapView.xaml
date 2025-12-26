@@ -12,7 +12,7 @@
     <UserControl.Resources>
         <conv:DeviceStatusToBrushConverter x:Key="DeviceStatusToBrushConverter"/>
     </UserControl.Resources>
-    <DockPanel Margin="8">
+    <DockPanel>
         <TreeView Name="tvDevices"
                   ItemsSource="{Binding MapRoots}"
                   AllowDrop="True"
@@ -41,6 +41,9 @@
                 <Style TargetType="TreeViewItem" BasedOn="{StaticResource VSCodeTreeViewItemStyle}">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=OneWay}"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
