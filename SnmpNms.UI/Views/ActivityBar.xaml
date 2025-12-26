@@ -16,6 +16,14 @@
             <TextBlock x:Name="iconMap" Style="{StaticResource ActivityBarIconActiveStyle}" Text="&#xE700;"/>
         </Button>
         
+        <!-- MIB -->
+        <Button x:Name="btnMib" 
+                Style="{StaticResource ActivityBarButtonStyle}"
+                Click="BtnMib_Click"
+                ToolTip="MIB">
+            <TextBlock x:Name="iconMib" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE8A5;"/>
+        </Button>
+        
         <!-- Search -->
         <Button x:Name="btnSearch" 
                 Style="{StaticResource ActivityBarButtonStyle}"

@@ -6,6 +6,7 @@ namespace SnmpNms.UI.Views;
 public enum ActivityBarView
 {
     Map,
+    Mib,
     Search,
     EventLog,
     Settings
@@ -72,6 +73,14 @@ public partial class ActivityBar : UserControl
                 : (Style)FindResource("ActivityBarIconStyle");
         }
         
+        // MIB 버튼
+        btnMib.Style = _currentView == ActivityBarView.Mib 
+            ? (Style)FindResource("ActivityBarButtonActiveStyle")
+            : (Style)FindResource("ActivityBarButtonStyle");
+        iconMib.Style = _currentView == ActivityBarView.Mib
+            ? (Style)FindResource("ActivityBarIconActiveStyle")
+            : (Style)FindResource("ActivityBarIconStyle");
+        
         // Settings 버튼
         btnSettings.Style = _currentView == ActivityBarView.Settings 
             ? (Style)FindResource("ActivityBarButtonActiveStyle")
@@ -87,6 +96,11 @@ public partial class ActivityBar : UserControl
     private void BtnMap_Click(object sender, RoutedEventArgs e)
     {
         CurrentView = ActivityBarView.Map;
+    }
+
+    private void BtnMib_Click(object sender, RoutedEventArgs e)
+    {
+        CurrentView = ActivityBarView.Mib;
     }
 
     private void BtnSearch_Click(object sender, RoutedEventArgs e)

@@ -1,0 +1,55 @@
+<UserControl x:Class="SnmpNms.UI.Views.SidebarMibView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:models="clr-namespace:SnmpNms.Core.Models;assembly=SnmpNms.Core"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="280"
+             Background="{StaticResource VSCodeSidebarBackground}">
+    <DockPanel Margin="8">
+        <TreeView Name="treeMib"
+                  Background="Transparent"
+                  Foreground="{StaticResource VSCodeForeground}">
+            <TreeView.Resources>
+                <HierarchicalDataTemplate DataType="{x:Type models:MibTreeNode}" ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Name}"
+                                   Foreground="{StaticResource VSCodeForeground}"/>
+                        <TextBlock Text=" (" 
+                                   Foreground="{StaticResource VSCodeForeground}"
+                                   Visibility="{Binding Oid, Converter={StaticResource StringToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding Oid}"
+                                   Foreground="#666"
+                                   Visibility="{Binding Oid, Converter={StaticResource StringToVisibilityConverter}}"/>
+                        <TextBlock Text=")" 
+                                   Foreground="{StaticResource VSCodeForeground}"
+                                   Visibility="{Binding Oid, Converter={StaticResource StringToVisibilityConverter}}"/>
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.Resources>
+            <TreeView.ItemContainerStyle>
+                <Style TargetType="TreeViewItem" BasedOn="{StaticResource VSCodeTreeViewItemStyle}">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=OneWay}"/>
+                    <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu>
+                                <MenuItem Header="Get" Click="MibTreeGet_Click"/>
+                                <MenuItem Header="Get Next" Click="MibTreeGetNext_Click"/>
+                                <MenuItem Header="Walk" Click="MibTreeWalk_Click"/>
+                                <Separator/>
+                                <MenuItem Header="View Table" Click="MibTreeViewTable_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Copy OID" Click="MibTreeCopyOid_Click"/>
+                                <MenuItem Header="Copy Name" Click="MibTreeCopyName_Click"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TreeView.ItemContainerStyle>
+        </TreeView>
+    </DockPanel>
+</UserControl>
+

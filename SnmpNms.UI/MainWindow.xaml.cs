@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private MapNode? _selectionAnchor;
     private SidebarMapView? _sidebarMapView;
     private TreeView? _tvDevices;
+    private TreeView? _treeMib;
 
     public MainWindow()
     {
@@ -111,6 +112,20 @@ public partial class MainWindow : Window
                 _tvDevices.PreviewKeyDown += TvDevices_PreviewKeyDown;
                 _sidebarMapView.MapNodeTextMouseLeftButtonDown += MapNodeText_MouseLeftButtonDown;
                 sidebar.CurrentContent = _sidebarMapView;
+                break;
+            case ActivityBarView.Mib:
+                sidebar.HeaderText = "MIB";
+                var sidebarMibView = new SidebarMibView { DataContext = _mibService.GetMibTree() };
+                _treeMib = sidebarMibView.TreeView;
+                _treeMib.ItemsSource = new[] { _mibService.GetMibTree() };
+                _treeMib.SelectedItemChanged += treeMib_SelectedItemChanged;
+                sidebarMibView.MibTreeGetClick += MibTreeGet_Click;
+                sidebarMibView.MibTreeGetNextClick += MibTreeGetNext_Click;
+                sidebarMibView.MibTreeWalkClick += MibTreeWalk_Click;
+                sidebarMibView.MibTreeViewTableClick += MibTreeViewTable_Click;
+                sidebarMibView.MibTreeCopyOidClick += MibTreeCopyOid_Click;
+                sidebarMibView.MibTreeCopyNameClick += MibTreeCopyName_Click;
+                sidebar.CurrentContent = sidebarMibView;
                 break;
             case ActivityBarView.Search:
                 sidebar.HeaderText = "SEARCH";
@@ -759,9 +774,7 @@ public partial class MainWindow : Window
         try
         {
             var rootTree = _mibService.GetMibTree();
-            // TODO: MIB 트리를 Sidebar에 추가할 때 활성화
-            // if (_treeMib != null)
-            //     _treeMib.ItemsSource = new[] { rootTree };
+            // MIB 트리는 Activity Bar에서 Mib 뷰를 선택할 때 초기화됨
             
             // 디버깅: 트리 노드 개수 확인
             var totalNodes = CountNodes(rootTree);
@@ -810,9 +823,7 @@ public partial class MainWindow : Window
             ExpandParentNodes(defaultNode, rootNode);
             
             // TreeViewItem을 찾아서 선택
-            // TODO: MIB 트리를 Sidebar에 추가할 때 활성화
-            // var treeViewItem = FindTreeViewItem(_treeMib, defaultNode);
-            var treeViewItem = (TreeViewItem?)null;
+            var treeViewItem = _treeMib != null ? FindTreeViewItem(_treeMib, defaultNode) : null;
             if (treeViewItem != null)
             {
                 treeViewItem.IsSelected = true;
@@ -901,9 +912,7 @@ public partial class MainWindow : Window
 
     private MibTreeNode? GetSelectedMibNode()
     {
-        // TODO: MIB 트리를 Sidebar에 추가할 때 활성화
-        // return _treeMib?.SelectedItem as MibTreeNode;
-        return null;
+        return _treeMib?.SelectedItem as MibTreeNode;
     }
 
     private void treeMib_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
