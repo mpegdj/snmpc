@@ -44,6 +44,7 @@
   - 필터 및 Seed 관리
   - Polling Protocol 기능
   - Map Object 속성 편집
+  - CIDR 기반 서브넷 자동 배치
 
 - **[7.mib_database.md](7.mib_database.md)**: MIB 데이터베이스 기능
   - MIB 파일 로드 및 파싱
@@ -55,18 +56,42 @@
   - 디바이스/Subnet/Goto 관리
   - 상태 전파 및 표시
 
-- **[5_dev_logs.md](5_dev_logs.md)**: 개발 로그
-  - 작업 기록 원장 (SSOT)
+- **[5_dev_logs.md](5_dev_logs.md)**: 개발 로그 (SSOT)
+  - 작업 기록 원장
   - 변경 이력 및 이슈 추적
+  - 모든 작업 기록의 단일 원장
 
 - **[4_dev_ops.md](4_dev_ops.md)**: 운영/개발 환경
   - 실행 방법
   - 빌드 및 배포
   - 트러블슈팅
 
-- **[3_dev_detail.md](3_dev_detail.md)**: 개발 상세 사항
+- **[3_dev_detail.md](3_dev_detail.md)**: 개발 상세 사항 (코드 기준)
+  - 코드 구조 및 클래스 트리
+  - 주요 함수 및 실행 흐름
   - 구현 세부사항
-  - 기술적 결정 사항
+
+- **[dev_detail.md](dev_detail.md)**: 개발 상세 문서 (포괄적)
+  - 프로젝트 개요 및 아키텍처
+  - 주요 컴포넌트 상세
+  - 데이터 모델 및 UI 구조
+  - 개발 가이드 및 변경 이력
+
+### UI/디자인 문서
+
+- **[9.vs_code_style.md](9.vs_code_style.md)**: VS Code 스타일 UI 변경 계획
+  - VS Code 스타일 레이아웃 구조
+  - Activity Bar, Sidebar, BottomPanel 구현
+  - Phase별 구현 현황
+
+- **[10_slidebar_map_min_color.md](10_slidebar_map_min_color.md)**: Sidebar Map/MIB 트리 선택 색상 변경 기록
+  - 문제 상황 및 해결 과정
+  - 시도한 모든 방법 기록
+  - 최종 해결 방법
+
+- **[11.renewal_gui.md](11.renewal_gui.md)**: GUI Renewal 계획
+  - SNMPc 원래 화면 구조를 VS Code 스타일로 재구성
+  - 최종 구조 및 레이아웃 계획
 
 ### 계획 및 설계 문서
 
@@ -100,6 +125,7 @@
 ### 레퍼런스
 
 - **[intro_snmpc.pdf](intro_snmpc.pdf)**: SNMPc UI 레퍼런스 (PDF)
+- **[README.md](README.md)**: 문서 정리 가이드 및 빠른 참조
 
 ---
 
@@ -329,6 +355,16 @@ dotnet build SnmpNms.UI
 - MapObjectPropertiesDialog에 Polling Protocol 선택 추가
 - PollingService에서 Protocol별 처리 구현
 
+### v1.3 (Auto Polling 개선)
+- Auto Polling 로그는 앱 시작 시에만 기록
+- Start/Stop Poll 시 모든 기기 polling
+- 필터링은 표시에만 관련, polling에는 영향 없음
+
+### v1.4 (Discovery CIDR 기반 서브넷 배치)
+- Discovery 후 기기를 CIDR 기반 서브넷에 자동 배치
+- Seed 정보를 기반으로 적절한 서브넷 찾기/생성
+- 서브넷 이름 형식: `네트워크주소/CIDR` (예: `192.168.0.0/24`)
+
 ---
 
 ## 문의 및 기여
@@ -336,6 +372,307 @@ dotnet build SnmpNms.UI
 - **이슈 리포트**: GitHub Issues 사용
 - **기능 제안**: GitHub Discussions 사용
 - **문서 개선**: Pull Request 환영
+
+---
+
+## 프로젝트 파일 구조 및 중요 클래스
+
+### SnmpNms.Core 프로젝트
+
+#### Interfaces (인터페이스)
+
+**`ISnmpClient.cs`**
+- **클래스**: `ISnmpClient` (인터페이스)
+- **목적**: SNMP 통신 인터페이스 정의
+- **주요 메서드**:
+  - `Task<SnmpResult> GetAsync(ISnmpTarget target, string oid)` - 단일 OID GET 요청
+  - `Task<SnmpResult> GetAsync(ISnmpTarget target, IEnumerable<string> oids)` - 다중 OID GET 요청
+  - `Task<SnmpResult> GetNextAsync(ISnmpTarget target, string oid)` - GET-NEXT 요청
+  - `Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid)` - WALK 요청
+
+**`ISnmpTarget.cs`**
+- **클래스**: `ISnmpTarget` (인터페이스)
+- **목적**: SNMP 타겟 디바이스 인터페이스 정의
+- **주요 속성**: `IpAddress`, `Port`, `Community`, `Version`, `Timeout`, `Retries`, `PollingProtocol`
+
+**`IPollingService.cs`**
+- **클래스**: `IPollingService` (인터페이스)
+- **목적**: 주기적 Polling 서비스 인터페이스 정의
+- **주요 메서드**: `Start()`, `Stop()`, `AddTarget()`, `RemoveTarget()`, `SetInterval()`
+- **이벤트**: `OnPollingResult`
+
+**`IMibService.cs`**
+- **클래스**: `IMibService` (인터페이스)
+- **목적**: MIB 파일 파싱 및 OID 변환 서비스 인터페이스 정의
+- **주요 메서드**: `LoadMibModules()`, `GetOidName()`, `GetOid()`, `GetMibTree()`
+
+#### Models (데이터 모델)
+
+**`DeviceStatus.cs`**
+- **클래스**: `DeviceStatus` (enum)
+- **값**: `Unknown`, `Up`, `Down`
+- **목적**: 디바이스 상태 표시
+
+**`PollingProtocol.cs`**
+- **클래스**: `PollingProtocol` (enum)
+- **값**: `SNMP`, `Ping`, `ARP`, `None`
+- **목적**: Polling에 사용할 프로토콜 지정
+
+**`SnmpVersion.cs`**
+- **클래스**: `SnmpVersion` (enum)
+- **값**: `V1`, `V2c`, `V3`
+- **목적**: SNMP 버전 지정
+
+**`SnmpResult.cs`**
+- **클래스**: `SnmpResult`
+- **목적**: SNMP 요청 결과 모델
+- **주요 속성**: `IsSuccess`, `Variables`, `ResponseTime`, `ErrorMessage`
+- **정적 메서드**: `Success()`, `Fail()`
+
+**`SnmpVariable.cs`**
+- **클래스**: `SnmpVariable`
+- **목적**: SNMP 변수 모델
+- **주요 속성**: `Oid`, `TypeCode`, `Value`
+
+**`PollingResult.cs`**
+- **클래스**: `PollingResult`
+- **목적**: Polling 결과 모델
+- **주요 속성**: `Target`, `Status`, `ResponseTime`, `Timestamp`, `Message`
+
+**`MibTreeNode.cs`**
+- **클래스**: `MibTreeNode`, `MibNodeType` (enum)
+- **목적**: MIB 트리 노드 모델
+- **주요 속성**: `Name`, `Oid`, `NodeType`, `Children`, `IsExpanded`, `IsSelected`, `Description`
+
+---
+
+### SnmpNms.Infrastructure 프로젝트
+
+**`SnmpClient.cs`**
+- **클래스**: `SnmpClient` (구현: `ISnmpClient`)
+- **목적**: SharpSnmpLib을 사용한 SNMP 통신 구현
+- **의존성**: `Lextm.SharpSnmpLib`
+- **주요 기능**: GET, GET-NEXT, WALK 요청 처리, 응답 시간 측정, 예외 처리
+
+**`PollingService.cs`**
+- **클래스**: `PollingService` (구현: `IPollingService`)
+- **목적**: 주기적 디바이스 상태 Polling 서비스 구현
+- **주요 기능**: 
+  - `System.Timers.Timer` 사용 (기본 3초 주기)
+  - `ConcurrentDictionary`로 타겟 관리 (스레드 안전)
+  - Protocol별 상태 확인 (SNMP: sysUpTime, Ping: ICMP, ARP: 미구현)
+- **이벤트**: `OnPollingResult`
+
+**`MibService.cs`**
+- **클래스**: `MibService` (구현: `IMibService`)
+- **목적**: MIB 파일 파싱 및 OID ↔ Name 변환 구현
+- **주요 기능**: 
+  - 정규표현식 기반 MIB 파일 파싱
+  - 의존성 해결을 위한 반복 파싱 (최대 10회)
+  - 기본 표준 MIB 하드코딩 (sysDescr, sysUpTime 등)
+  - 트리 구조 생성 및 정렬
+
+---
+
+### SnmpNms.UI 프로젝트
+
+#### Main Files (메인 파일)
+
+**`App.xaml` / `App.xaml.cs`**
+- **클래스**: `App` (Application)
+- **목적**: WPF 애플리케이션 진입점
+- **주요 기능**: 리소스 로드, 예외 처리
+
+**`MainWindow.xaml` / `MainWindow.xaml.cs`**
+- **클래스**: `MainWindow` (Window)
+- **목적**: 메인 윈도우 및 애플리케이션 진입점
+- **주요 속성**: 
+  - `_snmpClient`, `_mibService`, `_pollingService`, `_vm`
+  - `_sidebarMapView`, `_tvDevices`, `_treeMib`
+- **주요 메서드**:
+  - `InitializeVSCodeUI()` - VS Code 스타일 UI 초기화
+  - `LoadMibs()` - MIB 파일 로드
+  - `InitializeMibTree()` - MIB 트리 초기화
+  - `PollingService_OnPollingResult()` - Polling 결과 처리
+  - `ActivityBar_ViewChanged()` - Activity Bar 뷰 변경 처리
+
+**`MainWindowCommands.cs`**
+- **클래스**: `MainWindowCommands` (정적 클래스)
+- **목적**: Map Tree ContextMenu용 RoutedUICommand 정의
+- **주요 명령**: `MapProperties`, `MapOpen`, `MapQuickPoll`, `MapMibTable`, `MapDelete`
+
+#### ViewModels (뷰모델)
+
+**`MainViewModel.cs`**
+- **클래스**: `MainViewModel` (구현: `INotifyPropertyChanged`)
+- **목적**: 애플리케이션 상태 관리 및 데이터 바인딩
+- **주요 속성**:
+  - `MapRoots` - 맵 트리 루트 노드 컬렉션
+  - `SelectedMapNodes` - 선택된 맵 노드들 (다중 선택)
+  - `SelectedDeviceNode` - 현재 선택된 디바이스 노드
+  - `SelectedDevice` - 현재 선택된 디바이스
+  - `Events` - 이벤트 로그 엔트리 컬렉션
+  - `CurrentLog`, `HistoryLog`, `Custom1Log` ~ `Custom8Log` - 필터 뷰모델들
+- **주요 메서드**:
+  - `AddEvent()` - 이벤트 추가
+  - `AddSystemInfo()` - 시스템 정보 이벤트 추가
+  - `AddDeviceToSubnet()` - 디바이스를 Subnet에 추가
+  - `RemoveDeviceNode()` - 디바이스 노드 제거
+  - `AddSubnet()` - Subnet 추가
+  - `AddGoto()` - Goto 추가
+
+**`EventLogFilterViewModel.cs`**
+- **클래스**: `EventLogFilterViewModel` (구현: `INotifyPropertyChanged`)
+- **열거형**: `EventLogScope`, `EventSeverityFilter`
+- **목적**: 이벤트 로그 필터링 및 뷰 관리
+- **주요 속성**:
+  - `Name` - 필터 이름
+  - `View` - 필터링된 ICollectionView
+  - `Events` - 원본 이벤트 컬렉션
+  - `Scope` - 필터 범위 (All, SelectedDevice)
+  - `Severity` - 심각도 필터 (Any, Info, Warning, Error)
+  - `SearchText` - 검색어
+- **주요 메서드**: `Refresh()` - 필터 뷰 갱신
+
+#### Models (UI 모델)
+
+**`MapNode.cs`**
+- **클래스**: `MapNode` (구현: `INotifyPropertyChanged`)
+- **열거형**: `MapNodeType` (RootSubnet, Subnet, Device, Goto)
+- **목적**: Map 트리 노드 모델
+- **주요 속성**:
+  - `NodeType` - 노드 타입
+  - `Name` - 노드 이름
+  - `Target` - 디바이스 타겟 (Device 타입일 때)
+  - `Parent` - 부모 노드
+  - `Children` - 자식 노드들
+  - `IsExpanded` - 확장 상태
+  - `IsSelected` - 선택 상태
+  - `EffectiveStatus` - 유효 상태 (자식 노드들의 최고 우선순위 상태)
+  - `DisplayName` - 표시 이름
+- **주요 메서드**: `AddChild()`, `RemoveChild()`, `UpdateEffectiveStatus()`
+
+**`UiSnmpTarget.cs`**
+- **클래스**: `UiSnmpTarget` (구현: `ISnmpTarget`, `INotifyPropertyChanged`)
+- **목적**: UI 표시용 SNMP 타겟 모델
+- **주요 속성**:
+  - `IpAddress` - IP 주소
+  - `Port` - 포트 번호 (기본 161)
+  - `Alias` - 별칭
+  - `Device` - 디바이스 이름
+  - `Community` - Community String
+  - `Version` - SNMP 버전
+  - `Timeout` - 타임아웃 (밀리초)
+  - `Retries` - 재시도 횟수
+  - `PollingProtocol` - Polling 프로토콜
+  - `EndpointKey` - 고유 키 ("ip:port" 형식)
+  - `DisplayName` - 표시 이름 (Alias 우선)
+  - `Status` - 상태 (Up/Down/Unknown)
+
+**`EventLogEntry.cs`**
+- **클래스**: `EventLogEntry`
+- **열거형**: `EventSeverity` (Info, Warning, Error)
+- **목적**: 이벤트 로그 엔트리 모델
+- **주요 속성**: `Timestamp`, `Severity`, `Device`, `Message`
+
+#### Views (뷰)
+
+**`ActivityBar.xaml` / `ActivityBar.xaml.cs`**
+- **클래스**: `ActivityBar` (UserControl)
+- **열거형**: `ActivityBarView` (Map, Mib, Search, EventLog, Settings)
+- **목적**: VS Code 스타일 Activity Bar (왼쪽 세로 버튼 바)
+- **주요 속성**: `CurrentView`, `ViewChanged` 이벤트
+
+**`Sidebar.xaml` / `Sidebar.xaml.cs`**
+- **클래스**: `Sidebar` (UserControl)
+- **목적**: VS Code 스타일 Sidebar (Activity Bar + 콘텐츠 영역)
+- **주요 속성**:
+  - `HeaderText` (DependencyProperty) - 헤더 텍스트
+  - `CurrentContent` (DependencyProperty) - 현재 표시할 컨텐츠
+  - `CurrentView` - 현재 뷰
+- **이벤트**: `ViewChanged`
+
+**`SidebarMapView.xaml` / `SidebarMapView.xaml.cs`**
+- **클래스**: `SidebarMapView` (UserControl)
+- **목적**: Sidebar에 표시할 Map 트리 뷰
+- **주요 기능**: Map 트리 표시, 다중 선택, 드래그 앤 드롭, 컨텍스트 메뉴
+- **이벤트**: `MapNodeTextMouseLeftButtonDown`
+
+**`SidebarMibView.xaml` / `SidebarMibView.xaml.cs`**
+- **클래스**: `SidebarMibView` (UserControl)
+- **목적**: Sidebar에 표시할 MIB 트리 뷰
+- **주요 기능**: MIB 트리 표시, 노드 선택, 컨텍스트 메뉴 (Get, Get Next, Walk, View Table, Copy OID, Copy Name)
+- **이벤트**: `MibTreeGetClick`, `MibTreeGetNextClick`, `MibTreeWalkClick`, `MibTreeViewTableClick`, `MibTreeCopyOidClick`, `MibTreeCopyNameClick`
+
+**`Panel.xaml` / `Panel.xaml.cs`**
+- **클래스**: `BottomPanel` (UserControl)
+- **목적**: 하단 패널 (Event Log, Output, Terminal 탭)
+- **주요 기능**: 탭 인터페이스, Event Log 콘텐츠 설정
+- **주요 메서드**: `SetEventLogContent()`, `ToggleVisibility()`
+
+**`EventLog/EventLogTabControl.xaml` / `EventLogTabControl.xaml.cs`**
+- **클래스**: `EventLogTabControl` (UserControl)
+- **목적**: Event Log 탭 컨트롤 (필터 + DataGrid)
+- **주요 기능**: 
+  - 필터 바 (Scope, Severity, Search)
+  - DataGrid로 로그 표시
+  - 자동 스크롤 (새 로그 추가 시)
+- **주요 속성**: `dataGridLog` (DataGrid)
+
+**`MapView/MapViewControl.xaml` / `MapViewControl.xaml.cs`**
+- **클래스**: `MapViewControl` (UserControl)
+- **목적**: Map View 컨트롤 (내부 창 Cascade 지원)
+- **주요 기능**: Subnet 창 표시, Cascade 정렬, 내부 창 관리
+
+#### Dialogs (다이얼로그)
+
+**`Dialogs/DiscoveryPollingAgentsDialog.xaml` / `DiscoveryPollingAgentsDialog.xaml.cs`**
+- **클래스**: `DiscoveryPollingAgentsDialog` (Window)
+- **목적**: Discovery 및 Polling 설정 구성 다이얼로그
+- **주요 기능**: Seed IP/Netmask 설정, Community String 관리, 필터 설정, SNMP 버전 선택, Find Options 설정, 설정 저장/로드
+
+**`Dialogs/DiscoveryProgressDialog.xaml` / `DiscoveryProgressDialog.xaml.cs`**
+- **클래스**: `DiscoveryProgressDialog` (Window)
+- **목적**: Discovery 진행 상황 표시 및 결과 확인 다이얼로그
+- **주요 기능**: 진행 상황 표시, 발견된 디바이스 목록 표시, 병렬 IP 스캔 처리, 필터 적용
+
+**`Dialogs/MapObjectPropertiesDialog.xaml` / `MapObjectPropertiesDialog.xaml.cs`**
+- **클래스**: `MapObjectPropertiesDialog` (Window)
+- **목적**: Map Object (Device/Subnet/Goto) 속성 편집 다이얼로그
+- **주요 기능**: General/Access/Attributes/Dependencies 탭, Lookup 기능, Ping 테스트
+
+**`Dialogs/MapObjectType.cs`**
+- **열거형**: `MapObjectType` (Device, Subnet, Goto)
+- **목적**: Map Object 타입 정의
+
+**`Dialogs/CompileMibsDialog.xaml` / `CompileMibsDialog.xaml.cs`**
+- **클래스**: `CompileMibsDialog` (Window)
+- **목적**: MIB 파일 컴파일 및 로드 다이얼로그
+
+**`Dialogs/LookupPreviewDialog.xaml` / `LookupPreviewDialog.xaml.cs`**
+- **클래스**: `LookupPreviewDialog` (Window)
+- **목적**: 디바이스 Lookup 결과 미리보기 다이얼로그
+
+**`Dialogs/PingLogWindow.xaml` / `PingLogWindow.xaml.cs`**
+- **클래스**: `PingLogWindow` (Window)
+- **목적**: Ping 테스트 로그 표시 창
+- **주요 기능**: 연속 Ping (1초 간격), Stop 기능
+
+#### Converters (변환기)
+
+**`Converters/DeviceStatusToBrushConverter.cs`**
+- **클래스**: `DeviceStatusToBrushConverter` (구현: `IValueConverter`)
+- **목적**: 디바이스 상태 → 색상 변환 (Unknown=Gray, Up=Green, Down=Red)
+
+**`Converters/StringToVisibilityConverter.cs`**
+- **클래스**: `StringToVisibilityConverter` (구현: `IValueConverter`)
+- **목적**: 문자열 → Visibility 변환
+
+#### Resources (리소스)
+
+**`Resources/VSCodeTheme.xaml`**
+- **목적**: VS Code 스타일 테마 정의
+- **주요 리소스**: 색상 브러시, 스타일, 패널 헤더 스타일, 탭 스타일 등
 
 ---
 

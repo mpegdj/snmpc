@@ -33,8 +33,9 @@
                         <Style TargetType="TabItem" BasedOn="{StaticResource PanelTabItemStyle}"/>
                     </TabControl.Resources>
                     
-                    <TabItem Header="Event Log" x:Name="tabEventLog">
-                        <!-- Event Log content will be set in code-behind -->
+                    <TabItem Header="Event Log" x:Name="tabEventLog" IsSelected="True">
+                        <!-- Event Log: CurrentLog만 표시 (Map Object 선택과 연동) -->
+                        <eventLog:EventLogTabControl DataContext="{Binding CurrentLog}"/>
                     </TabItem>
                     
                     <TabItem Header="Output" x:Name="tabOutput" IsEnabled="False">
@@ -67,7 +68,7 @@
         <!-- Panel Content -->
         <ContentControl Grid.Row="1" 
                        x:Name="contentArea"
-                       Content="{Binding ElementName=tabPanel, Path=SelectedContent}"/>
+                       Background="{StaticResource VSCodePanelBackground}"/>
     </Grid>
 </UserControl>
 

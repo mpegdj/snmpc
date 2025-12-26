@@ -345,3 +345,110 @@
   - Map Tree Expander 호버 색상이 파란색으로 제대로 적용되지 않음 (현재 설정했으나 작동 미확인)
   - 접힘 상태에서 삼각형 Fill이 흰색으로 보이는 문제 (Foreground를 Black으로 강제했으나 해결 안 됨)
   - 해결 방안: WPF TreeViewItem의 기본 expander Path를 직접 제어하거나 커스텀 Path로 삼각형을 직접 그려서 Fill/Stroke를 완전히 제어 필요
+
+---
+
+## 2025-12-26 (시간 미확인) — Event Log 자동 업데이트 및 자동 스크롤 기능 개선
+
+- **작업내용**
+  - 하단 Event 창에 Log가 더 잘 표시되도록 개선
+  - `EventLogFilterViewModel`에서 `Events` 컬렉션 변경을 감지하여 View가 자동으로 Refresh되도록 구현
+  - `EventLogTabControl`에서 새 로그가 추가될 때 자동으로 마지막 항목으로 스크롤되도록 구현
+  - DataGrid에 스크롤바 추가 (가로/세로 스크롤 지원)
+
+- **구현 세부사항**
+  - `EventLogFilterViewModel`: `Events` 컬렉션의 `CollectionChanged` 이벤트를 구독하여 자동 Refresh
+  - `EventLogTabControl`: `LoadingRow` 이벤트와 `Events` 컬렉션 변경 감지를 통해 자동 스크롤 구현
+  - DataGrid에 `ScrollViewer.HorizontalScrollBarVisibility="Auto"` 및 `ScrollViewer.VerticalScrollBarVisibility="Auto"` 추가
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/ViewModels/EventLogFilterViewModel.cs` : `L105-L106` (Events 컬렉션 변경 감지 추가), `L30-L31` (Events 속성 노출)
+  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml` : `L43-L64` (DataGrid에 스크롤바 및 x:Name 추가)
+  - `SnmpNms.UI/Views/EventLog/EventLogTabControl.xaml.cs` : `L1-L77` (자동 스크롤 로직 추가)
+
+- **결과**
+  - ✅ 새 로그가 추가되면 자동으로 View가 Refresh됨
+  - ✅ 새 로그가 추가되면 자동으로 마지막 항목으로 스크롤됨
+  - ✅ 많은 로그가 있어도 스크롤바로 탐색 가능
+
+---
+
+## 2025-12-26 (시간 미확인) — Discovery CIDR 기반 서브넷 자동 배치
+
+- **작업내용**
+  - Discovery로 찾은 기기를 IP 주소의 CIDR에 따라 적절한 서브넷에 자동으로 배치
+  - Seed 정보를 기반으로 해당 IP가 속한 서브넷 찾기/생성
+  - 서브넷 이름 형식: `네트워크주소/CIDR` (예: `192.168.0.0/24`)
+  - 매칭되는 Seed가 없으면 RootSubnet에 직접 추가
+
+- **구현 세부사항**
+  - `IsIpInSubnet()`: IP 주소가 특정 Seed의 서브넷에 속하는지 확인
+  - `NetmaskToCidrPrefix()`: Netmask를 CIDR prefix length로 변환 (예: `255.255.255.0` → `24`)
+  - `CalculateNetworkAddress()`: IP 주소와 Netmask로 네트워크 주소 계산
+  - `FindSubnetByName()`: 서브넷 이름으로 서브넷 찾기 (재귀)
+  - `FindOrCreateSubnetForDevice()`: 기기 IP 주소에 맞는 서브넷을 찾거나 생성
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/Views/Dialogs/DiscoveryPollingAgentsDialog.xaml.cs` : `L270-L274` (CIDR 기반 서브넷 배치), `L340-L503` (헬퍼 메서드 추가)
+
+- **결과**
+  - ✅ Discovery로 찾은 기기가 자동으로 적절한 서브넷에 배치됨
+  - ✅ 서브넷 이름이 CIDR 형식으로 명확하게 표시됨
+  - ✅ 매칭되는 Seed가 없어도 RootSubnet에 추가되어 안전하게 처리됨
+
+---
+
+## 2025-12-26 (시간 미확인) — Auto Polling 로그 개선
+
+- **작업내용**
+  - Auto Polling 로그는 앱 시작 시에만 남기기
+  - 이후 Stop/Start 시에는 모든 기기가 polling되도록 하기
+  - 필터링은 표시에만 관련있고 polling에는 영향 없음
+
+- **구현 세부사항**
+  - `_isInitialAutoPoll` 플래그 추가하여 첫 번째 호출 시에만 로그 기록
+  - `ChkAutoPoll_Checked()`: 모든 기기를 polling에 추가 (SNMP Test 탭의 특정 IP가 아닌)
+  - `ChkAutoPoll_Unchecked()`: 모든 기기를 polling에서 제거, 로그 없음
+  - `StartPoll_Click()`: 선택과 무관하게 RootSubnet의 모든 기기를 polling에 추가, 로그 없음
+  - `StopPoll_Click()`: 선택과 무관하게 RootSubnet의 모든 기기를 polling에서 제거, 로그 없음
+
+- **변경사항(파일/라인)**
+  - `SnmpNms.UI/MainWindow.xaml.cs` : `L341-L359` (ChkAutoPoll_Checked/Unchecked 수정), `L977-L1086` (StartPoll/StopPoll 수정)
+
+- **결과**
+  - ✅ Auto Polling 로그가 앱 시작 시에만 기록됨
+  - ✅ Start/Stop Poll 시 모든 기기가 polling됨
+  - ✅ 필터링은 표시에만 영향, polling 동작에는 영향 없음
+
+---
+
+## 2025-12-26 (시간 미확인) — Default 서브넷 제거 제안
+
+- **작업내용**
+  - 맨 처음 표시되는 "Default" 서브넷 제거 제안
+  - RootSubnet 아래에 직접 서브넷/디바이스 추가
+
+- **제안된 수정 사항**
+  - `MainViewModel.cs`: `DefaultSubnet` 속성 제거, `subnet ??= DefaultSubnet` → `subnet ??= RootSubnet`
+  - `MainWindow.xaml.cs`: `GetSelectedSubnetOrDefault()` 수정
+  - `DiscoveryPollingAgentsDialog.xaml.cs`: `DefaultSubnet` 참조 제거
+  - `MapViewControl.xaml.cs`: `DefaultSubnet` 참조 제거
+
+- **상태**: 제안 단계 (아직 구현되지 않음)
+
+---
+
+## 2025-12-26 (시간 미확인) — IP/이름 표시 기능 제안 (SNMPc 스타일)
+
+- **작업내용**
+  - Map Object Viewer에서 IP로도 트리가 보이고 이름으로도 보이도록
+  - Activity Bar의 toggle button으로 제어
+
+- **제안된 구현 방법**
+  - `MainViewModel`에 `ShowIpAddress` 속성 추가
+  - `MapNode`에 정적 `ShowIpAddress` 속성 추가
+  - `MapNode.DisplayName`이 `ShowIpAddress`에 따라 IP/이름 표시 전환
+  - `Sidebar.xaml`에 IP 표시 토글 버튼 추가
+  - `Sidebar.xaml.cs`에 이벤트 핸들러 추가
+
+- **상태**: 제안 단계 (아직 구현되지 않음)

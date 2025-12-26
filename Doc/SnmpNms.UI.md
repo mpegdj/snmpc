@@ -137,6 +137,7 @@ public partial class MainWindow : Window
   - Current, History, Custom 1-8 탭
   - Severity 필터 (Info, Warning, Error, Critical)
   - 검색 기능
+  - 자동 업데이트 및 자동 스크롤 (새 로그 추가 시)
 
 ---
 
@@ -395,15 +396,22 @@ Map Object (Device/Subnet/Goto)의 속성을 편집하는 다이얼로그입니�
 ### Event Log 바인딩
 
 ```xml
-<DataGrid ItemsSource="{Binding CurrentLog.FilteredEvents}">
+<DataGrid x:Name="dataGridLog"
+          ItemsSource="{Binding View}"
+          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+          ScrollViewer.VerticalScrollBarVisibility="Auto">
     <DataGrid.Columns>
-        <DataGridTextColumn Header="Time" Binding="{Binding Time, StringFormat='{}{0:HH:mm:ss}'}"/>
-        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}"/>
-        <DataGridTextColumn Header="Device" Binding="{Binding Device}"/>
-        <DataGridTextColumn Header="Message" Binding="{Binding Message}"/>
+        <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat=HH:mm:ss}" Width="90"/>
+        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="90"/>
+        <DataGridTextColumn Header="Device" Binding="{Binding Device}" Width="140"/>
+        <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*"/>
     </DataGrid.Columns>
 </DataGrid>
 ```
+
+**자동 업데이트 및 스크롤**:
+- `EventLogFilterViewModel`에서 `Events` 컬렉션 변경 시 자동으로 View Refresh
+- `EventLogTabControl`에서 새 로그 추가 시 자동으로 마지막 항목으로 스크롤
 
 ---
 

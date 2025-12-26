@@ -15,6 +15,8 @@ public partial class MapViewControl : UserControl
     private int _windowSeq = 1;
     private readonly List<Border> _windows = new();
     private readonly Dictionary<string, Border> _subnetWindows = new(StringComparer.OrdinalIgnoreCase);
+    private Border? _objectPropertiesWindow;
+    private ContentControl? _objectPropertiesContent;
     private bool _initialized;
     private readonly DeviceStatusToBrushConverter _statusBrush = new();
 
@@ -32,13 +34,42 @@ public partial class MapViewControl : UserControl
         if (TryGetVm() is { } vm)
         {
             OpenSubnet(vm.DefaultSubnet.Name);
-            AddInternalWindow("Object Properties", new TextBlock
+            
+            // Object Properties 창 생성 (동적 콘텐츠를 위한 ContentControl 사용)
+            _objectPropertiesContent = new ContentControl
             {
-                Text = "Selected object properties (Todo).",
-                Foreground = Brushes.White,
+                Margin = new Thickness(10),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
+            
+            // 초기 Content 설정
+            _objectPropertiesContent.Content = new TextBlock
+            {
+                Text = "No object selected.\nSelect a device or subnet to view properties.",
+                Foreground = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)),
                 Margin = new Thickness(10),
                 TextWrapping = TextWrapping.Wrap
-            });
+            };
+            
+            _objectPropertiesWindow = AddInternalWindow("Object Properties", _objectPropertiesContent);
+            
+            // 초기 상태 표시
+            UpdateObjectProperties();
+            
+            // SelectedDevice 변경 구독
+            vm.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName == nameof(MainViewModel.SelectedDevice) || 
+                    args.PropertyName == nameof(MainViewModel.SelectedDeviceNode))
+                {
+                    UpdateObjectProperties();
+                }
+            };
+            
+            // SelectedMapNodes 변경 구독
+            vm.SelectedMapNodes.CollectionChanged += (_, _) => UpdateObjectProperties();
+            
             CascadeWindows();
         }
         else
@@ -51,6 +82,217 @@ public partial class MapViewControl : UserControl
                 TextWrapping = TextWrapping.Wrap
             });
         }
+    }
+    
+    private void UpdateObjectProperties()
+    {
+        if (_objectPropertiesContent == null)
+        {
+            Console.WriteLine("[MapViewControl] UpdateObjectProperties: _objectPropertiesContent is null");
+            return;
+        }
+        
+        var vm = TryGetVm();
+        if (vm == null)
+        {
+            Console.WriteLine("[MapViewControl] UpdateObjectProperties: ViewModel is null");
+            return;
+        }
+        
+        // UI 스레드에서 실행 보장
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(UpdateObjectProperties);
+            return;
+        }
+        
+        Console.WriteLine($"[MapViewControl] UpdateObjectProperties: SelectedMapNodes.Count={vm.SelectedMapNodes.Count}, SelectedDevice={vm.SelectedDevice?.IpAddress ?? "null"}");
+        
+        // 선택된 MapNode 중 Device를 우선 표시
+        var selectedDeviceNode = vm.SelectedMapNodes.FirstOrDefault(n => n.NodeType == MapNodeType.Device);
+        if (selectedDeviceNode?.Target != null)
+        {
+            Console.WriteLine($"[MapViewControl] Showing device: {selectedDeviceNode.Target.IpAddress}");
+            _objectPropertiesContent.Content = CreateDevicePropertiesContent(selectedDeviceNode.Target, selectedDeviceNode);
+            return;
+        }
+        
+        // SelectedDevice가 있으면 표시
+        if (vm.SelectedDevice != null)
+        {
+            Console.WriteLine($"[MapViewControl] Showing SelectedDevice: {vm.SelectedDevice.IpAddress}");
+            _objectPropertiesContent.Content = CreateDevicePropertiesContent(vm.SelectedDevice, null);
+            return;
+        }
+        
+        // 선택된 Subnet이 있으면 표시
+        var selectedSubnet = vm.SelectedMapNodes.FirstOrDefault(n => 
+            n.NodeType == MapNodeType.Subnet || n.NodeType == MapNodeType.RootSubnet);
+        if (selectedSubnet != null)
+        {
+            Console.WriteLine($"[MapViewControl] Showing subnet: {selectedSubnet.Name}");
+            _objectPropertiesContent.Content = CreateSubnetPropertiesContent(selectedSubnet);
+            return;
+        }
+        
+        // 아무것도 선택되지 않았을 때
+        Console.WriteLine("[MapViewControl] No object selected");
+        _objectPropertiesContent.Content = new TextBlock
+        {
+            Text = "No object selected.\nSelect a device or subnet to view properties.",
+            Foreground = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)),
+            Margin = new Thickness(10),
+            TextWrapping = TextWrapping.Wrap
+        };
+    }
+    
+    private UIElement CreateDevicePropertiesContent(UiSnmpTarget target, MapNode? node)
+    {
+        var stack = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Margin = new Thickness(0)
+        };
+        
+        // 제목
+        var title = new TextBlock
+        {
+            Text = "Device Properties",
+            FontSize = 14,
+            FontWeight = FontWeights.Bold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        stack.Children.Add(title);
+        
+        // 정보 항목들
+        void AddProperty(string label, string value)
+        {
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            
+            var labelBlock = new TextBlock
+            {
+                Text = $"{label}:",
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)),
+                Width = 90,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            
+            var valueBlock = new TextBlock
+            {
+                Text = value,
+                Foreground = Brushes.White,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            
+            panel.Children.Add(labelBlock);
+            panel.Children.Add(valueBlock);
+            stack.Children.Add(panel);
+        }
+        
+        AddProperty("Alias", target.Alias ?? "-");
+        AddProperty("IP Address", target.IpAddress);
+        AddProperty("Port", target.Port.ToString());
+        AddProperty("Community", target.Community ?? "-");
+        AddProperty("Version", target.Version.ToString());
+        AddProperty("Timeout", $"{target.Timeout} ms");
+        AddProperty("Retries", target.Retries.ToString());
+        AddProperty("Status", target.Status.ToString());
+        
+        if (!string.IsNullOrWhiteSpace(target.Device))
+        {
+            AddProperty("Device", target.Device);
+        }
+        
+        if (node != null && node.Parent != null)
+        {
+            AddProperty("Subnet", node.Parent.Name);
+        }
+        
+        var scroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = stack
+        };
+        
+        return scroll;
+    }
+    
+    private UIElement CreateSubnetPropertiesContent(MapNode subnet)
+    {
+        var stack = new StackPanel
+        {
+            Orientation = Orientation.Vertical,
+            Margin = new Thickness(0)
+        };
+        
+        // 제목
+        var title = new TextBlock
+        {
+            Text = "Subnet Properties",
+            FontSize = 14,
+            FontWeight = FontWeights.Bold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 0, 12)
+        };
+        stack.Children.Add(title);
+        
+        // 정보 항목들
+        void AddProperty(string label, string value)
+        {
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            
+            var labelBlock = new TextBlock
+            {
+                Text = $"{label}:",
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)),
+                Width = 90,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            
+            var valueBlock = new TextBlock
+            {
+                Text = value,
+                Foreground = Brushes.White,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            
+            panel.Children.Add(labelBlock);
+            panel.Children.Add(valueBlock);
+            stack.Children.Add(panel);
+        }
+        
+        AddProperty("Name", subnet.Name);
+        AddProperty("Type", subnet.NodeType.ToString());
+        AddProperty("Status", subnet.EffectiveStatus.ToString());
+        AddProperty("Children", subnet.Children.Count.ToString());
+        
+        if (subnet.Parent != null)
+        {
+            AddProperty("Parent", subnet.Parent.Name);
+        }
+        
+        var scroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = stack
+        };
+        
+        return scroll;
     }
 
     public void OpenSubnet(string subnetName)
@@ -137,7 +379,7 @@ public partial class MapViewControl : UserControl
         header.Children.Add(closeBtn);
         header.Children.Add(titleBlock);
 
-        var root = new DockPanel();
+        var root = new DockPanel { LastChildFill = true };
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
         root.Children.Add(body);

@@ -214,9 +214,15 @@ Discovery 실행 시 표시되는 진행 상황 다이얼로그입니다.
 
 OK 버튼 클릭 시:
 - 선택된 디바이스들을 Map에 자동 등록
-- `MainViewModel.AddDeviceToSubnet()` 호출
+- **CIDR 기반 서브넷 자동 배치** (v1.6)
+  - 각 디바이스의 IP 주소를 분석하여 적절한 서브넷 찾기
+  - Seed 목록에서 해당 IP가 속한 서브넷 확인
+  - 네트워크 주소와 CIDR prefix로 서브넷 이름 생성 (예: `192.168.0.0/24`)
+  - 서브넷이 없으면 자동 생성 (RootSubnet 아래에 직접 생성)
+  - 매칭되는 Seed가 없으면 RootSubnet에 직접 추가
+- `MainViewModel.AddDeviceToSubnet()` 호출 (서브넷 지정)
 - 각 디바이스의 기본 Polling Protocol은 **SNMP**로 설정
-- 이벤트 로그에 등록 정보 기록
+- 이벤트 로그에 등록 정보 기록 (서브넷 정보 포함)
 
 ---
 
@@ -567,3 +573,15 @@ SnmpNms.Infrastructure/
 - MapObjectPropertiesDialog에 Polling Protocol 선택 추가
 - PollingService에서 Protocol별 처리 구현
 - Device Properties 다이얼로그 열기 기능 추가
+
+### v1.6 (CIDR 기반 서브넷 자동 배치)
+- Discovery 후 기기를 CIDR 기반 서브넷에 자동 배치
+- Seed 정보를 기반으로 적절한 서브넷 찾기/생성
+- 서브넷 이름 형식: `네트워크주소/CIDR` (예: `192.168.0.0/24`)
+- 매칭되는 Seed가 없으면 RootSubnet에 직접 추가
+- **구현 파일**: `SnmpNms.UI/Views/Dialogs/DiscoveryPollingAgentsDialog.xaml.cs`
+  - `IsIpInSubnet()`: IP 주소가 특정 Seed의 서브넷에 속하는지 확인
+  - `NetmaskToCidrPrefix()`: Netmask를 CIDR prefix length로 변환
+  - `CalculateNetworkAddress()`: IP 주소와 Netmask로 네트워크 주소 계산
+  - `FindSubnetByName()`: 서브넷 이름으로 서브넷 찾기 (재귀)
+  - `FindOrCreateSubnetForDevice()`: 기기 IP 주소에 맞는 서브넷을 찾거나 생성

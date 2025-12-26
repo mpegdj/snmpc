@@ -637,11 +637,17 @@ void SetEventLogContent(EventLogTabControl control)
 - 필터링 (심각도, 디바이스, 검색어)
 - 여러 탭 지원 (Current, History, Custom 1-8)
 - 실시간 업데이트
+- 자동 스크롤 (새 로그 추가 시 마지막 항목으로 자동 스크롤)
 
 **이벤트 심각도**:
 - **Info**: 정보성 메시지
 - **Warning**: 경고 메시지
 - **Error**: 에러 메시지
+
+**구현 세부사항**:
+- `EventLogFilterViewModel`: `Events` 컬렉션 변경 감지로 자동 View Refresh
+- `EventLogTabControl`: `LoadingRow` 이벤트와 컬렉션 변경 감지로 자동 스크롤
+- DataGrid에 가로/세로 스크롤바 지원
 
 ### 5. Map 관리 기능
 
@@ -788,6 +794,21 @@ dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
   - ✅ WPF 기본 기능 유지 (확장/축소, 포커스 등 정상 작동)
   - ✅ 가장 간단하고 효과적인 방법 (실무에서 90% 사용)
 
+#### Event Log 자동 업데이트 및 자동 스크롤 기능 개선 (2025-12-26)
+- **목적**: 하단 Event 창에 Log가 더 잘 표시되도록 개선
+- **구현 내용**:
+  - `EventLogFilterViewModel`에서 `Events` 컬렉션 변경을 감지하여 View가 자동으로 Refresh되도록 구현
+  - `EventLogTabControl`에서 새 로그가 추가될 때 자동으로 마지막 항목으로 스크롤되도록 구현
+  - DataGrid에 스크롤바 추가 (가로/세로 스크롤 지원)
+- **기술 세부사항**:
+  - `Events.CollectionChanged` 이벤트 구독으로 자동 Refresh
+  - `LoadingRow` 이벤트와 컬렉션 변경 감지를 통한 자동 스크롤
+  - `ScrollViewer.HorizontalScrollBarVisibility="Auto"` 및 `ScrollViewer.VerticalScrollBarVisibility="Auto"` 추가
+- **결과**:
+  - ✅ 새 로그가 추가되면 자동으로 View가 Refresh됨
+  - ✅ 새 로그가 추가되면 자동으로 마지막 항목으로 스크롤됨
+  - ✅ 많은 로그가 있어도 스크롤바로 탐색 가능
+
 ---
 
 ## 향후 계획
@@ -810,5 +831,5 @@ dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
 ---
 
 **문서 작성일**: 2025-12-26
-**최종 업데이트**: 2025-12-26
+**최종 업데이트**: 2025-12-26 (Event Log 자동 업데이트 및 자동 스크롤 기능 추가)
 

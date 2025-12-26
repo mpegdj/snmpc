@@ -134,6 +134,10 @@
 
             <!-- Editor Area -->
             <TabControl Grid.Column="3" Name="tabMain" SelectionChanged="TabMain_SelectionChanged">
+                            <TabItem Header="Event Log">
+                                <eventLog:EventLogTabControl DataContext="{Binding CurrentLog}"/>
+                            </TabItem>
+                            
                             <TabItem Header="Dashboard">
                                 <Grid Margin="12">
                                     <TextBlock FontSize="18" FontWeight="Bold" Text="Dashboard (Coming soon)"/>
@@ -141,7 +145,7 @@
                             </TabItem>
 
                             <TabItem Header="Map View">
-                                <mapView:MapViewControl x:Name="mapViewControl"/>
+                                <mapView:MapViewControl x:Name="mapViewControl" DataContext="{Binding}"/>
                             </TabItem>
 
                             <TabItem Header="Device">

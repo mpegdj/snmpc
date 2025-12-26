@@ -58,6 +58,20 @@ public class MainViewModel : INotifyPropertyChanged
     public EventLogFilterViewModel Custom7Log { get; }
     public EventLogFilterViewModel Custom8Log { get; }
 
+    private bool _isPollingRunning;
+    public bool IsPollingRunning
+    {
+        get => _isPollingRunning;
+        set
+        {
+            if (_isPollingRunning != value)
+            {
+                _isPollingRunning = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public MainViewModel()
     {
         RootSubnet = new MapNode(MapNodeType.RootSubnet, "Root Subnet");
@@ -70,7 +84,8 @@ public class MainViewModel : INotifyPropertyChanged
         DefaultSubnet.IsExpanded = true;
 
         // 각 탭마다 독립 필터(스코프/Severity/검색)를 갖는다.
-        CurrentLog = new EventLogFilterViewModel("Current", Events, () => SelectedDevice, this);
+        // CurrentLog는 MapNode 선택에 따라 필터링됨
+        CurrentLog = new EventLogFilterViewModel("Current", Events, () => SelectedDevice, this, () => SelectedMapNodes.FirstOrDefault(), SelectedMapNodes);
         HistoryLog = new EventLogFilterViewModel("History", Events, () => SelectedDevice, this);
         Custom1Log = new EventLogFilterViewModel("Custom 1", Events, () => SelectedDevice, this);
         Custom2Log = new EventLogFilterViewModel("Custom 2", Events, () => SelectedDevice, this);

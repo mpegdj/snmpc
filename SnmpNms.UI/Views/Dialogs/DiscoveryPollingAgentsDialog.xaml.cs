@@ -267,9 +267,11 @@ public partial class DiscoveryPollingAgentsDialog : Window
                         PollingProtocol = PollingProtocol.SNMP // Discovery로 찾은 디바이스는 기본적으로 SNMP
                     };
 
-                    _mainViewModel.AddDeviceToSubnet(target);
+                    // CIDR 기반 서브넷 찾기 또는 생성
+                    var subnet = FindOrCreateSubnetForDevice(device.IpAddress);
+                    _mainViewModel.AddDeviceToSubnet(target, subnet);
                     _mainViewModel.AddEvent(EventSeverity.Info, target.EndpointKey, 
-                        $"[Discovery] Device added: {device.IpAddress} ({device.Status})");
+                        $"[Discovery] Device added: {device.IpAddress} ({device.Status}) to subnet: {subnet.Name}");
                 }
 
                 MessageBox.Show($"Added {selectedDevices.Count} device(s) to map.", "Discovery Complete", 
@@ -333,6 +335,171 @@ public partial class DiscoveryPollingAgentsDialog : Window
         
         txtSeedIpAddr.Clear();
         txtSeedNetmask.Clear();
+    }
+    
+    /// <summary>
+    /// IP 주소가 특정 Seed의 서브넷에 속하는지 확인합니다.
+    /// </summary>
+    private bool IsIpInSubnet(string ipAddress, SeedEntry seed)
+    {
+        try
+        {
+            var ip = System.Net.IPAddress.Parse(ipAddress);
+            var seedIp = System.Net.IPAddress.Parse(seed.IpAddr);
+            var mask = System.Net.IPAddress.Parse(seed.Netmask);
+            
+            if (ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) return false;
+            
+            var ipBytes = ip.GetAddressBytes();
+            var seedBytes = seedIp.GetAddressBytes();
+            var maskBytes = mask.GetAddressBytes();
+            
+            // Seed IP와 Netmask를 AND 연산하여 네트워크 주소 계산
+            var seedNetworkBytes = new byte[4];
+            for (int i = 0; i < 4; i++)
+            {
+                seedNetworkBytes[i] = (byte)(seedBytes[i] & maskBytes[i]);
+            }
+            
+            // Device IP와 Netmask를 AND 연산하여 네트워크 주소 계산
+            var deviceNetworkBytes = new byte[4];
+            for (int i = 0; i < 4; i++)
+            {
+                deviceNetworkBytes[i] = (byte)(ipBytes[i] & maskBytes[i]);
+            }
+            
+            // 네트워크 주소가 같으면 같은 서브넷
+            return seedNetworkBytes.SequenceEqual(deviceNetworkBytes);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// Netmask에서 CIDR prefix length를 계산합니다.
+    /// 예: 255.255.255.0 -> 24
+    /// </summary>
+    private int NetmaskToCidrPrefix(string netmask)
+    {
+        try
+        {
+            var mask = System.Net.IPAddress.Parse(netmask);
+            var maskBytes = mask.GetAddressBytes();
+            
+            int prefixLength = 0;
+            foreach (var b in maskBytes)
+            {
+                if (b == 0xFF)
+                {
+                    prefixLength += 8;
+                }
+                else
+                {
+                    // 비트를 세어서 prefix length 계산
+                    int bits = 0;
+                    byte temp = b;
+                    while ((temp & 0x80) != 0)
+                    {
+                        bits++;
+                        temp <<= 1;
+                    }
+                    prefixLength += bits;
+                    break;
+                }
+            }
+            
+            return prefixLength;
+        }
+        catch
+        {
+            return 24; // 기본값
+        }
+    }
+    
+    /// <summary>
+    /// IP 주소와 Netmask로 네트워크 주소를 계산합니다.
+    /// </summary>
+    private string CalculateNetworkAddress(string ipAddress, string netmask)
+    {
+        try
+        {
+            var ip = System.Net.IPAddress.Parse(ipAddress);
+            var mask = System.Net.IPAddress.Parse(netmask);
+            
+            var ipBytes = ip.GetAddressBytes();
+            var maskBytes = mask.GetAddressBytes();
+            
+            var networkBytes = new byte[4];
+            for (int i = 0; i < 4; i++)
+            {
+                networkBytes[i] = (byte)(ipBytes[i] & maskBytes[i]);
+            }
+            
+            return $"{networkBytes[0]}.{networkBytes[1]}.{networkBytes[2]}.{networkBytes[3]}";
+        }
+        catch
+        {
+            return ipAddress;
+        }
+    }
+    
+    /// <summary>
+    /// 서브넷 이름을 찾는 헬퍼 메서드 (재귀)
+    /// </summary>
+    private MapNode? FindSubnetByName(MapNode root, string subnetName)
+    {
+        if (root.NodeType == MapNodeType.Subnet && root.Name == subnetName)
+        {
+            return root;
+        }
+        
+        foreach (var child in root.Children)
+        {
+            var found = FindSubnetByName(child, subnetName);
+            if (found != null) return found;
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// 기기의 IP 주소에 맞는 서브넷을 찾거나 생성합니다.
+    /// </summary>
+    private MapNode FindOrCreateSubnetForDevice(string deviceIpAddress)
+    {
+        if (_mainViewModel == null) 
+        {
+            // _mainViewModel이 null이면 null을 반환할 수 없으므로, 
+            // 이 경우는 호출 전에 체크해야 하지만 안전을 위해 예외 처리
+            throw new InvalidOperationException("MainViewModel is not available");
+        }
+        
+        // Seed 목록에서 해당 IP가 속한 서브넷 찾기
+        foreach (var seed in Seeds)
+        {
+            if (IsIpInSubnet(deviceIpAddress, seed))
+            {
+                // 네트워크 주소 계산
+                var networkAddress = CalculateNetworkAddress(seed.IpAddr, seed.Netmask);
+                var cidrPrefix = NetmaskToCidrPrefix(seed.Netmask);
+                var subnetName = $"{networkAddress}/{cidrPrefix}";
+                
+                // 서브넷 찾기
+                var existingSubnet = FindSubnetByName(_mainViewModel.RootSubnet, subnetName);
+                if (existingSubnet != null)
+                {
+                    return existingSubnet;
+                }
+                
+                // 서브넷이 없으면 생성 (Default 서브넷 아래에 생성)
+                return _mainViewModel.AddSubnet(subnetName, _mainViewModel.DefaultSubnet);
+            }
+        }
+        
+        // 매칭되는 Seed가 없으면 Default 서브넷에 추가
+        return _mainViewModel.DefaultSubnet;
     }
     
     /// <summary>

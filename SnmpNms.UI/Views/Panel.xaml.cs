@@ -6,24 +6,28 @@ namespace SnmpNms.UI.Views;
 
 public partial class BottomPanel : UserControl
 {
-    private EventLogTabControl? _eventLogControl;
-
     public BottomPanel()
     {
         InitializeComponent();
-        InitializeEventLog();
+        
+        // TabControl 선택 변경 시 ContentControl 업데이트
+        tabPanel.SelectionChanged += TabPanel_SelectionChanged;
+        
+        // 초기 선택된 탭의 Content 설정
+        UpdateContent();
     }
 
-    private void InitializeEventLog()
+    private void TabPanel_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        // Event Log content will be set from MainWindow
-        // For now, create a placeholder
+        UpdateContent();
     }
 
-    public void SetEventLogContent(EventLogTabControl eventLogControl)
+    private void UpdateContent()
     {
-        _eventLogControl = eventLogControl;
-        tabEventLog.Content = eventLogControl;
+        if (tabPanel.SelectedItem is TabItem selectedTab)
+        {
+            contentArea.Content = selectedTab.Content;
+        }
     }
 
     private void BtnToggle_Click(object sender, RoutedEventArgs e)

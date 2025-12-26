@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -21,6 +22,10 @@ namespace SnmpNms.UI;
 /// </summary>
 public partial class MainWindow : Window
 {
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AllocConsole();
+
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
     private readonly IPollingService _pollingService;
@@ -66,6 +71,10 @@ public partial class MainWindow : Window
 
         // VS Code 스타일 UI 초기화
         this.Loaded += (s, e) => InitializeVSCodeUI();
+        
+        // 시작 메시지를 터미널에 표시 (콘솔 할당)
+        AllocConsole();
+        Console.WriteLine("SNMPc Start");
     }
 
     private void InitializeVSCodeUI()
@@ -74,6 +83,7 @@ public partial class MainWindow : Window
         _sidebarMapView = new SidebarMapView { DataContext = _vm };
         _tvDevices = _sidebarMapView.TreeView;
         _tvDevices.MouseLeftButtonDown += TvDevices_MouseLeftButtonDown;
+        _tvDevices.SelectedItemChanged += TvDevices_SelectedItemChanged;
         _tvDevices.PreviewMouseMove += TvDevices_PreviewMouseMove;
         _tvDevices.Drop += TvDevices_Drop;
         _tvDevices.PreviewKeyDown += TvDevices_PreviewKeyDown;
@@ -89,9 +99,8 @@ public partial class MainWindow : Window
             _sidebarMapView.DataContext = _vm;
         }
 
-        // BottomPanel에 Event Log 설정
-        var eventLogControl = new EventLogTabControl { DataContext = _vm.CurrentLog };
-        bottomPanel.SetEventLogContent(eventLogControl);
+        // BottomPanel에 Event Log DataContext 설정 (여러 탭이 각각 바인딩됨)
+        bottomPanel.DataContext = _vm;
 
         // Sidebar (Activity Bar 포함) 이벤트 연결
         sidebar.ViewChanged += ActivityBar_ViewChanged;
@@ -107,6 +116,7 @@ public partial class MainWindow : Window
                 _sidebarMapView = new SidebarMapView { DataContext = _vm };
                 _tvDevices = _sidebarMapView.TreeView;
                 _tvDevices.MouseLeftButtonDown += TvDevices_MouseLeftButtonDown;
+                _tvDevices.SelectedItemChanged += TvDevices_SelectedItemChanged;
                 _tvDevices.PreviewMouseMove += TvDevices_PreviewMouseMove;
                 _tvDevices.Drop += TvDevices_Drop;
                 _tvDevices.PreviewKeyDown += TvDevices_PreviewKeyDown;
@@ -328,22 +338,43 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private bool _isInitialAutoPoll = true; // 앱 시작 시 auto polling 플래그
+    
     private void ChkAutoPoll_Checked(object sender, RoutedEventArgs e)
     {
-        var target = BuildTargetFromInputs();
-
-        _pollingService.AddTarget(target);
+        // 모든 기기를 polling에 추가
+        var allDevices = GetAllDevicesFromNode(_vm.RootSubnet);
+        
+        foreach (var device in allDevices)
+        {
+            _pollingService.AddTarget(device);
+        }
+        
         _pollingService.Start();
-        _vm.AddEvent(EventSeverity.Info, target.EndpointKey, "[System] Auto Polling Started");
+        _vm.IsPollingRunning = true;
+        
+        // 앱 시작 시에만 로그 남기기
+        if (_isInitialAutoPoll)
+        {
+            _vm.AddEvent(EventSeverity.Info, null, "[System] Auto Polling Started");
+            _isInitialAutoPoll = false; // 이후에는 로그 남기지 않음
+        }
     }
 
     private void ChkAutoPoll_Unchecked(object sender, RoutedEventArgs e)
     {
-        var target = BuildTargetFromInputs(minimal: true);
-        _pollingService.RemoveTarget(target);
-        _pollingService.Stop(); // 현재는 단순화를 위해 전체 Stop
+        // 모든 기기를 polling에서 제거
+        var allDevices = GetAllDevicesFromNode(_vm.RootSubnet);
         
-        _vm.AddSystemInfo("[System] Auto Polling Stopped");
+        foreach (var device in allDevices)
+        {
+            _pollingService.RemoveTarget(device);
+        }
+        
+        _pollingService.Stop();
+        _vm.IsPollingRunning = false;
+        
+        // Stop 시에는 로그 남기지 않음 (필터링은 표시에만 관련)
     }
 
     private UiSnmpTarget BuildTargetFromInputs(bool minimal = false)
@@ -471,28 +502,51 @@ public partial class MainWindow : Window
     }
 
     // --- Map Selection Tree interactions (SNMPc style) ---
+    private void TvDevices_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        Console.WriteLine("[TvDevices_SelectedItemChanged] Event fired");
+        
+        if (e.NewValue is MapNode node)
+        {
+            Console.WriteLine($"[TvDevices_SelectedItemChanged] Node selected: {node.Name}, NodeType={node.NodeType}");
+            
+            var ctrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+            var shift = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
+            if (!ctrl && !shift)
+            {
+                ClearMapSelection();
+                SelectNode(node, true);
+                _selectionAnchor = node;
+            }
+            else if (ctrl)
+            {
+                SelectNode(node, !node.IsSelected);
+                _selectionAnchor = node;
+            }
+            else if (shift)
+            {
+                SelectRange(node);
+                UpdateTreeViewItemSelection();
+            }
+        }
+        else
+        {
+            Console.WriteLine("[TvDevices_SelectedItemChanged] SelectedItem is not MapNode");
+        }
+    }
+    
     private void TvDevices_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        // MIB sidebar처럼 표준 동작을 허용하되, 선택 기능은 유지
-        // MouseLeftButtonDown을 사용하면 PreviewMouseLeftButtonDown 이후에 발생하므로
-        // 확장/축소는 이미 처리된 후입니다
+        Console.WriteLine("[TvDevices_MouseLeftButtonDown] Event fired");
         
-        var dep = e.OriginalSource as DependencyObject;
+        if (_tvDevices == null) return;
         
-        // ToggleButton(확장/축소 버튼)을 직접 클릭한 경우 선택 처리하지 않음
-        while (dep is not null)
-        {
-            if (dep is System.Windows.Controls.Primitives.ToggleButton)
-            {
-                // 확장/축소 동작만 처리하고 선택은 하지 않음
-                return;
-            }
-            dep = VisualTreeHelper.GetParent(dep);
-        }
-
-        // TreeViewItem을 찾음
-        dep = e.OriginalSource as DependencyObject;
+        // e.Source 또는 e.OriginalSource에서 TreeViewItem 찾기
+        var dep = e.Source as DependencyObject ?? e.OriginalSource as DependencyObject;
         TreeViewItem? clickedItem = null;
+        
+        // TreeViewItem을 찾을 때까지 부모를 따라 올라감
         while (dep is not null)
         {
             if (dep is TreeViewItem tvi)
@@ -503,9 +557,41 @@ public partial class MainWindow : Window
             dep = VisualTreeHelper.GetParent(dep);
         }
 
-        // TreeViewItem을 찾지 못한 경우 선택 처리하지 않음
+        // ToggleButton(확장/축소 버튼)을 직접 클릭한 경우 선택 처리하지 않음
+        var toggleButton = e.OriginalSource as System.Windows.Controls.Primitives.ToggleButton;
+        if (toggleButton != null)
+        {
+            Console.WriteLine("[TvDevices_MouseLeftButtonDown] ToggleButton clicked, skipping selection");
+            return;
+        }
+
+        // TreeViewItem을 찾지 못한 경우, SelectedItem을 사용
         if (clickedItem == null)
         {
+            Console.WriteLine("[TvDevices_MouseLeftButtonDown] clickedItem is null, trying SelectedItem");
+            if (_tvDevices.SelectedItem is MapNode selectedNode)
+            {
+                Console.WriteLine($"[TvDevices_MouseLeftButtonDown] Using SelectedItem: {selectedNode.Name}, NodeType={selectedNode.NodeType}");
+                var isCtrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                var isShift = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
+
+                if (!isCtrl && !isShift)
+                {
+                    ClearMapSelection();
+                    SelectNode(selectedNode, true);
+                    _selectionAnchor = selectedNode;
+                }
+                else if (isCtrl)
+                {
+                    SelectNode(selectedNode, !selectedNode.IsSelected);
+                    _selectionAnchor = selectedNode;
+                }
+                else if (isShift)
+                {
+                    SelectRange(selectedNode);
+                    UpdateTreeViewItemSelection();
+                }
+            }
             return;
         }
 
@@ -515,17 +601,21 @@ public partial class MainWindow : Window
             var clickPosition = e.GetPosition(clickedItem);
             if (clickPosition.X < 19)
             {
-                // 확장/축소 영역을 클릭한 경우 선택 처리하지 않음
+                Console.WriteLine("[TvDevices_MouseLeftButtonDown] Expansion area clicked, skipping selection");
                 return;
             }
         }
 
-        // 선택 처리
-        if (_tvDevices == null) return;
         _dragStartPoint = e.GetPosition(_tvDevices);
 
         var node = clickedItem.DataContext as MapNode;
-        if (node is null) return;
+        if (node is null)
+        {
+            Console.WriteLine("[TvDevices_MouseLeftButtonDown] node is null");
+            return;
+        }
+        
+        Console.WriteLine($"[TvDevices_MouseLeftButtonDown] Node clicked: {node.Name}, NodeType={node.NodeType}");
 
         var ctrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
         var shift = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
@@ -548,10 +638,6 @@ public partial class MainWindow : Window
             SelectRange(node);
             UpdateTreeViewItemSelection();
         }
-
-        // MouseLeftButtonDown에서는 e.Handled를 설정하지 않아도 됨
-        // 확장/축소는 이미 PreviewMouseLeftButtonDown에서 처리되었고,
-        // 선택은 여기서 처리하므로 기본 동작과 충돌하지 않음
     }
     
     private void UpdateTreeViewItemSelection()
@@ -718,6 +804,7 @@ public partial class MainWindow : Window
 
     private void SelectNode(MapNode node, bool selected)
     {
+        Console.WriteLine($"[SelectNode] Called: node={node.Name}, NodeType={node.NodeType}, selected={selected}");
         node.IsSelected = selected;
         
         // TreeViewItem의 실제 선택 상태도 업데이트
@@ -735,12 +822,55 @@ public partial class MainWindow : Window
             if (!_vm.SelectedMapNodes.Contains(node))
                 _vm.SelectedMapNodes.Add(node);
 
+            // 모든 노드 타입에 대해 정보 출력
+            Console.WriteLine($"[SelectNode] Node selected: {node.Name}");
+            Console.WriteLine($"  NodeType: {node.NodeType}");
+            Console.WriteLine($"  DisplayName: {node.DisplayName}");
+            Console.WriteLine($"  EffectiveStatus: {node.EffectiveStatus}");
+            
             if (node.NodeType == MapNodeType.Device && node.Target is not null)
             {
+                // Device인 경우 상세 정보 출력
+                Console.WriteLine($"[SelectNode] Device details:");
+                Console.WriteLine($"  IP Address: {node.Target.IpAddress}:{node.Target.Port}");
+                Console.WriteLine($"  Alias: {node.Target.Alias ?? "-"}");
+                Console.WriteLine($"  Community: {node.Target.Community ?? "-"}");
+                Console.WriteLine($"  Version: {node.Target.Version}");
+                Console.WriteLine($"  Status: {node.Target.Status}");
+                
                 _vm.SelectedDevice = node.Target;
                 _vm.SelectedDeviceNode = node;
-                txtIp.Text = node.Target.IpAddress;
-                txtCommunity.Text = node.Target.Community;
+                
+                // SNMP Test 탭으로 자동 전환
+                var snmpTestTab = tabMain.Items.Cast<TabItem>().FirstOrDefault(t => t.Header?.ToString() == "SNMP Test");
+                if (snmpTestTab != null)
+                {
+                    tabMain.SelectedItem = snmpTestTab;
+                }
+                
+                // IP Address와 Community 필드 업데이트 (탭 전환과 관계없이 항상 업데이트)
+                Dispatcher.BeginInvoke(new System.Action(() =>
+                {
+                    if (txtIp != null)
+                    {
+                        txtIp.Text = node.Target.IpAddress;
+                        System.Diagnostics.Debug.WriteLine($"[SelectNode] Set txtIp.Text to {node.Target.IpAddress}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("[SelectNode] txtIp is null!");
+                    }
+                    
+                    if (txtCommunity != null)
+                    {
+                        txtCommunity.Text = node.Target.Community;
+                        System.Diagnostics.Debug.WriteLine($"[SelectNode] Set txtCommunity.Text to {node.Target.Community}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("[SelectNode] txtCommunity is null!");
+                    }
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
                 
                 // MIB Table 탭이 활성화되어 있고 MIB 노드가 선택되어 있으면 자동으로 테이블 로드
                 if (tabMain.SelectedIndex == 5) // MIB Table 탭
@@ -845,29 +975,62 @@ public partial class MainWindow : Window
         _vm.RootSubnet.RecomputeEffectiveStatus();
     }
 
+    // MapNode에서 하위 모든 Device를 재귀적으로 찾는 헬퍼 메서드
+    private List<UiSnmpTarget> GetAllDevicesFromNode(MapNode node)
+    {
+        var devices = new List<UiSnmpTarget>();
+        
+        if (node.NodeType == MapNodeType.Device && node.Target != null)
+        {
+            devices.Add(node.Target);
+        }
+        
+        foreach (var child in node.Children)
+        {
+            devices.AddRange(GetAllDevicesFromNode(child));
+        }
+        
+        return devices;
+    }
+
     private void StartPoll_Click(object sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedDevice is null)
+        // 모든 기기를 polling에 추가 (필터링은 표시에만 관련)
+        var allDevices = GetAllDevicesFromNode(_vm.RootSubnet);
+        
+        if (allDevices.Count == 0)
         {
-            _vm.AddSystemInfo("[System] StartPoll: no device selected.");
+            _vm.AddSystemInfo("[System] StartPoll: no device to poll.");
             return;
         }
-
-        _pollingService.AddTarget(_vm.SelectedDevice);
+        
+        // 모든 장비를 polling에 추가
+        foreach (var device in allDevices)
+        {
+            _pollingService.AddTarget(device);
+        }
+        
         _pollingService.Start();
-        chkAutoPoll.IsChecked = true;
-        _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.EndpointKey, "[System] Polling started");
+        _vm.IsPollingRunning = true;
+        
+        // Start 시에는 로그 남기지 않음 (필터링은 표시에만 관련)
     }
 
     private void StopPoll_Click(object sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedDevice is not null)
+        // 모든 기기를 polling에서 제거 (필터링은 표시에만 관련)
+        var allDevices = GetAllDevicesFromNode(_vm.RootSubnet);
+        
+        // 모든 장비를 polling에서 제거
+        foreach (var device in allDevices)
         {
-            _pollingService.RemoveTarget(_vm.SelectedDevice);
+            _pollingService.RemoveTarget(device);
         }
+        
         _pollingService.Stop();
-        chkAutoPoll.IsChecked = false;
-        _vm.AddSystemInfo("[System] Polling stopped");
+        _vm.IsPollingRunning = false;
+        
+        // Stop 시에는 로그 남기지 않음 (필터링은 표시에만 관련)
     }
 
     private void ClearLog_Click(object sender, RoutedEventArgs e)
@@ -1123,6 +1286,25 @@ public partial class MainWindow : Window
     // TabControl의 탭 선택 변경 이벤트 핸들러
     private void TabMain_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // SNMP Test 탭이 선택되었고 SelectedDevice가 있으면 IP Address와 Community 업데이트
+        var selectedTab = tabMain.SelectedItem as TabItem;
+        if (selectedTab != null && selectedTab.Header?.ToString() == "SNMP Test" && _vm.SelectedDevice != null)
+        {
+            Dispatcher.BeginInvoke(new System.Action(() =>
+            {
+                if (txtIp != null)
+                {
+                    txtIp.Text = _vm.SelectedDevice.IpAddress;
+                    System.Diagnostics.Debug.WriteLine($"[TabMain_SelectionChanged] Set txtIp.Text to {_vm.SelectedDevice.IpAddress}");
+                }
+                if (txtCommunity != null)
+                {
+                    txtCommunity.Text = _vm.SelectedDevice.Community;
+                    System.Diagnostics.Debug.WriteLine($"[TabMain_SelectionChanged] Set txtCommunity.Text to {_vm.SelectedDevice.Community}");
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+        
         // MIB Table 탭이 선택되었는지 확인
         if (tabMain.SelectedIndex == 5) // MIB Table 탭 인덱스
         {
