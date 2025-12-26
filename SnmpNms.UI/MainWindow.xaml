@@ -111,36 +111,36 @@
         <!-- VS Code Style Layout -->
         <Grid>
             <Grid.RowDefinitions>
+                <RowDefinition Height="48"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="5"/>
                 <RowDefinition Height="220" MinHeight="120"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="48"/>
                 <ColumnDefinition Width="280"/>
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Activity Bar (왼쪽 가장자리) -->
-            <views:ActivityBar Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
+            <!-- Activity Bar (상단 가로) -->
+            <views:ActivityBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
                               x:Name="activityBar"
                               ViewChanged="ActivityBar_ViewChanged"/>
 
-            <!-- Sidebar (Activity Bar 오른쪽) -->
-            <views:Sidebar Grid.Row="0" Grid.Column="1" Grid.RowSpan="3"
+            <!-- Sidebar (Activity Bar 아래) -->
+            <views:Sidebar Grid.Row="1" Grid.Column="0" Grid.RowSpan="3"
                            x:Name="sidebar"
                            HeaderText="EXPLORER"/>
 
             <!-- Splitter between Sidebar and Editor -->
-            <GridSplitter Grid.Row="0" Grid.Column="2" Grid.RowSpan="3"
+            <GridSplitter Grid.Row="1" Grid.Column="1" Grid.RowSpan="3"
                          Width="5"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"
                          Background="{StaticResource VSCodeDivider}"/>
 
             <!-- Editor Area (중앙) -->
-            <Grid Grid.Row="0" Grid.Column="3">
+            <Grid Grid.Row="1" Grid.Column="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="48"/>
@@ -349,7 +349,7 @@
             </Grid>
 
             <!-- Splitter between Editor and Panel -->
-            <GridSplitter Grid.Row="1" Grid.Column="3"
+            <GridSplitter Grid.Row="2" Grid.Column="2"
                          Height="5"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"
@@ -358,7 +358,7 @@
                          ResizeBehavior="PreviousAndNext"/>
 
             <!-- Bottom Panel (Event Log) -->
-            <views:BottomPanel Grid.Row="2" Grid.Column="3"
+            <views:BottomPanel Grid.Row="3" Grid.Column="2"
                                x:Name="bottomPanel"/>
 
         </Grid>

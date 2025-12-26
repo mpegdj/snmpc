@@ -19,7 +19,9 @@
     <!-- Accent Colors -->
     <SolidColorBrush x:Key="VSCodeAccent" Color="#007acc"/>
     <SolidColorBrush x:Key="VSCodeAccentHover" Color="#0098ff"/>
-    <SolidColorBrush x:Key="VSCodeSelection" Color="#0078d4"/>
+    <!-- VS Code Light+ 선택 색상: 은은한 파란색 (투명도 포함) -->
+    <!-- VS Code Light+ 테마의 실제 선택 색상: #add6ff (약간 투명한 밝은 파란색) -->
+    <SolidColorBrush x:Key="VSCodeSelection" Color="#add6ff"/>
     <SolidColorBrush x:Key="VSCodeHover" Color="#e5e5e5"/>
     
     <!-- Tab Colors -->
@@ -53,7 +55,7 @@
     <Style x:Key="ActivityBarButtonActiveStyle" TargetType="Button" BasedOn="{StaticResource ActivityBarButtonStyle}">
         <Setter Property="Background" Value="{StaticResource VSCodeSelection}"/>
         <Setter Property="BorderBrush" Value="{StaticResource VSCodeAccent}"/>
-        <Setter Property="BorderThickness" Value="0,0,0,0"/>
+        <Setter Property="BorderThickness" Value="0,0,0,3"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{StaticResource VSCodeSelection}"/>
@@ -144,10 +146,8 @@
             </Style>
         </Style.Resources>
         <Style.Triggers>
-            <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{StaticResource VSCodeSelection}"/>
-                <Setter Property="Foreground" Value="White"/>
-            </Trigger>
+            <!-- 선택 시 색상 변경 제거: WPF 기본 동작 사용 -->
+            <!-- IsSelected 트리거 제거하여 WPF 기본 선택 동작 사용 -->
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{StaticResource VSCodeHover}"/>
             </Trigger>

@@ -73,7 +73,7 @@ public partial class MainWindow : Window
         // Sidebar에 Map 뷰 설정
         _sidebarMapView = new SidebarMapView { DataContext = _vm };
         _tvDevices = _sidebarMapView.TreeView;
-        _tvDevices.PreviewMouseLeftButtonDown += TvDevices_PreviewMouseLeftButtonDown;
+        _tvDevices.MouseLeftButtonDown += TvDevices_MouseLeftButtonDown;
         _tvDevices.PreviewMouseMove += TvDevices_PreviewMouseMove;
         _tvDevices.Drop += TvDevices_Drop;
         _tvDevices.PreviewKeyDown += TvDevices_PreviewKeyDown;
@@ -106,7 +106,7 @@ public partial class MainWindow : Window
                 sidebar.HeaderText = "EXPLORER";
                 _sidebarMapView = new SidebarMapView { DataContext = _vm };
                 _tvDevices = _sidebarMapView.TreeView;
-                _tvDevices.PreviewMouseLeftButtonDown += TvDevices_PreviewMouseLeftButtonDown;
+                _tvDevices.MouseLeftButtonDown += TvDevices_MouseLeftButtonDown;
                 _tvDevices.PreviewMouseMove += TvDevices_PreviewMouseMove;
                 _tvDevices.Drop += TvDevices_Drop;
                 _tvDevices.PreviewKeyDown += TvDevices_PreviewKeyDown;
@@ -477,26 +477,60 @@ public partial class MainWindow : Window
     }
 
     // --- Map Selection Tree interactions (SNMPc style) ---
-    private void TvDevices_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void TvDevices_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        // SNMPc 매뉴얼: "Single-click on the small box to the left of a subnet icon to open or close"
-        // Expander(▶/▼) 클릭은 기본 동작(expand/collapse)을 허용해야 함
+        // MIB sidebar처럼 표준 동작을 허용하되, 선택 기능은 유지
+        // MouseLeftButtonDown을 사용하면 PreviewMouseLeftButtonDown 이후에 발생하므로
+        // 확장/축소는 이미 처리된 후입니다
+        
         var dep = e.OriginalSource as DependencyObject;
+        
+        // ToggleButton(확장/축소 버튼)을 직접 클릭한 경우 선택 처리하지 않음
         while (dep is not null)
         {
-            // TreeViewItem의 ToggleButton(expander)을 클릭한 경우 기본 동작 허용
             if (dep is System.Windows.Controls.Primitives.ToggleButton)
             {
-                e.Handled = false;
+                // 확장/축소 동작만 처리하고 선택은 하지 않음
                 return;
             }
             dep = VisualTreeHelper.GetParent(dep);
         }
 
+        // TreeViewItem을 찾음
+        dep = e.OriginalSource as DependencyObject;
+        TreeViewItem? clickedItem = null;
+        while (dep is not null)
+        {
+            if (dep is TreeViewItem tvi)
+            {
+                clickedItem = tvi;
+                break;
+            }
+            dep = VisualTreeHelper.GetParent(dep);
+        }
+
+        // TreeViewItem을 찾지 못한 경우 선택 처리하지 않음
+        if (clickedItem == null)
+        {
+            return;
+        }
+
+        // 확장/축소 영역(왼쪽 19px)을 클릭한 경우 선택 처리하지 않음
+        if (clickedItem.Items.Count > 0)
+        {
+            var clickPosition = e.GetPosition(clickedItem);
+            if (clickPosition.X < 19)
+            {
+                // 확장/축소 영역을 클릭한 경우 선택 처리하지 않음
+                return;
+            }
+        }
+
+        // 선택 처리
         if (_tvDevices == null) return;
         _dragStartPoint = e.GetPosition(_tvDevices);
 
-        var node = FindNodeFromOriginalSource(e.OriginalSource);
+        var node = clickedItem.DataContext as MapNode;
         if (node is null) return;
 
         var ctrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
@@ -506,19 +540,53 @@ public partial class MainWindow : Window
         {
             ClearMapSelection();
             SelectNode(node, true);
+            clickedItem.IsSelected = true;
             _selectionAnchor = node;
         }
         else if (ctrl)
         {
             SelectNode(node, !node.IsSelected);
+            clickedItem.IsSelected = node.IsSelected;
             _selectionAnchor = node;
         }
         else if (shift)
         {
             SelectRange(node);
+            UpdateTreeViewItemSelection();
         }
 
-        e.Handled = true; // 기본 TreeView 단일 선택 동작 차단
+        // MouseLeftButtonDown에서는 e.Handled를 설정하지 않아도 됨
+        // 확장/축소는 이미 PreviewMouseLeftButtonDown에서 처리되었고,
+        // 선택은 여기서 처리하므로 기본 동작과 충돌하지 않음
+    }
+    
+    private void UpdateTreeViewItemSelection()
+    {
+        if (_tvDevices == null) return;
+        
+        // 모든 TreeViewItem의 선택 상태를 MapNode의 IsSelected와 동기화
+        UpdateTreeViewItemSelectionRecursive(_tvDevices.Items, _tvDevices.ItemContainerGenerator);
+    }
+    
+    private void UpdateTreeViewItemSelectionRecursive(ItemCollection items, ItemContainerGenerator generator)
+    {
+        foreach (var item in items)
+        {
+            if (item is MapNode node)
+            {
+                var container = generator.ContainerFromItem(item) as TreeViewItem;
+                if (container != null)
+                {
+                    container.IsSelected = node.IsSelected;
+                    
+                    // 자식 항목도 재귀적으로 업데이트
+                    if (container.Items.Count > 0)
+                    {
+                        UpdateTreeViewItemSelectionRecursive(container.Items, container.ItemContainerGenerator);
+                    }
+                }
+            }
+        }
     }
 
     private void TvDevices_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -657,6 +725,17 @@ public partial class MainWindow : Window
     private void SelectNode(MapNode node, bool selected)
     {
         node.IsSelected = selected;
+        
+        // TreeViewItem의 실제 선택 상태도 업데이트
+        if (_tvDevices != null)
+        {
+            var container = FindTreeViewItemForNode(_tvDevices, node);
+            if (container != null)
+            {
+                container.IsSelected = selected;
+            }
+        }
+        
         if (selected)
         {
             if (!_vm.SelectedMapNodes.Contains(node))
@@ -691,6 +770,40 @@ public partial class MainWindow : Window
             if (node.NodeType == MapNodeType.Device && ReferenceEquals(_vm.SelectedDeviceNode, node))
                 _vm.SelectedDeviceNode = null;
         }
+    }
+    
+    private TreeViewItem? FindTreeViewItemForNode(ItemsControl parent, MapNode targetNode)
+    {
+        foreach (var item in parent.Items)
+        {
+            var container = parent.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
+            if (container != null)
+            {
+                if (container.DataContext == targetNode)
+                    return container;
+                
+                var found = FindTreeViewItemForNode(container, targetNode);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+    
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        if (parent == null) return null;
+        
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T t)
+                return t;
+            
+            var childOfChild = FindVisualChild<T>(child);
+            if (childOfChild != null)
+                return childOfChild;
+        }
+        return null;
     }
 
     private void SelectRange(MapNode node)
