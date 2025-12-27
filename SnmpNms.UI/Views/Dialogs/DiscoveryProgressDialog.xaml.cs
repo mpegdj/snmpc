@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using SnmpNms.UI.Models;
@@ -18,11 +19,22 @@ public partial class DiscoveryProgressDialog : Window
 {
     public class DiscoveredDevice : INotifyPropertyChanged
     {
-        private bool _isSelected = true;
+        private bool _isSelected = false;  // 기본값: uncheck
         public bool IsSelected
         {
             get => _isSelected;
             set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        private bool _isSnmpSupported = false;
+        public bool IsSnmpSupported
+        {
+            get => _isSnmpSupported;
+            set 
+            { 
+                _isSnmpSupported = value;
+                OnPropertyChanged();
+            }
         }
 
         public string IpAddress { get; set; } = "";
@@ -30,6 +42,9 @@ public partial class DiscoveryProgressDialog : Window
         public string Community { get; set; } = "public";
         public string Version { get; set; } = "V2c";
         public int Port { get; set; } = 161;
+        public string Maker { get; set; } = "";
+        public string DeviceName { get; set; } = "";
+        public string SubnetName { get; set; } = "";  // 서브넷 이름 (예: "192.168.0.0/24")
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
@@ -42,7 +57,29 @@ public partial class DiscoveryProgressDialog : Window
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; } = new();
+    public ObservableCollection<string> AvailableMakers { get; } = new();
+    public ObservableCollection<string> AvailableDevices { get; } = new();
+    public ObservableCollection<SubnetGroup> SubnetGroups { get; } = new();
     public bool ConfigureTrapDestination { get; set; } = false;
+    public bool ConfigureStandardNttTrap { get; set; } = false;
+    public bool AddDevicesWithoutSubnet { get; set; } = false;  // 서브넷 없이 기기만 추가
+
+    public class SubnetGroup : INotifyPropertyChanged
+    {
+        private bool _isSelected = false;  // 기본값: uncheck
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set { _isSelected = value; OnPropertyChanged(); }
+        }
+
+        public string SubnetName { get; set; } = "";
+        public ObservableCollection<DiscoveredDevice> Devices { get; } = new();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+            => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+    }
 
     public DiscoveryProgressDialog(ISnmpClient snmpClient, DiscoveryPollingAgentsDialog.DiscoveryConfig config, ITrapListener? trapListener = null)
     {
@@ -52,6 +89,12 @@ public partial class DiscoveryProgressDialog : Window
         _config = config;
         DataContext = this;
         dataGridDevices.ItemsSource = DiscoveredDevices;
+        
+        // DiscoveredDevices 변경 시 드롭다운 업데이트
+        DiscoveredDevices.CollectionChanged += (s, e) =>
+        {
+            UpdateFilterDropdowns();
+        };
         
         // Trap Listener가 없거나 실행 중이 아니면 체크박스 비활성화
         if (_trapListener == null || !_trapListener.IsListening)
@@ -356,35 +399,39 @@ public partial class DiscoveryProgressDialog : Window
                     Retries = 1
                 };
 
-                // sysDescr (Maker), sysName (Device Name)으로 SNMP 확인
-                var oids = new[] { "1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.5.0" };
+                // sysDescr (Maker), sysObjectID, sysName (Device Name)으로 SNMP 확인
+                var oids = new[] { "1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.2.0", "1.3.6.1.2.1.1.5.0" };
                 var result = await _snmpClient.GetAsync(target, oids);
                 
                 if (result.IsSuccess && result.Variables.Count > 0)
                 {
                     string? sysDescr = null;
+                    string? sysObjectId = null;
                     string? sysName = null;
                     
                     foreach (var v in result.Variables)
                     {
                         if (v.Oid == "1.3.6.1.2.1.1.1.0") sysDescr = v.Value;
+                        else if (v.Oid == "1.3.6.1.2.1.1.2.0") sysObjectId = v.Value;
                         else if (v.Oid == "1.3.6.1.2.1.1.5.0") sysName = v.Value;
                     }
                     
-                    // Maker 필터 확인 (sysDescr 사용)
+                    // 메이커 정보 추출
+                    string maker = ExtractMaker(sysObjectId, sysDescr);
+                    
+                    // Maker 필터 확인 (추출된 메이커 정보 사용)
                     var makerFilters = config.Filters.Where(f => f.FilterCategory == DiscoveryPollingAgentsDialog.FilterType.Maker).ToList();
                     if (makerFilters.Count > 0)
                     {
-                        var makerName = sysDescr ?? "";
                         bool makerMatch = false;
                         foreach (var filter in makerFilters)
                         {
-                            if (filter.Type == "Include" && MatchesNamePattern(makerName, filter.Range))
+                            if (filter.Type == "Include" && MatchesNamePattern(maker, filter.Range))
                             {
                                 makerMatch = true;
                                 break;
                             }
-                            if (filter.Type == "Exclude" && MatchesNamePattern(makerName, filter.Range))
+                            if (filter.Type == "Exclude" && MatchesNamePattern(maker, filter.Range))
                             {
                                 return; // Exclude는 제외
                             }
@@ -413,17 +460,40 @@ public partial class DiscoveryProgressDialog : Window
                         if (!deviceNameMatch) return; // Device Name 필터에 매칭되지 않으면 제외
                     }
                     
+                    // 서브넷 이름 계산
+                    string subnetName = CalculateSubnetName(ip);
+                    
                     var device = new DiscoveredDevice
                     {
                         IpAddress = ip,
                         Status = "SNMP OK",
                         Community = comm.ReadCommunity,
                         Version = comm.Version,
-                        Port = 161
+                        Port = 161,
+                        IsSnmpSupported = true,  // SNMP 지원 기기
+                        Maker = maker,
+                        DeviceName = sysName ?? "",
+                        SubnetName = subnetName
                     };
                     
                     DiscoveredDevices.Add(device);
-                    var makerInfo = !string.IsNullOrWhiteSpace(sysDescr) ? $" Maker: {sysDescr}" : "";
+                    
+                    // 메이커 및 디바이스 목록 업데이트, 서브넷 그룹 업데이트
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (!AvailableMakers.Contains(maker))
+                        {
+                            AvailableMakers.Add(maker);
+                        }
+                        if (!string.IsNullOrWhiteSpace(sysName) && !AvailableDevices.Contains(sysName))
+                        {
+                            AvailableDevices.Add(sysName);
+                        }
+                        UpdateSubnetGroups();
+                        UpdateFilterDropdowns();
+                    });
+                    
+                    var makerInfo = !string.IsNullOrWhiteSpace(maker) ? $" Maker: {maker}" : "";
                     var nameInfo = !string.IsNullOrWhiteSpace(sysName) ? $" Name: {sysName}" : "";
                     AddLog($"  {ip}: Found (SNMP {comm.Version}, Community: {comm.ReadCommunity}){makerInfo}{nameInfo}");
                     return; // 첫 번째 성공한 커뮤니티 사용
@@ -438,15 +508,29 @@ public partial class DiscoveryProgressDialog : Window
         // SNMP 실패했지만 Ping 성공이면 Non-SNMP 노드로 추가
         if (config.FindNonSnmpNodes)
         {
+            // 서브넷 이름 계산
+            string subnetName = CalculateSubnetName(ip);
+            
             var device = new DiscoveredDevice
             {
                 IpAddress = ip,
                 Status = "Ping Only",
                 Community = "N/A",
                 Version = "N/A",
-                Port = 161
+                Port = 161,
+                IsSnmpSupported = false,
+                Maker = "Unknown",
+                DeviceName = "",
+                SubnetName = subnetName
             };
             DiscoveredDevices.Add(device);
+            
+            // 서브넷 그룹 업데이트
+            Dispatcher.Invoke(() =>
+            {
+                UpdateSubnetGroups();
+            });
+            
             AddLog($"  {ip}: Found (Ping only, no SNMP)");
         }
     }
@@ -480,19 +564,73 @@ public partial class DiscoveryProgressDialog : Window
         AddLog("Stopping discovery...");
     }
 
-    private void BtnSelectAll_Click(object sender, RoutedEventArgs e)
+    private void BtnAllToggle_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var device in DiscoveredDevices)
+        // 모든 기기 토글
+        var allDevices = DiscoveredDevices.ToList();
+        if (allDevices.Count == 0) return;
+
+        bool allSelected = allDevices.All(d => d.IsSelected);
+        
+        foreach (var device in allDevices)
         {
-            device.IsSelected = true;
+            device.IsSelected = !allSelected;
         }
     }
 
-    private void BtnDeselectAll_Click(object sender, RoutedEventArgs e)
+    private void BtnSnmpToggle_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var device in DiscoveredDevices)
+        // SNMP 지원 기기만 토글
+        var snmpDevices = DiscoveredDevices.Where(d => d.IsSnmpSupported).ToList();
+        if (snmpDevices.Count == 0) return;
+
+        bool allSelected = snmpDevices.All(d => d.IsSelected);
+        
+        foreach (var device in snmpDevices)
         {
-            device.IsSelected = false;
+            device.IsSelected = !allSelected;
+        }
+    }
+
+    private void BtnPingToggle_Click(object sender, RoutedEventArgs e)
+    {
+        // Ping Only 기기만 토글
+        var pingDevices = DiscoveredDevices.Where(d => d.Status == "Ping Only").ToList();
+        if (pingDevices.Count == 0) return;
+
+        bool allSelected = pingDevices.All(d => d.IsSelected);
+        
+        foreach (var device in pingDevices)
+        {
+            device.IsSelected = !allSelected;
+        }
+    }
+
+    private void BtnV1Toggle_Click(object sender, RoutedEventArgs e)
+    {
+        // SNMP V1 기기만 토글
+        var v1Devices = DiscoveredDevices.Where(d => d.Version == "V1").ToList();
+        if (v1Devices.Count == 0) return;
+
+        bool allSelected = v1Devices.All(d => d.IsSelected);
+        
+        foreach (var device in v1Devices)
+        {
+            device.IsSelected = !allSelected;
+        }
+    }
+
+    private void BtnV2Toggle_Click(object sender, RoutedEventArgs e)
+    {
+        // SNMP V2c 기기만 토글
+        var v2Devices = DiscoveredDevices.Where(d => d.Version == "V2c").ToList();
+        if (v2Devices.Count == 0) return;
+
+        bool allSelected = v2Devices.All(d => d.IsSelected);
+        
+        foreach (var device in v2Devices)
+        {
+            device.IsSelected = !allSelected;
         }
     }
 
@@ -509,6 +647,359 @@ public partial class DiscoveryProgressDialog : Window
         _cancellationTokenSource.Cancel();
         _cancellationTokenSource.Dispose();
         base.OnClosed(e);
+    }
+
+    /// <summary>
+    /// sysObjectID와 sysDescr에서 메이커 정보를 추출합니다.
+    /// </summary>
+    private string ExtractMaker(string? sysObjectId, string? sysDescr)
+    {
+        // sysObjectID에서 메이커 추출 (더 정확함)
+        if (!string.IsNullOrWhiteSpace(sysObjectId))
+        {
+            // 알려진 Enterprise OID 매핑
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.9.")) return "Cisco";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.2636.")) return "Juniper";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.311.")) return "Microsoft";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.8072.")) return "Net-SNMP";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.2011.")) return "Huawei";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.36")) return "NTT (MVE5000)";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.35")) return "NTT (MVD5000)";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.")) return "NTT";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.171.")) return "D-Link";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.5624.")) return "HP";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.232.")) return "HP";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.1991.")) return "Brocade";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.6486.")) return "Alcatel-Lucent";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.6027.")) return "3Com";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.890.")) return "ZTE";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.6527.")) return "Extreme Networks";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.1916.")) return "Enterasys";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.30065.")) return "Ubiquiti";
+        }
+
+        // sysDescr에서 메이커 추출 (대체 방법)
+        if (!string.IsNullOrWhiteSpace(sysDescr))
+        {
+            var descr = sysDescr.ToUpper();
+            if (descr.Contains("CISCO")) return "Cisco";
+            if (descr.Contains("JUNIPER")) return "Juniper";
+            if (descr.Contains("MICROSOFT") || descr.Contains("WINDOWS")) return "Microsoft";
+            if (descr.Contains("NET-SNMP") || descr.Contains("NETSNMP")) return "Net-SNMP";
+            if (descr.Contains("HUAWEI")) return "Huawei";
+            if (descr.Contains("MVE5000") || descr.Contains("MVD5000")) return "NTT";
+            if (descr.Contains("D-LINK") || descr.Contains("DLINK")) return "D-Link";
+            if (descr.Contains("HP ") || descr.Contains("HEWLETT")) return "HP";
+            if (descr.Contains("BROCADE")) return "Brocade";
+            if (descr.Contains("ALCATEL") || descr.Contains("LUCENT")) return "Alcatel-Lucent";
+            if (descr.Contains("3COM")) return "3Com";
+            if (descr.Contains("ZTE")) return "ZTE";
+            if (descr.Contains("EXTREME")) return "Extreme Networks";
+            if (descr.Contains("UBIQUITI")) return "Ubiquiti";
+            
+            // sysDescr의 첫 부분에서 추출 시도 (일반적으로 형식: "Manufacturer Model ...")
+            var parts = sysDescr.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0 && parts[0].Length > 2)
+            {
+                return parts[0];
+            }
+        }
+
+        return "Unknown";
+    }
+
+    private void CmbMakerFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (cmbMakerFilter?.SelectedItem == null) return;
+        
+        string? selectedMaker = null;
+        if (cmbMakerFilter.SelectedItem is ComboBoxItem item)
+        {
+            selectedMaker = item.Content?.ToString();
+        }
+        else if (cmbMakerFilter.SelectedItem is string maker)
+        {
+            selectedMaker = maker;
+        }
+        
+        // "None"이면 아무것도 하지 않음
+        if (selectedMaker == null || selectedMaker == "None" || selectedMaker == "")
+        {
+            return;
+        }
+        
+        // 해당 Maker의 기기들 찾기
+        var makerDevices = DiscoveredDevices.Where(d => d.Maker == selectedMaker).ToList();
+        if (makerDevices.Count == 0) return;
+        
+        // 모두 체크되어 있으면 모두 해제, 아니면 모두 체크
+        bool allSelected = makerDevices.All(d => d.IsSelected);
+        
+        foreach (var device in makerDevices)
+        {
+            device.IsSelected = !allSelected;
+        }
+        
+        // 선택을 "None"으로 리셋
+        Dispatcher.Invoke(() =>
+        {
+            if (cmbMakerFilter.Items.Count > 0)
+            {
+                cmbMakerFilter.SelectedIndex = 0; // "None" 선택
+            }
+        });
+    }
+
+    private void CmbDeviceFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (cmbDeviceFilter?.SelectedItem == null) return;
+        
+        string? selectedDevice = null;
+        if (cmbDeviceFilter.SelectedItem is ComboBoxItem item)
+        {
+            selectedDevice = item.Content?.ToString();
+        }
+        else if (cmbDeviceFilter.SelectedItem is string device)
+        {
+            selectedDevice = device;
+        }
+        
+        // "None"이면 아무것도 하지 않음
+        if (selectedDevice == null || selectedDevice == "None" || selectedDevice == "")
+        {
+            return;
+        }
+        
+        // 해당 DeviceName의 기기들 찾기
+        var deviceMatches = DiscoveredDevices.Where(d => d.DeviceName == selectedDevice).ToList();
+        if (deviceMatches.Count == 0) return;
+        
+        // 모두 체크되어 있으면 모두 해제, 아니면 모두 체크
+        bool allSelected = deviceMatches.All(d => d.IsSelected);
+        
+        foreach (var device in deviceMatches)
+        {
+            device.IsSelected = !allSelected;
+        }
+        
+        // 선택을 "None"으로 리셋
+        Dispatcher.Invoke(() =>
+        {
+            if (cmbDeviceFilter.Items.Count > 0)
+            {
+                cmbDeviceFilter.SelectedIndex = 0; // "None" 선택
+            }
+        });
+    }
+
+    private void UpdateFilterDropdowns()
+    {
+        if (cmbMakerFilter == null || cmbDeviceFilter == null) return;
+        
+        // 메이커 드롭다운 업데이트
+        var currentMaker = cmbMakerFilter.SelectedItem;
+        var currentMakerValue = currentMaker is ComboBoxItem cbi ? cbi.Content?.ToString() : currentMaker?.ToString();
+        cmbMakerFilter.Items.Clear();
+        cmbMakerFilter.Items.Add(new ComboBoxItem { Content = "None", IsSelected = true });
+        foreach (var maker in AvailableMakers.OrderBy(m => m))
+        {
+            cmbMakerFilter.Items.Add(maker);
+        }
+        // 현재 선택값 유지 또는 "None" 선택
+        if (currentMakerValue != null && currentMakerValue != "None")
+        {
+            var itemToSelect = cmbMakerFilter.Items.Cast<object>().FirstOrDefault(item =>
+                (item is ComboBoxItem itemCbi && itemCbi.Content?.ToString() == currentMakerValue) ||
+                (item is string str && str == currentMakerValue));
+            if (itemToSelect != null)
+            {
+                cmbMakerFilter.SelectedItem = itemToSelect;
+            }
+            else
+            {
+                cmbMakerFilter.SelectedIndex = 0; // "None" 선택
+            }
+        }
+        else if (cmbMakerFilter.Items.Count > 0)
+        {
+            cmbMakerFilter.SelectedIndex = 0; // "None" 선택
+        }
+        
+        // 디바이스 드롭다운 업데이트
+        var currentDevice = cmbDeviceFilter.SelectedItem;
+        var currentDeviceValue = currentDevice is ComboBoxItem cdi ? cdi.Content?.ToString() : currentDevice?.ToString();
+        cmbDeviceFilter.Items.Clear();
+        cmbDeviceFilter.Items.Add(new ComboBoxItem { Content = "None", IsSelected = true });
+        foreach (var device in AvailableDevices.OrderBy(d => d))
+        {
+            cmbDeviceFilter.Items.Add(device);
+        }
+        // 현재 선택값 유지 또는 "None" 선택
+        if (currentDeviceValue != null && currentDeviceValue != "None")
+        {
+            var itemToSelect = cmbDeviceFilter.Items.Cast<object>().FirstOrDefault(item =>
+                (item is ComboBoxItem itemCdi && itemCdi.Content?.ToString() == currentDeviceValue) ||
+                (item is string str && str == currentDeviceValue));
+            if (itemToSelect != null)
+            {
+                cmbDeviceFilter.SelectedItem = itemToSelect;
+            }
+            else
+            {
+                cmbDeviceFilter.SelectedIndex = 0; // "None" 선택
+            }
+        }
+        else if (cmbDeviceFilter.Items.Count > 0)
+        {
+            cmbDeviceFilter.SelectedIndex = 0; // "None" 선택
+        }
+    }
+
+    /// <summary>
+    /// IP 주소를 기반으로 서브넷 이름을 계산합니다.
+    /// </summary>
+    private string CalculateSubnetName(string deviceIpAddress)
+    {
+        // Seed 목록에서 해당 IP가 속한 서브넷 찾기
+        foreach (var seed in _config.Seeds)
+        {
+            if (IsIpInSubnet(deviceIpAddress, seed))
+            {
+                // 네트워크 주소 계산
+                var networkAddress = CalculateNetworkAddress(seed.IpAddr, seed.Netmask);
+                var cidrPrefix = NetmaskToCidrPrefix(seed.Netmask);
+                return $"{networkAddress}/{cidrPrefix}";
+            }
+        }
+        
+        // 매칭되는 Seed가 없으면 "Default" 반환
+        return "Default";
+    }
+
+    /// <summary>
+    /// IP 주소가 특정 Seed의 서브넷에 속하는지 확인합니다.
+    /// </summary>
+    private bool IsIpInSubnet(string ipAddress, DiscoveryPollingAgentsDialog.SeedEntry seed)
+    {
+        try
+        {
+            var ip = System.Net.IPAddress.Parse(ipAddress);
+            var seedIp = System.Net.IPAddress.Parse(seed.IpAddr);
+            var mask = System.Net.IPAddress.Parse(seed.Netmask);
+            
+            var ipBytes = ip.GetAddressBytes();
+            var seedBytes = seedIp.GetAddressBytes();
+            var maskBytes = mask.GetAddressBytes();
+            
+            for (int i = 0; i < 4; i++)
+            {
+                if ((ipBytes[i] & maskBytes[i]) != (seedBytes[i] & maskBytes[i]))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Netmask를 CIDR prefix length로 변환합니다.
+    /// </summary>
+    private int NetmaskToCidrPrefix(string netmask)
+    {
+        try
+        {
+            var mask = System.Net.IPAddress.Parse(netmask);
+            var maskBytes = mask.GetAddressBytes();
+            int prefixLength = 0;
+            
+            foreach (var b in maskBytes)
+            {
+                for (int i = 7; i >= 0; i--)
+                {
+                    if ((b & (1 << i)) != 0)
+                    {
+                        prefixLength++;
+                    }
+                    else
+                    {
+                        return prefixLength;
+                    }
+                }
+            }
+            return prefixLength;
+        }
+        catch
+        {
+            return 24; // 기본값
+        }
+    }
+
+    /// <summary>
+    /// IP 주소와 Netmask로 네트워크 주소를 계산합니다.
+    /// </summary>
+    private string CalculateNetworkAddress(string ipAddress, string netmask)
+    {
+        try
+        {
+            var ip = System.Net.IPAddress.Parse(ipAddress);
+            var mask = System.Net.IPAddress.Parse(netmask);
+            
+            var ipBytes = ip.GetAddressBytes();
+            var maskBytes = mask.GetAddressBytes();
+            var networkBytes = new byte[4];
+            
+            for (int i = 0; i < 4; i++)
+            {
+                networkBytes[i] = (byte)(ipBytes[i] & maskBytes[i]);
+            }
+            
+            return new System.Net.IPAddress(networkBytes).ToString();
+        }
+        catch
+        {
+            return ipAddress;
+        }
+    }
+
+    /// <summary>
+    /// 서브넷 그룹을 업데이트합니다.
+    /// </summary>
+    private void UpdateSubnetGroups()
+    {
+        var subnetDict = new Dictionary<string, SubnetGroup>();
+        
+        // 기존 그룹 유지
+        foreach (var group in SubnetGroups)
+        {
+            subnetDict[group.SubnetName] = group;
+            group.Devices.Clear();
+        }
+        
+        // 디바이스를 서브넷별로 그룹화
+        foreach (var device in DiscoveredDevices)
+        {
+            if (!subnetDict.ContainsKey(device.SubnetName))
+            {
+                subnetDict[device.SubnetName] = new SubnetGroup
+                {
+                    SubnetName = device.SubnetName,
+                    IsSelected = false  // 기본값: uncheck
+                };
+            }
+            subnetDict[device.SubnetName].Devices.Add(device);
+        }
+        
+        // 컬렉션 업데이트
+        SubnetGroups.Clear();
+        foreach (var group in subnetDict.Values.OrderBy(g => g.SubnetName))
+        {
+            SubnetGroups.Add(group);
+        }
     }
 }
 

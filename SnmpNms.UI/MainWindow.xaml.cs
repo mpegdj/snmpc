@@ -69,16 +69,7 @@ public partial class MainWindow : Window
         // MIB 트리 초기화
         InitializeMibTree();
 
-        // 기본 디바이스(샘플) 추가
-        var defaultDevice = new UiSnmpTarget
-        {
-            IpAddress = "127.0.0.1",
-            Community = "public",
-            Version = SnmpVersion.V2c,
-            Timeout = 3000
-        };
-        _vm.AddDeviceToSubnet(defaultDevice);
-        _vm.SelectedDevice = defaultDevice;
+        // 기본 디바이스 제거 (127.0.0.1은 의미 없음)
         _vm.AddSystemInfo("[System] Map Selection Tree ready (Root Subnet/Default).");
 
         // VS Code 스타일 UI 초기화

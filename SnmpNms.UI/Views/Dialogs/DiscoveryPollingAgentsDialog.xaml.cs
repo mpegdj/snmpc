@@ -256,7 +256,22 @@ public partial class DiscoveryPollingAgentsDialog : Window
             {
                 var selectedDevices = progressDialog.DiscoveredDevices.Where(d => d.IsSelected && d.Status != "Ping Only").ToList();
                 
-                // Trap 설정이 활성화되어 있고 Trap Listener가 실행 중이면 Trap 설정도 함께 수행
+                // Standard NTT Trap 설정 (MVE5000/MVD5000 전용)
+                bool configureStandardNtt = progressDialog.ConfigureStandardNttTrap && 
+                                          _trapListener != null && 
+                                          _trapListener.IsListening;
+                
+                if (configureStandardNtt && selectedDevices.Count > 0 && _trapListener != null)
+                {
+                    var snmpDevices = selectedDevices.Where(d => d.IsSnmpSupported).ToList();
+                    if (snmpDevices.Count > 0)
+                    {
+                        var (trapIp, trapPort) = _trapListener.GetListenerInfo();
+                        await ConfigureStandardNttTrapAsync(snmpDevices, trapIp, "public");
+                    }
+                }
+                
+                // 표준 Trap 설정 (기존)
                 bool configureTrap = progressDialog.ConfigureTrapDestination && 
                                      _trapListener != null && 
                                      _trapListener.IsListening;
@@ -267,9 +282,24 @@ public partial class DiscoveryPollingAgentsDialog : Window
                     await ConfigureTrapForDevicesAsync(selectedDevices, trapIp, trapPort);
                 }
                 
-                foreach (var device in selectedDevices)
+                // 선택된 서브넷 그룹 확인
+                var selectedSubnets = progressDialog.SubnetGroups
+                    .Where(sg => sg.IsSelected)
+                    .Select(sg => sg.SubnetName)
+                    .ToHashSet();
+                
+                // 선택된 서브넷에 속한 디바이스만 필터링
+                var devicesToAdd = selectedDevices
+                    .Where(d => selectedSubnets.Contains(d.SubnetName) || selectedSubnets.Count == 0)
+                    .ToList();
+                
+                foreach (var device in devicesToAdd)
                 {
                     var version = device.Version == "V1" ? SnmpVersion.V1 : SnmpVersion.V2c;
+                    
+                    // DeviceName이 있으면 Device와 Alias 모두 설정, 없으면 IP 주소 사용
+                    var deviceName = !string.IsNullOrWhiteSpace(device.DeviceName) ? device.DeviceName : device.IpAddress;
+                    
                     var target = new UiSnmpTarget
                     {
                         IpAddress = device.IpAddress,
@@ -278,20 +308,140 @@ public partial class DiscoveryPollingAgentsDialog : Window
                         Version = version,
                         Timeout = 3000,
                         Retries = 1,
-                        PollingProtocol = PollingProtocol.SNMP // Discovery로 찾은 디바이스는 기본적으로 SNMP
+                        PollingProtocol = PollingProtocol.SNMP, // Discovery로 찾은 디바이스는 기본적으로 SNMP
+                        Device = deviceName,
+                        Alias = deviceName,
+                        Maker = device.Maker
                     };
 
-                    // CIDR 기반 서브넷 찾기 또는 생성
-                    var subnet = FindOrCreateSubnetForDevice(device.IpAddress);
+                    // 서브넷 없이 추가 옵션 확인
+                    MapNode? subnet = null;
+                    if (progressDialog.AddDevicesWithoutSubnet)
+                    {
+                        // 서브넷 없이 Default에 직접 추가
+                        subnet = _mainViewModel.DefaultSubnet;
+                    }
+                    else
+                    {
+                        // CIDR 기반 서브넷 찾기 또는 생성
+                        subnet = FindOrCreateSubnetForDevice(device.IpAddress);
+                    }
+                    
                     _mainViewModel.AddDeviceToSubnet(target, subnet);
                     _mainViewModel.AddEvent(EventSeverity.Info, target.EndpointKey, 
-                        $"[Discovery] Device added: {device.IpAddress} ({device.Status}) to subnet: {subnet.Name}");
+                        $"[Discovery] Device added: {deviceName} ({device.IpAddress}, Maker: {device.Maker}) to subnet: {subnet.Name}");
                 }
 
                 var trapInfo = configureTrap ? " (Trap configured)" : "";
-                MessageBox.Show($"Added {selectedDevices.Count} device(s) to map{trapInfo}.", "Discovery Complete", 
+                var subnetInfo = selectedSubnets.Count > 0 ? $" from {selectedSubnets.Count} subnet(s)" : "";
+                MessageBox.Show($"Added {devicesToAdd.Count} device(s){subnetInfo} to map{trapInfo}.", "Discovery Complete", 
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+    }
+
+    private async Task ConfigureStandardNttTrapAsync(
+        List<DiscoveryProgressDialog.DiscoveredDevice> devices, 
+        string trapIp, 
+        string community)
+    {
+        if (_snmpClient == null) return;
+        
+        int successCount = 0;
+        int skipCount = 0;
+        int failCount = 0;
+        
+        // MVE5000/MVD5000 base OID
+        string[] baseOids = {
+            "1.3.6.1.4.1.3930.36.5.2.11",  // MVE5000
+            "1.3.6.1.4.1.3930.35.5.2.11"   // MVD5000
+        };
+        
+        foreach (var device in devices)
+        {
+            try
+            {
+                var target = new UiSnmpTarget
+                {
+                    IpAddress = device.IpAddress,
+                    Port = device.Port,
+                    Community = device.Community == "N/A" ? "private" : device.Community, // Write Community 시도
+                    Version = device.Version == "V1" ? SnmpVersion.V1 : SnmpVersion.V2c,
+                    Timeout = 3000,
+                    Retries = 1
+                };
+
+                bool configured = false;
+                
+                // MVE5000/MVD5000 Table 확인
+                foreach (var baseOid in baseOids)
+                {
+                    // 1번 Entry 확인 (GET)
+                    var enableOid = $"{baseOid}.1.2.1";    // ServiceEnable
+                    var ipv4Oid = $"{baseOid}.1.5.1";      // IPv4Address
+                    
+                    var checkResult = await _snmpClient.GetAsync(target, new[] { enableOid, ipv4Oid });
+                    
+                    if (checkResult.IsSuccess && checkResult.Variables.Count >= 2)
+                    {
+                        var enableValue = checkResult.Variables.FirstOrDefault(v => v.Oid == enableOid)?.Value;
+                        var ipValue = checkResult.Variables.FirstOrDefault(v => v.Oid == ipv4Oid)?.Value;
+                        
+                        // 이미 설정되어 있으면 스킵
+                        if (enableValue == "0" && !string.IsNullOrWhiteSpace(ipValue) && ipValue != "0.0.0.0")
+                        {
+                            skipCount++;
+                            configured = true;
+                            break;
+                        }
+                        
+                        // MVE5000/MVD5000 기기임을 확인했으므로 설정 시도
+                        // ServiceEnable = 0 (enabled)
+                        var enableResult = await _snmpClient.SetAsync(target, enableOid, "0", "INTEGER");
+                        if (!enableResult.IsSuccess) continue;
+                        
+                        // CommunityName = "public"
+                        var communityOid = $"{baseOid}.1.3.1";
+                        var communityResult = await _snmpClient.SetAsync(target, communityOid, community, "OCTETSTRING");
+                        if (!communityResult.IsSuccess) continue;
+                        
+                        // Protocol = 0 (IPv4)
+                        var protocolOid = $"{baseOid}.1.4.1";
+                        var protocolResult = await _snmpClient.SetAsync(target, protocolOid, "0", "INTEGER");
+                        if (!protocolResult.IsSuccess) continue;
+                        
+                        // IPv4Address = trapIp
+                        var ipResult = await _snmpClient.SetAsync(target, ipv4Oid, trapIp, "IPADDRESS");
+                        if (!ipResult.IsSuccess) continue;
+                        
+                        successCount++;
+                        configured = true;
+                        break;
+                    }
+                }
+                
+                if (!configured)
+                {
+                    failCount++;
+                }
+            }
+            catch
+            {
+                failCount++;
+            }
+        }
+        
+        if (successCount > 0 || skipCount > 0 || failCount > 0)
+        {
+            MessageBox.Show(
+                $"Standard NTT Trap configuration completed.\n\n" +
+                $"Success: {successCount}\n" +
+                $"Skipped (already configured): {skipCount}\n" +
+                $"Failed: {failCount}\n\n" +
+                "Note: Only MVE5000/MVD5000 devices are configured. Other devices are skipped.",
+                "Standard NTT Trap Configuration Result",
+                MessageBoxButton.OK,
+                successCount > 0 || skipCount > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
     }
 

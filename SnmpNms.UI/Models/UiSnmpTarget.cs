@@ -60,6 +60,18 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
         }
     }
 
+    private string _maker = "";
+    public string Maker
+    {
+        get => _maker;
+        set
+        {
+            if (_maker == value) return;
+            _maker = value ?? "";
+            OnPropertyChanged();
+        }
+    }
+
     public string Community { get; set; } = "public";
     public SnmpVersion Version { get; set; } = SnmpVersion.V2c;
     public int Timeout { get; set; } = 3000;

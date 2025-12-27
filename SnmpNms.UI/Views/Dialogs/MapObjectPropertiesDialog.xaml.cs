@@ -896,6 +896,7 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
             };
 
             // 표준 SNMP Trap Destination OID 시도
+            // MVE5000/MVD5000 전용 설정은 개별 편집에서 처리 (향후 구현)
             // 1.3.6.1.6.3.18.1.3.0 (snmpTrapAddress) - 표준이지만 모든 장비에서 지원하지 않음
             var trapOid = "1.3.6.1.6.3.18.1.3.0";
             var result = await _snmpClient.SetAsync(target, trapOid, TrapDestinationIp, "IPADDRESS");
