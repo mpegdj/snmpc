@@ -1,4 +1,5 @@
 using System.Net;
+using System.Threading;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
 using SnmpNms.Core.Interfaces;
@@ -87,12 +88,15 @@ public class SnmpClient : ISnmpClient
         });
     }
 
-    public async Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid)
+    public async Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid, CancellationToken cancellationToken = default)
     {
         return await Task.Run(() =>
         {
             try
             {
+                // 취소 토큰 체크
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var endpoint = new IPEndPoint(IPAddress.Parse(target.IpAddress), target.Port);
                 var community = new OctetString(target.Community);
                 var rootParams = new ObjectIdentifier(rootOid);
@@ -102,18 +106,43 @@ public class SnmpClient : ISnmpClient
 
                 var result = new List<Variable>();
                 
-                Messenger.Walk(version, endpoint, community, rootParams, result, target.Timeout, WalkMode.WithinSubtree);
+                // WalkMode.Default: 지정된 OID부터 시작하여 모든 하위 OID를 순회
+                // - 하위 OID가 있으면: 하위로 내려가서 모든 하위 OID를 가져옴
+                // - 하위 OID가 없으면: 현재 OID만 가져옴 (리프 노드)
+                // WalkMode.WithinSubtree는 자기 자신을 제외하고 하위만 가져오므로, Default 사용
+                // 
+                // 주의: Messenger.Walk는 동기 메서드이고 CancellationToken을 직접 지원하지 않음
+                // 취소는 Walk 완료 후 체크하거나, 별도 스레드에서 실행하여 취소 처리
+                Messenger.Walk(version, endpoint, community, rootParams, result, target.Timeout, WalkMode.Default);
+                
+                // Walk 완료 후 취소 체크
+                cancellationToken.ThrowIfCancellationRequested();
                 
                 stopwatch.Stop();
 
                 var snmpVariables = result.Select(MapVariable).ToList();
+                
+                // 디버깅: Walk 결과 확인
+                System.Diagnostics.Debug.WriteLine($"WalkAsync: OID={rootOid}, Count={snmpVariables.Count}, Time={stopwatch.ElapsedMilliseconds}ms");
+                if (snmpVariables.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  First: {snmpVariables[0].Oid}");
+                    System.Diagnostics.Debug.WriteLine($"  Last: {snmpVariables[snmpVariables.Count - 1].Oid}");
+                }
+                
                 return SnmpResult.Success(snmpVariables, stopwatch.ElapsedMilliseconds);
+            }
+            catch (OperationCanceledException)
+            {
+                System.Diagnostics.Debug.WriteLine($"WalkAsync Cancelled: OID={rootOid}");
+                return SnmpResult.Fail("Walk cancelled by user");
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"WalkAsync Exception: {ex.Message}\n{ex.StackTrace}");
                 return SnmpResult.Fail(ex.Message);
             }
-        });
+        }, cancellationToken);
     }
 
     private VersionCode MapVersion(SnmpVersion version)

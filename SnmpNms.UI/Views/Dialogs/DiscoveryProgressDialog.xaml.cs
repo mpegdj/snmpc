@@ -62,7 +62,7 @@ public partial class DiscoveryProgressDialog : Window
     public ObservableCollection<SubnetGroup> SubnetGroups { get; } = new();
     public bool ConfigureTrapDestination { get; set; } = false;
     public bool ConfigureStandardNttTrap { get; set; } = false;
-    public bool AddDevicesWithoutSubnet { get; set; } = false;  // 서브넷 없이 기기만 추가
+    public bool AddDevicesWithoutSubnet { get; set; } = true;  // 서브넷 없이 기기만 추가 (기본값: 체크)
 
     public class SubnetGroup : INotifyPropertyChanged
     {

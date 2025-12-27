@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     private SidebarMapView? _sidebarMapView;
     private TreeView? _tvDevices;
     private TreeView? _treeMib;
+    private CancellationTokenSource? _walkCancellationTokenSource;
 
     public MainWindow()
     {
@@ -508,20 +509,245 @@ public partial class MainWindow : Window
                     
                     sb.AppendLine($"{displayName} = {v.TypeCode}: {v.Value}");
                 }
-                _vm.AddEvent(EventSeverity.Info, $"{target.IpAddress}:{target.Port}", sb.ToString().TrimEnd());
+                var resultText = sb.ToString().TrimEnd();
+                txtSnmpResult.Text = resultText;
+                _vm.AddEvent(EventSeverity.Info, $"{target.IpAddress}:{target.Port}", resultText);
             }
             else
             {
-                _vm.AddEvent(EventSeverity.Error, $"{target.IpAddress}:{target.Port}", $"Failed: {result.ErrorMessage}");
+                var errorText = $"Failed: {result.ErrorMessage}";
+                txtSnmpResult.Text = errorText;
+                _vm.AddEvent(EventSeverity.Error, $"{target.IpAddress}:{target.Port}", errorText);
             }
         }
         catch (Exception ex)
         {
-            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", $"Error: {ex.Message}");
+            var errorText = $"Error: {ex.Message}";
+            txtSnmpResult.Text = errorText;
+            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", errorText);
         }
         finally
         {
             btnGet.IsEnabled = true;
+        }
+    }
+
+    private async void BtnGetNext_Click(object sender, RoutedEventArgs e)
+    {
+        if (txtIp == null || txtCommunity == null || txtOid == null || txtSnmpResult == null)
+        {
+            MessageBox.Show("UI 필드가 초기화되지 않았습니다.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        _vm.AddEvent(EventSeverity.Info, $"{txtIp.Text}:161", $"Sending SNMP GET-NEXT request to {txtIp.Text}...");
+        if (txtSnmpResult != null)
+        {
+            txtSnmpResult.Text = $"Sending SNMP GET-NEXT request to {txtIp.Text}...";
+        }
+        btnGetNext.IsEnabled = false;
+
+        try
+        {
+            var target = new UiSnmpTarget
+            {
+                IpAddress = txtIp.Text,
+                Community = txtCommunity.Text,
+                Version = SnmpVersion.V2c,
+                Timeout = 3000
+            };
+
+            var oid = txtOid.Text;
+
+            // 이름으로 OID 검색 기능 추가
+            if (!string.IsNullOrEmpty(oid) && !oid.StartsWith(".") && !char.IsDigit(oid[0]))
+            {
+                var convertedOid = _mibService.GetOid(oid);
+                if (convertedOid != oid)
+                {
+                    _vm.AddSystemInfo($"[System] Converted '{oid}' to '{convertedOid}'");
+                    oid = convertedOid;
+                }
+            }
+
+            var result = await _snmpClient.GetNextAsync(target, oid);
+
+            if (result.IsSuccess && result.Variables.Count > 0)
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"Get-Next Success! (Time: {result.ResponseTime}ms)");
+                // Get Next는 단일 결과이므로 정렬 불필요, 순서대로 표시
+                foreach (var v in result.Variables)
+                {
+                    var name = _mibService.GetOidName(v.Oid);
+                    var displayName = name == v.Oid ? v.Oid : $"{name} ({v.Oid})";
+                    sb.AppendLine($"{displayName} = {v.TypeCode}: {v.Value}");
+                    
+                    // 다음 Get Next를 위해 OID 필드 자동 업데이트
+                    if (txtOid != null && !string.IsNullOrEmpty(v.Oid))
+                    {
+                        txtOid.Text = v.Oid;
+                    }
+                }
+                var resultText = sb.ToString().TrimEnd();
+                if (txtSnmpResult != null)
+                {
+                    txtSnmpResult.Text = resultText;
+                }
+                _vm.AddEvent(EventSeverity.Info, $"{target.IpAddress}:{target.Port}", resultText);
+            }
+            else
+            {
+                var errorText = $"Get-Next Failed: {result.ErrorMessage}";
+                if (txtSnmpResult != null)
+                {
+                    txtSnmpResult.Text = errorText;
+                }
+                _vm.AddEvent(EventSeverity.Error, $"{target.IpAddress}:{target.Port}", errorText);
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorText = $"Error: {ex.Message}";
+            if (txtSnmpResult != null)
+            {
+                txtSnmpResult.Text = errorText;
+            }
+            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", errorText);
+            System.Diagnostics.Debug.WriteLine($"BtnGetNext_Click Exception: {ex}");
+        }
+        finally
+        {
+            btnGetNext.IsEnabled = true;
+        }
+    }
+
+    private async void BtnWalk_Click(object sender, RoutedEventArgs e)
+    {
+        if (txtIp == null || txtCommunity == null || txtOid == null || txtSnmpResult == null)
+        {
+            MessageBox.Show("UI 필드가 초기화되지 않았습니다.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        // 기존 Walk 작업이 있으면 취소
+        _walkCancellationTokenSource?.Cancel();
+        _walkCancellationTokenSource?.Dispose();
+        _walkCancellationTokenSource = new CancellationTokenSource();
+        var token = _walkCancellationTokenSource.Token;
+
+        _vm.AddEvent(EventSeverity.Info, $"{txtIp.Text}:161", $"Sending SNMP WALK request to {txtIp.Text}...");
+        if (txtSnmpResult != null)
+        {
+            txtSnmpResult.Text = $"Sending SNMP WALK request to {txtIp.Text}...";
+        }
+        btnWalk.IsEnabled = false;
+        btnStopWalk.IsEnabled = true;
+        btnStopWalk.Visibility = Visibility.Visible;
+
+        try
+        {
+            var target = new UiSnmpTarget
+            {
+                IpAddress = txtIp.Text,
+                Community = txtCommunity.Text,
+                Version = SnmpVersion.V2c,
+                Timeout = 10000  // Walk는 여러 요청을 보내므로 Timeout을 늘림
+            };
+
+            var oid = txtOid.Text;
+
+            // 이름으로 OID 검색 기능 추가
+            if (!string.IsNullOrEmpty(oid) && !oid.StartsWith(".") && !char.IsDigit(oid[0]))
+            {
+                var convertedOid = _mibService.GetOid(oid);
+                if (convertedOid != oid)
+                {
+                    _vm.AddSystemInfo($"[System] Converted '{oid}' to '{convertedOid}'");
+                    oid = convertedOid;
+                }
+            }
+
+            // 취소 토큰 체크
+            token.ThrowIfCancellationRequested();
+
+            var result = await _snmpClient.WalkAsync(target, oid, token);
+
+            // 취소되었는지 확인
+            if (token.IsCancellationRequested)
+            {
+                if (txtSnmpResult != null)
+                {
+                    txtSnmpResult.Text = "Walk cancelled by user.";
+                }
+                _vm.AddEvent(EventSeverity.Warning, $"{target.IpAddress}:{target.Port}", "Walk cancelled by user");
+                return;
+            }
+
+            if (result.IsSuccess)
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"Walk Success! (Time: {result.ResponseTime}ms, {result.Variables.Count} values)");
+                sb.AppendLine("");
+                // OID 순으로 정렬하여 표시
+                var sortedVariables = result.Variables.OrderBy(v => CompareOidForDisplay(v.Oid)).ToList();
+                foreach (var v in sortedVariables)
+                {
+                    var name = _mibService.GetOidName(v.Oid);
+                    var displayName = name == v.Oid ? v.Oid : $"{name} ({v.Oid})";
+                    sb.AppendLine($"{displayName} = {v.TypeCode}: {v.Value}");
+                }
+                var resultText = sb.ToString().TrimEnd();
+                if (txtSnmpResult != null)
+                {
+                    txtSnmpResult.Text = resultText;
+                }
+                _vm.AddEvent(EventSeverity.Info, $"{target.IpAddress}:{target.Port}", $"Walk completed: {result.Variables.Count} values");
+            }
+            else
+            {
+                var errorText = $"Walk Failed: {result.ErrorMessage}";
+                if (txtSnmpResult != null)
+                {
+                    txtSnmpResult.Text = errorText;
+                }
+                _vm.AddEvent(EventSeverity.Error, $"{target.IpAddress}:{target.Port}", errorText);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            if (txtSnmpResult != null)
+            {
+                txtSnmpResult.Text = "Walk cancelled by user.";
+            }
+            _vm.AddEvent(EventSeverity.Warning, $"{txtIp.Text}:161", "Walk cancelled by user");
+        }
+        catch (Exception ex)
+        {
+            var errorText = $"Error: {ex.Message}";
+            if (txtSnmpResult != null)
+            {
+                txtSnmpResult.Text = errorText;
+            }
+            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", errorText);
+            System.Diagnostics.Debug.WriteLine($"BtnWalk_Click Exception: {ex}");
+        }
+        finally
+        {
+            btnWalk.IsEnabled = true;
+            btnStopWalk.IsEnabled = false;
+            btnStopWalk.Visibility = Visibility.Collapsed;
+            _walkCancellationTokenSource?.Dispose();
+            _walkCancellationTokenSource = null;
+        }
+    }
+
+    private void BtnStopWalk_Click(object sender, RoutedEventArgs e)
+    {
+        _walkCancellationTokenSource?.Cancel();
+        if (txtSnmpResult != null)
+        {
+            txtSnmpResult.Text = "Stopping Walk...";
         }
     }
 
@@ -1313,6 +1539,15 @@ public partial class MainWindow : Window
             {
                 _ = LoadMibTableData(node.Oid);
             }
+
+            // SNMP Test 탭의 OID 필드에 자동으로 채워주기
+            if (txtOid != null && !string.IsNullOrEmpty(node.Oid))
+            {
+                // OID 또는 이름 중 선택 (이름이 있으면 이름 우선, 없으면 OID)
+                txtOid.Text = !string.IsNullOrEmpty(node.Name) && node.Name != node.Oid 
+                    ? node.Name 
+                    : node.Oid;
+            }
         }
     }
 
@@ -1826,5 +2061,14 @@ public partial class MainWindow : Window
         }
         
         base.OnClosed(e);
+    }
+
+    private string CompareOidForDisplay(string oid)
+    {
+        // OID를 숫자 배열로 변환하여 정렬 가능한 문자열 생성
+        // 예: "1.3.6.1.2.1.1.1" -> "0001.0003.0006.0001.0002.0001.0001.0001"
+        var parts = oid.Split('.');
+        var paddedParts = parts.Select(p => int.TryParse(p, out var num) ? num.ToString("D10") : p.PadLeft(10, '0')).ToArray();
+        return string.Join(".", paddedParts);
     }
 }

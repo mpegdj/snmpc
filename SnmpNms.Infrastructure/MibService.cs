@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.RegularExpressions;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
@@ -319,21 +320,39 @@ public class MibService : IMibService
             }
         }
 
-        // 트리 정렬 (이름 순)
+        // 트리 정렬 (OID 숫자 순)
         SortTree(mgmtNode);
         SortTree(privateNode);
     }
 
     private void SortTree(MibTreeNode node)
     {
-        // 자식 노드를 이름 순으로 정렬
-        var sortedChildren = node.Children.OrderBy(c => c.Name).ToList();
+        // 자식 노드를 OID 숫자 순으로 정렬 (OID가 있으면 OID 기준, 없으면 이름 기준)
+        var sortedChildren = node.Children.OrderBy(c =>
+        {
+            // OID가 있으면 OID 숫자 순으로 정렬
+            if (!string.IsNullOrEmpty(c.Oid))
+            {
+                return CompareOidForSort(c.Oid);
+            }
+            // OID가 없으면 이름으로 정렬
+            return c.Name;
+        }).ToList();
         node.Children.Clear();
         foreach (var child in sortedChildren)
         {
             node.Children.Add(child);
             SortTree(child); // 재귀적으로 정렬
         }
+    }
+
+    private string CompareOidForSort(string oid)
+    {
+        // OID를 숫자 배열로 변환하여 정렬 가능한 문자열 생성
+        // 예: "1.3.6.1.2.1.1.1" -> "0001.0003.0006.0001.0002.0001.0001.0001"
+        var parts = oid.Split('.');
+        var paddedParts = parts.Select(p => int.TryParse(p, out var num) ? num.ToString("D10") : p.PadLeft(10, '0')).ToArray();
+        return string.Join(".", paddedParts);
     }
 }
 
