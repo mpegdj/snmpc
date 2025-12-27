@@ -1,11 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Lextm.SharpSnmpLib;
+using Lextm.SharpSnmpLib.Messaging;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using SnmpNms.Infrastructure;
@@ -14,6 +17,7 @@ using SnmpNms.UI.ViewModels;
 using SnmpNms.UI.Views.Dialogs;
 using SnmpNms.UI.Views;
 using SnmpNms.UI.Views.EventLog;
+using VersionCode = Lextm.SharpSnmpLib.VersionCode;
 
 namespace SnmpNms.UI;
 
@@ -29,6 +33,7 @@ public partial class MainWindow : Window
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
     private readonly IPollingService _pollingService;
+    private readonly ITrapListener _trapListener;
     private readonly MainViewModel _vm;
 
     private Point _dragStartPoint;
@@ -45,11 +50,18 @@ public partial class MainWindow : Window
         _snmpClient = new SnmpClient();
         _mibService = new MibService();
         _pollingService = new PollingService(_snmpClient);
+        _trapListener = new TrapListener();
         _vm = new MainViewModel();
         DataContext = _vm;
 
         // Polling 이벤트 연결
         _pollingService.OnPollingResult += PollingService_OnPollingResult;
+
+        // Trap 이벤트 연결
+        _trapListener.OnTrapReceived += TrapListener_OnTrapReceived;
+
+        // Trap Listener 시작
+        InitializeTrapListener();
 
         // MIB 파일 로드 (Mib 폴더가 실행 파일 위치 또는 상위에 있다고 가정)
         LoadMibs();
@@ -106,6 +118,53 @@ public partial class MainWindow : Window
         sidebar.ViewChanged += ActivityBar_ViewChanged;
     }
 
+    private void InitializeTrapListener()
+    {
+        try
+        {
+            _trapListener.Start(162);
+            _vm.IsTrapListening = true;
+            _vm.AddEvent(EventSeverity.Info, null, "[System] Trap Listener started on port 162");
+        }
+        catch (Exception ex)
+        {
+            _vm.IsTrapListening = false;
+            _vm.AddEvent(EventSeverity.Error, null, $"[System] Failed to start Trap Listener: {ex.Message}");
+        }
+    }
+
+    private void TrapListener_OnTrapReceived(object? sender, TrapEvent e)
+    {
+        if (e.ErrorMessage != null)
+        {
+            _vm.AddEvent(EventSeverity.Error, e.SourceIpAddress, $"[Trap] {e.ErrorMessage}");
+            return;
+        }
+
+        var trapInfo = $"Trap from {e.SourceIpAddress}:{e.SourcePort}";
+        if (!string.IsNullOrEmpty(e.EnterpriseOid))
+        {
+            trapInfo += $" Enterprise: {e.EnterpriseOid}";
+        }
+        if (!string.IsNullOrEmpty(e.GenericTrapType))
+        {
+            trapInfo += $" Generic: {e.GenericTrapType}";
+        }
+        if (e.Variables.Count > 0)
+        {
+            trapInfo += $" ({e.Variables.Count} variables)";
+        }
+
+        _vm.AddEvent(EventSeverity.Info, e.SourceIpAddress, $"[Trap] {trapInfo}");
+        
+        // 변수들도 로그에 기록 (최대 5개만, MIB 이름 변환 포함)
+        foreach (var variable in e.Variables.Take(5))
+        {
+            var oidName = _mibService?.GetOidName(variable.Oid) ?? variable.Oid;
+            _vm.AddEvent(EventSeverity.Info, e.SourceIpAddress, $"  {oidName} = {variable.Value}");
+        }
+    }
+
     private void ActivityBar_ViewChanged(object? sender, ActivityBarView view)
     {
         // Activity Bar 뷰 변경 처리
@@ -155,7 +214,7 @@ public partial class MainWindow : Window
     // --- Edit Button Bar: Add Map Objects (SNMPc style) ---
     private void FindMapObjects_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new DiscoveryPollingAgentsDialog(_snmpClient, _vm) { Owner = this };
+        var dialog = new DiscoveryPollingAgentsDialog(_snmpClient, _vm, _trapListener) { Owner = this };
         dialog.ShowDialog();
     }
 
@@ -179,7 +238,7 @@ public partial class MainWindow : Window
 
     private void ShowAddMapObjectDialog(MapObjectType type)
     {
-        var dlg = new MapObjectPropertiesDialog(type, _snmpClient) { Owner = this };
+        var dlg = new MapObjectPropertiesDialog(type, _snmpClient, _trapListener) { Owner = this };
 
         // 기본값: 현재 선택된 장비/입력값 기반
         if (type == MapObjectType.Device)
@@ -338,7 +397,6 @@ public partial class MainWindow : Window
         return null;
     }
 
-    private bool _isInitialAutoPoll = true; // 앱 시작 시 auto polling 플래그
     
     private void ChkAutoPoll_Checked(object sender, RoutedEventArgs e)
     {
@@ -352,13 +410,7 @@ public partial class MainWindow : Window
         
         _pollingService.Start();
         _vm.IsPollingRunning = true;
-        
-        // 앱 시작 시에만 로그 남기기
-        if (_isInitialAutoPoll)
-        {
-            _vm.AddEvent(EventSeverity.Info, null, "[System] Auto Polling Started");
-            _isInitialAutoPoll = false; // 이후에는 로그 남기지 않음
-        }
+        _vm.AddEvent(EventSeverity.Info, null, "[System] Auto Polling Started");
     }
 
     private void ChkAutoPoll_Unchecked(object sender, RoutedEventArgs e)
@@ -373,8 +425,7 @@ public partial class MainWindow : Window
         
         _pollingService.Stop();
         _vm.IsPollingRunning = false;
-        
-        // Stop 시에는 로그 남기지 않음 (필터링은 표시에만 관련)
+        _vm.AddEvent(EventSeverity.Info, null, "[System] Auto Polling Stopped");
     }
 
     private UiSnmpTarget BuildTargetFromInputs(bool minimal = false)
@@ -480,6 +531,71 @@ public partial class MainWindow : Window
         finally
         {
             btnGet.IsEnabled = true;
+        }
+    }
+
+    private void BtnSendTrap_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var targetIp = txtTrapTarget.Text.Trim();
+            if (string.IsNullOrEmpty(targetIp))
+            {
+                _vm.AddEvent(EventSeverity.Warning, null, "[Trap Test] Please enter Trap Target IP address");
+                return;
+            }
+
+            if (!int.TryParse(txtTrapPort.Text.Trim(), out int port) || port <= 0 || port > 65535)
+            {
+                _vm.AddEvent(EventSeverity.Warning, null, "[Trap Test] Please enter valid port number (1-65535)");
+                return;
+            }
+
+            var trapOid = txtTrapOid.Text.Trim();
+            if (string.IsNullOrEmpty(trapOid))
+            {
+                _vm.AddEvent(EventSeverity.Warning, null, "[Trap Test] Please enter Trap OID");
+                return;
+            }
+
+            // 이름으로 OID 검색 기능 (예: "sysDescr" 입력 시 변환)
+            if (!trapOid.StartsWith(".") && !char.IsDigit(trapOid[0]))
+            {
+                var convertedOid = _mibService.GetOid(trapOid);
+                if (convertedOid != trapOid)
+                {
+                    _vm.AddSystemInfo($"[Trap Test] Converted '{trapOid}' to '{convertedOid}'");
+                    trapOid = convertedOid;
+                }
+            }
+
+            var target = new IPEndPoint(IPAddress.Parse(targetIp), port);
+            var community = new OctetString(txtCommunity.Text.Trim());
+            var trapObjectId = new ObjectIdentifier(trapOid);
+
+            _vm.AddEvent(EventSeverity.Info, $"{targetIp}:{port}", $"[Trap Test] Sending SNMPv2c Trap to {targetIp}:{port}...");
+
+            // SNMPv2c Trap 전송
+            var variables = new List<Variable>
+            {
+                new Variable(new ObjectIdentifier("1.3.6.1.2.1.1.3.0"), new TimeTicks(0)), // sysUpTime
+                new Variable(trapObjectId, new OctetString($"Test Trap from {DateTime.Now:yyyy-MM-dd HH:mm:ss}"))
+            };
+
+            Messenger.SendTrapV2(
+                0,
+                VersionCode.V2,
+                target,
+                community,
+                trapObjectId,
+                0,
+                variables);
+
+            _vm.AddEvent(EventSeverity.Info, $"{targetIp}:{port}", $"[Trap Test] Trap sent successfully! OID: {trapOid}");
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Error, null, $"[Trap Test] Error: {ex.Message}");
         }
     }
 
@@ -1700,5 +1816,24 @@ public partial class MainWindow : Window
         // SNMPc 스타일: View Window Area 내부 창 정렬(Cascade)
         // 현재는 Map View 탭 내부에서 겹치는 내부 창을 제공한다.
         mapViewControl?.CascadeWindows();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (_trapListener != null && _trapListener.IsListening)
+        {
+            _trapListener.Stop();
+            _vm.IsTrapListening = false;
+            _vm.AddEvent(EventSeverity.Info, null, "[System] Trap Listener stopped");
+        }
+        
+        if (_pollingService != null && _vm.IsPollingRunning)
+        {
+            _pollingService.Stop();
+            _vm.IsPollingRunning = false;
+            _vm.AddEvent(EventSeverity.Info, null, "[System] Auto Polling Stopped");
+        }
+        
+        base.OnClosed(e);
     }
 }

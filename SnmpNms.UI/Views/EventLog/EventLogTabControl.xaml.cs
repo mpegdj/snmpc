@@ -53,6 +53,7 @@ public partial class EventLogTabControl : UserControl
                 UpdateSpinnerAnimation(mainVm.IsPollingRunning);
             }
         }
+        // IsTrapListening 변경은 UI 바인딩으로 자동 업데이트됨
     }
 
     private void UpdateSpinnerAnimation(bool isRunning)

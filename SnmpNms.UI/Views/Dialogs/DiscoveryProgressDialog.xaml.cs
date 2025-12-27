@@ -37,18 +37,28 @@ public partial class DiscoveryProgressDialog : Window
     }
 
     private readonly ISnmpClient _snmpClient;
+    private readonly ITrapListener? _trapListener;
     private readonly DiscoveryPollingAgentsDialog.DiscoveryConfig _config;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; } = new();
+    public bool ConfigureTrapDestination { get; set; } = false;
 
-    public DiscoveryProgressDialog(ISnmpClient snmpClient, DiscoveryPollingAgentsDialog.DiscoveryConfig config)
+    public DiscoveryProgressDialog(ISnmpClient snmpClient, DiscoveryPollingAgentsDialog.DiscoveryConfig config, ITrapListener? trapListener = null)
     {
         InitializeComponent();
         _snmpClient = snmpClient;
+        _trapListener = trapListener;
         _config = config;
         DataContext = this;
         dataGridDevices.ItemsSource = DiscoveredDevices;
+        
+        // Trap Listener가 없거나 실행 중이 아니면 체크박스 비활성화
+        if (_trapListener == null || !_trapListener.IsListening)
+        {
+            chkConfigureTrap.IsEnabled = false;
+            chkConfigureTrap.ToolTip = "Trap Listener must be running to configure Trap Destination";
+        }
         
         // Discovery 시작
         _ = StartDiscoveryAsync();
@@ -488,6 +498,8 @@ public partial class DiscoveryProgressDialog : Window
 
     private void BtnOk_Click(object sender, RoutedEventArgs e)
     {
+        // Trap 설정은 DiscoveryPollingAgentsDialog에서 Map 등록 시 함께 수행
+        // 여기서는 다이얼로그만 닫고 ConfigureTrapDestination 플래그는 유지
         DialogResult = true;
         Close();
     }

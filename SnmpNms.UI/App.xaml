@@ -12,6 +12,7 @@
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
             <converters:DeviceStatusToBrushConverter x:Key="DeviceStatusToBrushConverter"/>
             <converters:PollingStatusConverter x:Key="PollingStatusConverter"/>
+            <converters:TrapStatusConverter x:Key="TrapStatusConverter"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>

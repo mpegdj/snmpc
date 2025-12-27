@@ -25,7 +25,7 @@
 
                 <TextBlock Grid.Column="0" Text="Status:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,8,0"/>
                 
-                <!-- Polling 상태 및 필터링 정보 표시 -->
+                <!-- Polling 및 Trap 상태 및 필터링 정보 표시 -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- 회전하는 아이콘 (Polling 중일 때만 표시) -->
                     <TextBlock x:Name="spinnerIcon" 
@@ -42,8 +42,14 @@
                         </TextBlock.RenderTransform>
                     </TextBlock>
                     
-                    <!-- 상태 텍스트 -->
+                    <!-- Polling 상태 텍스트 -->
                     <TextBlock Text="{Binding Tag.IsPollingRunning, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource PollingStatusConverter}}"
+                              VerticalAlignment="Center"
+                              Foreground="{StaticResource VSCodeForeground}"
+                              Margin="0,0,12,0"/>
+                    
+                    <!-- Trap 상태 텍스트 -->
+                    <TextBlock Text="{Binding Tag.IsTrapListening, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource TrapStatusConverter}}"
                               VerticalAlignment="Center"
                               Foreground="{StaticResource VSCodeForeground}"
                               Margin="0,0,12,0"/>

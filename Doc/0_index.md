@@ -1,4 +1,28 @@
 # Doc 인덱스 (문서 내비게이션)
+실행 명령어
+방법 1: 프로젝트 지정하여 실행 (권장)
+dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
+방법 2: UI 프로젝트 디렉토리로 이동 후 실행
+cd SnmpNms.UIdotnet runcd ..
+방법 3: 솔루션 빌드 후 실행
+dotnet build SnmpNms.slndotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
+실행 전 확인사항
+포트 162 권한: UDP 162는 관리자 권한이 필요할 수 있습니다.
+관리자 권한으로 실행하거나
+MainWindow.xaml.cs의 InitializeTrapListener()에서 포트를 1162로 변경
+MIB 파일 경로: MainWindow.xaml.cs의 LoadMibs()에서 MIB 경로 확인
+기본값: D:\git\snmpc\Mib
+없으면 실행 파일 기준 ./Mib 폴더 사용
+빠른 테스트 방법
+애플리케이션 실행
+SNMP Test 탭 이동
+Trap Test 섹션에서:
+Trap Target: 127.0.0.1
+Trap Port: 162 (또는 설정한 포트)
+Trap OID: 1.3.6.1.4.1.1.1.1.1
+Send Trap 버튼 클릭
+하단 Event Log에서 Trap 수신 확인
+가장 간단한 방법은 방법 1입니다. 현재 디렉토리(d:\git\snmpc)에서 실행하면 됩니다.
 
 이 폴더는 `snmpc` 프로젝트의 **계획/운영/로그/레퍼런스** 문서를 모아두는 곳입니다.
 

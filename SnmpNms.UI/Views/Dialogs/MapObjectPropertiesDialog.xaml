@@ -172,11 +172,58 @@
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Read/Write Comm:" VerticalAlignment="Center"/>
                     <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,2,0,6"
                              Text="{Binding ReadWriteCommunity, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+            </TabItem>
 
-                    <GroupBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Header="Other (Todo)">
-                        <StackPanel Margin="8">
-                            <TextBlock Text="Trap Community / SNMPv3 params / TCP service polling 등은 다음 단계에서 확장합니다."/>
-                        </StackPanel>
+            <TabItem Header="Trap" x:Name="tabTrap">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Trap Destination IP:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Margin="0,2,8,6" x:Name="txtTrapDestinationIp"
+                             Text="{Binding TrapDestinationIp, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Trap Destination Port:" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,2,8,6" x:Name="txtTrapDestinationPort"
+                             Text="{Binding TrapDestinationPort, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Orientation="Vertical" Margin="0,2,0,6">
+                        <Button Content="Get Trap Info" 
+                                Padding="12,4" 
+                                Margin="0,0,0,4"
+                                Click="GetTrapInfo_Click"
+                                IsEnabled="{Binding IsConfigureTrapEnabled}"/>
+                        <Button Content="Configure Trap" 
+                                Padding="12,4" 
+                                Click="ConfigureTrap_Click"
+                                IsEnabled="{Binding IsConfigureTrapEnabled}"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" 
+                               Margin="0,8,0,0"
+                               Foreground="#666"
+                               FontStyle="Italic"
+                               TextWrapping="Wrap"
+                               Text="Note: Trap configuration requires Write Community. Standard OID (1.3.6.1.6.3.18.1.3.0) will be used. Some devices may not support this OID."/>
+
+                    <GroupBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Header="Trap Information" Margin="0,12,0,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="200">
+                            <TextBlock x:Name="txtTrapInfo" 
+                                       Margin="8"
+                                       TextWrapping="Wrap"
+                                       Foreground="#333"
+                                       Text="Click 'Get Trap Info' to retrieve current trap configuration from the device."/>
+                        </ScrollViewer>
                     </GroupBox>
                 </Grid>
             </TabItem>

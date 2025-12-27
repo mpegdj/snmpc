@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows.Input;
@@ -9,6 +11,7 @@ using SnmpNms.Core.Models;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 using SnmpNms.UI.Models;
 
 namespace SnmpNms.UI.Views.Dialogs;
@@ -16,12 +19,14 @@ namespace SnmpNms.UI.Views.Dialogs;
 public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
 {
     private readonly ISnmpClient? _snmpClient;
+    private readonly ITrapListener? _trapListener;
     private CancellationTokenSource? _lookupCts;
 
-    public MapObjectPropertiesDialog(MapObjectType type, ISnmpClient? snmpClient = null)
+    public MapObjectPropertiesDialog(MapObjectType type, ISnmpClient? snmpClient = null, ITrapListener? trapListener = null)
     {
         ObjectType = type;
         _snmpClient = snmpClient;
+        _trapListener = trapListener;
         // sensible defaults (SNMPc 느낌)
         IconName = "auto.ico";
         ReadAccessMode = "SNMP V2c";
@@ -33,8 +38,28 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
         PollRetries = "1";
         LookupStatus = "Address 입력 후 Enter 또는 Lookup을 누르면 Ping/SNMP로 자동 채움";
 
+        // Trap Listener 정보로 기본값 설정 (항상 실제 네트워크 IP 사용)
+        if (_trapListener != null)
+        {
+            var (ip, port) = _trapListener.GetListenerInfo();
+            TrapDestinationIp = ip;
+            TrapDestinationPort = port.ToString();
+        }
+        else
+        {
+            // Trap Listener가 없어도 실제 네트워크 IP 찾기 시도
+            TrapDestinationIp = GetLocalNetworkIp();
+            TrapDestinationPort = "162";
+        }
+
         DataContext = this;
         InitializeComponent();
+        
+        // Trap 탭은 Device 타입일 때만 활성화
+        if (tabTrap != null)
+        {
+            tabTrap.IsEnabled = ObjectType == MapObjectType.Device;
+        }
         
         // Address 입력창 초기화
         if (ObjectType == MapObjectType.Device)
@@ -43,7 +68,7 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
         }
     }
 
-    public MapObjectPropertiesDialog(MapObjectType type, UiSnmpTarget target, ISnmpClient? snmpClient = null) : this(type, snmpClient)
+    public MapObjectPropertiesDialog(MapObjectType type, UiSnmpTarget target, ISnmpClient? snmpClient = null, ITrapListener? trapListener = null) : this(type, snmpClient, trapListener)
     {
         // 기존 UiSnmpTarget의 값으로 다이얼로그 초기화
         Alias = target.Alias ?? "";
@@ -287,6 +312,38 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
     public string PollIntervalSec { get; set; } = "3";
     public string PollTimeoutMs { get; set; } = "3000";
     public string PollRetries { get; set; } = "1";
+
+    private string _trapDestinationIp = "";
+    public string TrapDestinationIp
+    {
+        get => _trapDestinationIp;
+        set
+        {
+            if (_trapDestinationIp != value)
+            {
+                _trapDestinationIp = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    private string _trapDestinationPort = "162";
+    public string TrapDestinationPort
+    {
+        get => _trapDestinationPort;
+        set
+        {
+            if (_trapDestinationPort != value)
+            {
+                _trapDestinationPort = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool IsConfigureTrapEnabled => ObjectType == MapObjectType.Device && 
+                                          _snmpClient != null && 
+                                          !string.IsNullOrWhiteSpace(Address);
 
     private bool _isLookupBusy;
     public bool IsLookupBusy
@@ -708,8 +765,211 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    
+    private async void GetTrapInfo_Click(object sender, RoutedEventArgs e)
+    {
+        if (_snmpClient == null || ObjectType != MapObjectType.Device)
+        {
+            MessageBox.Show("Trap information retrieval is only available for Device objects.", "Invalid Object Type", 
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        await LoadTrapInfoAsync();
+    }
+
+    private async Task LoadTrapInfoAsync()
+    {
+        if (_snmpClient == null) return;
+
+        var (host, port) = ParseHostPort(Address);
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return;
+        }
+
+        try
+        {
+            var target = new UiSnmpTarget
+            {
+                IpAddress = host,
+                Port = port,
+                Community = ReadCommunity, // Read Community 사용
+                Version = ParseSnmpVersion(ReadAccessMode),
+                Timeout = int.TryParse(PollTimeoutMs, out var timeout) ? timeout : 3000,
+                Retries = int.TryParse(PollRetries, out var retries) ? retries : 1
+            };
+
+            // 표준 SNMP Trap Destination OID 시도
+            // 1.3.6.1.6.3.18.1.3.0 (snmpTrapAddress)
+            var trapOid = "1.3.6.1.6.3.18.1.3.0";
+            var result = await _snmpClient.GetAsync(target, trapOid);
+
+            if (result.IsSuccess && result.Variables.Count > 0)
+            {
+                var trapAddress = result.Variables[0].Value;
+                if (!string.IsNullOrWhiteSpace(trapAddress) && IPAddress.TryParse(trapAddress, out _))
+                {
+                    TrapDestinationIp = trapAddress;
+                    
+                    // Trap 정보 텍스트 업데이트
+                    if (txtTrapInfo != null)
+                    {
+                        txtTrapInfo.Text = $"Trap Destination retrieved successfully!\n\n" +
+                                         $"Device: {host}\n" +
+                                         $"Trap Destination IP: {trapAddress}\n" +
+                                         $"Trap Destination Port: {TrapDestinationPort}\n" +
+                                         $"\nRetrieved at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                    }
+                    
+                    MessageBox.Show($"Trap Destination retrieved successfully!\n\nDevice: {host}\nTrap Destination IP: {trapAddress}", 
+                        "Trap Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    var message = $"Trap Destination retrieved but value is invalid or empty.\n\nDevice: {host}\nValue: {trapAddress}";
+                    if (txtTrapInfo != null)
+                    {
+                        txtTrapInfo.Text = message + $"\n\nRetrieved at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                    }
+                    MessageBox.Show(message, "Trap Information", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            else
+            {
+                var message = $"Failed to retrieve Trap Destination.\n\nError: {result.ErrorMessage}\n\nNote: This device may not support the standard SNMP Trap OID (1.3.6.1.6.3.18.1.3.0), or the OID may not be configured.";
+                if (txtTrapInfo != null)
+                {
+                    txtTrapInfo.Text = message + $"\n\nAttempted at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                }
+                MessageBox.Show(message, "Trap Information", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error retrieving Trap Destination: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void ConfigureTrap_Click(object sender, RoutedEventArgs e)
+    {
+        if (_snmpClient == null || ObjectType != MapObjectType.Device)
+        {
+            MessageBox.Show("Trap configuration is only available for Device objects.", "Invalid Object Type", 
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var (host, port) = ParseHostPort(Address);
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            MessageBox.Show("Please enter a valid device address first.", "Invalid Address", 
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!IPAddress.TryParse(TrapDestinationIp, out _))
+        {
+            MessageBox.Show("Please enter a valid Trap Destination IP address.", "Invalid IP", 
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!int.TryParse(TrapDestinationPort, out int trapPort) || trapPort <= 0 || trapPort > 65535)
+        {
+            MessageBox.Show("Please enter a valid Trap Destination Port (1-65535).", "Invalid Port", 
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            var target = new UiSnmpTarget
+            {
+                IpAddress = host,
+                Port = port,
+                Community = ReadWriteCommunity, // Write Community 사용
+                Version = ParseSnmpVersion(ReadWriteAccessMode),
+                Timeout = int.TryParse(PollTimeoutMs, out var timeout) ? timeout : 3000,
+                Retries = int.TryParse(PollRetries, out var retries) ? retries : 1
+            };
+
+            // 표준 SNMP Trap Destination OID 시도
+            // 1.3.6.1.6.3.18.1.3.0 (snmpTrapAddress) - 표준이지만 모든 장비에서 지원하지 않음
+            var trapOid = "1.3.6.1.6.3.18.1.3.0";
+            var result = await _snmpClient.SetAsync(target, trapOid, TrapDestinationIp, "IPADDRESS");
+
+            if (result.IsSuccess)
+            {
+                MessageBox.Show($"Trap Destination configured successfully!\n\nDevice: {host}\nTrap Destination: {TrapDestinationIp}:{TrapDestinationPort}", 
+                    "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show($"Failed to configure Trap Destination.\n\nError: {result.ErrorMessage}\n\nNote: This device may not support the standard SNMP Trap OID, or Write Community may be incorrect.", 
+                    "Configuration Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error configuring Trap Destination: {ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private string GetLocalNetworkIp()
+    {
+        // Trap Listener가 있으면 그것을 사용
+        if (_trapListener != null)
+        {
+            return _trapListener.GetLocalNetworkIp();
+        }
+
+        // 로컬 네트워크 IP 주소 찾기 (127.0.0.1 제외)
+        string localIP = "127.0.0.1";
+        try
+        {
+            // 활성 네트워크 인터페이스에서 IPv4 주소 찾기
+            // 우선순위: Ethernet > Wireless > 기타
+            var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                            ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .OrderByDescending(ni => ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet)
+                .ThenByDescending(ni => ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211);
+
+            foreach (var ni in networkInterfaces)
+            {
+                var ipProps = ni.GetIPProperties();
+                var ipv4Address = ipProps.UnicastAddresses
+                    .FirstOrDefault(addr => addr.Address.AddressFamily == AddressFamily.InterNetwork &&
+                                           !IPAddress.IsLoopback(addr.Address));
+                
+                if (ipv4Address != null)
+                {
+                    localIP = ipv4Address.Address.ToString();
+                    break; // 첫 번째 유효한 IP 주소 사용
+                }
+            }
+        }
+        catch
+        {
+            // 실패 시 기본값 사용 (127.0.0.1)
+        }
+
+        return localIP;
+    }
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        
+        // IsConfigureTrapEnabled 업데이트
+        if (propertyName == nameof(Address))
+        {
+            OnPropertyChanged(nameof(IsConfigureTrapEnabled));
+        }
+    }
 }
 
 

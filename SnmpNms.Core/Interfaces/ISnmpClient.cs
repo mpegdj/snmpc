@@ -8,5 +8,6 @@ public interface ISnmpClient
     Task<SnmpResult> GetAsync(ISnmpTarget target, IEnumerable<string> oids);
     Task<SnmpResult> GetNextAsync(ISnmpTarget target, string oid);
     Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid);
+    Task<SnmpResult> SetAsync(ISnmpTarget target, string oid, string value, string type);
 }
 

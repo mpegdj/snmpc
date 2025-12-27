@@ -80,6 +80,7 @@ public partial class DiscoveryPollingAgentsDialog : Window
     }
 
     private readonly ISnmpClient? _snmpClient;
+    private readonly ITrapListener? _trapListener;
     private readonly MainViewModel? _mainViewModel;
     private const string ConfigFileName = "discovery_config.json";
 
@@ -90,9 +91,10 @@ public partial class DiscoveryPollingAgentsDialog : Window
 
     public DiscoveryConfig Config { get; private set; } = new();
 
-    public DiscoveryPollingAgentsDialog(ISnmpClient? snmpClient = null, MainViewModel? mainViewModel = null)
+    public DiscoveryPollingAgentsDialog(ISnmpClient? snmpClient = null, MainViewModel? mainViewModel = null, ITrapListener? trapListener = null)
     {
         _snmpClient = snmpClient;
+        _trapListener = trapListener;
         _mainViewModel = mainViewModel;
         InitializeComponent();
         DataContext = this;
@@ -222,7 +224,7 @@ public partial class DiscoveryPollingAgentsDialog : Window
         }
     }
 
-    private void BtnRestart_Click(object sender, RoutedEventArgs e)
+    private async void BtnRestart_Click(object sender, RoutedEventArgs e)
     {
         if (_snmpClient == null)
         {
@@ -246,13 +248,25 @@ public partial class DiscoveryPollingAgentsDialog : Window
         SaveConfig(); // 설정 저장
 
         // Discovery 진행 다이얼로그 표시
-        var progressDialog = new DiscoveryProgressDialog(_snmpClient, Config) { Owner = this };
+        var progressDialog = new DiscoveryProgressDialog(_snmpClient, Config, _trapListener) { Owner = this };
         if (progressDialog.ShowDialog() == true)
         {
             // 선택된 디바이스들을 Map에 등록
             if (_mainViewModel != null)
             {
                 var selectedDevices = progressDialog.DiscoveredDevices.Where(d => d.IsSelected && d.Status != "Ping Only").ToList();
+                
+                // Trap 설정이 활성화되어 있고 Trap Listener가 실행 중이면 Trap 설정도 함께 수행
+                bool configureTrap = progressDialog.ConfigureTrapDestination && 
+                                     _trapListener != null && 
+                                     _trapListener.IsListening;
+                
+                if (configureTrap && selectedDevices.Count > 0 && _trapListener != null)
+                {
+                    var (trapIp, trapPort) = _trapListener.GetListenerInfo();
+                    await ConfigureTrapForDevicesAsync(selectedDevices, trapIp, trapPort);
+                }
+                
                 foreach (var device in selectedDevices)
                 {
                     var version = device.Version == "V1" ? SnmpVersion.V1 : SnmpVersion.V2c;
@@ -274,9 +288,65 @@ public partial class DiscoveryPollingAgentsDialog : Window
                         $"[Discovery] Device added: {device.IpAddress} ({device.Status}) to subnet: {subnet.Name}");
                 }
 
-                MessageBox.Show($"Added {selectedDevices.Count} device(s) to map.", "Discovery Complete", 
+                var trapInfo = configureTrap ? " (Trap configured)" : "";
+                MessageBox.Show($"Added {selectedDevices.Count} device(s) to map{trapInfo}.", "Discovery Complete", 
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
+        }
+    }
+
+    private async Task ConfigureTrapForDevicesAsync(List<DiscoveryProgressDialog.DiscoveredDevice> devices, string trapIp, int trapPort)
+    {
+        if (_snmpClient == null) return;
+        
+        int successCount = 0;
+        int failCount = 0;
+        
+        foreach (var device in devices)
+        {
+            try
+            {
+                // Write Community는 Read Community와 동일하게 시도 (실제로는 CommunityEntry에서 WriteCommunity를 가져와야 함)
+                // 현재는 DiscoveryProgressDialog에서 WriteCommunity 정보가 없으므로 Read Community 사용
+                var target = new UiSnmpTarget
+                {
+                    IpAddress = device.IpAddress,
+                    Port = device.Port,
+                    Community = device.Community == "N/A" ? "private" : device.Community, // Write Community 시도
+                    Version = device.Version == "V1" ? SnmpVersion.V1 : SnmpVersion.V2c,
+                    Timeout = 3000,
+                    Retries = 1
+                };
+
+                // 표준 SNMP Trap Destination OID 시도
+                var trapOid = "1.3.6.1.6.3.18.1.3.0";
+                var result = await _snmpClient.SetAsync(target, trapOid, trapIp, "IPADDRESS");
+
+                if (result.IsSuccess)
+                {
+                    successCount++;
+                }
+                else
+                {
+                    failCount++;
+                }
+            }
+            catch
+            {
+                failCount++;
+            }
+        }
+        
+        if (successCount > 0 || failCount > 0)
+        {
+            MessageBox.Show(
+                $"Trap configuration completed.\n\n" +
+                $"Success: {successCount}\n" +
+                $"Failed: {failCount}\n\n" +
+                "Note: Some devices may not support the standard SNMP Trap OID, or Write Community may be incorrect.",
+                "Trap Configuration Result",
+                MessageBoxButton.OK,
+                successCount > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
         }
     }
 

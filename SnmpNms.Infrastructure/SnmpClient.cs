@@ -127,6 +127,47 @@ public class SnmpClient : ISnmpClient
         };
     }
 
+    public async Task<SnmpResult> SetAsync(ISnmpTarget target, string oid, string value, string type)
+    {
+        return await Task.Run(() =>
+        {
+            try
+            {
+                var endpoint = new IPEndPoint(IPAddress.Parse(target.IpAddress), target.Port);
+                var community = new OctetString(target.Community);
+                var version = MapVersion(target.Version);
+
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+                // 타입에 따라 ISnmpData 생성
+                ISnmpData data = type.ToUpper() switch
+                {
+                    "INTEGER" or "INTEGER32" => new Integer32(int.Parse(value)),
+                    "OCTETSTRING" or "STRING" => new OctetString(value),
+                    "IPADDRESS" => new IP(IPAddress.Parse(value).GetAddressBytes()),
+                    "COUNTER32" => new Counter32(uint.Parse(value)),
+                    "COUNTER64" => new Counter64(ulong.Parse(value)),
+                    "GAUGE32" => new Gauge32(uint.Parse(value)),
+                    "TIMETICKS" => new TimeTicks(uint.Parse(value)),
+                    "OBJECTIDENTIFIER" or "OID" => new ObjectIdentifier(value),
+                    _ => new OctetString(value) // 기본값: 문자열
+                };
+
+                var variable = new Variable(new ObjectIdentifier(oid), data);
+                var result = Messenger.Set(version, endpoint, community, new List<Variable> { variable }, target.Timeout);
+
+                stopwatch.Stop();
+
+                var snmpVariables = result.Select(MapVariable).ToList();
+                return SnmpResult.Success(snmpVariables, stopwatch.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                return SnmpResult.Fail(ex.Message);
+            }
+        });
+    }
+
     private SnmpVariable MapVariable(Variable v)
     {
         return new SnmpVariable(v.Id.ToString(), v.Data.ToString(), v.Data.TypeCode.ToString());

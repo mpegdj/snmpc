@@ -72,6 +72,20 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _isTrapListening;
+    public bool IsTrapListening
+    {
+        get => _isTrapListening;
+        set
+        {
+            if (_isTrapListening != value)
+            {
+                _isTrapListening = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public MainViewModel()
     {
         RootSubnet = new MapNode(MapNodeType.RootSubnet, "Root Subnet");
