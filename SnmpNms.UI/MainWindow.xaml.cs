@@ -392,14 +392,35 @@ public partial class MainWindow : Window
         var prefix = $"[T:{deviceDisplayName}]";
 
         // 이벤트 로그용 병합 텍스트 생성
-        var values = e.Variables.Select(v => v.Value?.ToString() ?? "null");
-        var mergedValues = string.Join(" / ", values);
+        // MVE5000 트랩 변수 순서: 0:DateAndTime, 1:Event, 2:Level, 3:Category, 4:Message
+        var displayValues = new List<string>();
+        for (int i = 0; i < e.Variables.Count; i++)
+        {
+            var val = e.Variables[i].Value?.ToString() ?? "null";
+            
+            // Level(2)과 Category(3)는 텍스트로 변환
+            if (i == 2)
+            {
+                displayValues.Add(NttTrapMappers.GetLevelName(val));
+            }
+            else if (i == 3)
+            {
+                displayValues.Add(NttTrapMappers.GetCategoryName(val));
+            }
+            else
+            {
+                displayValues.Add(val);
+            }
+        }
+
+        var mergedValues = string.Join(" / ", displayValues);
         var variablesSummary = e.Variables.Count > 0 ? ": " + mergedValues : "";
 
-        // Com에 Trap 수신 로그 기록
+        // Com에 Trap 수신 로그 기록 (Raw 데이터 위주)
         if (e.RawData != null && e.RawData.Length > 0)
         {
-            _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}", trapOid, mergedValues);
+            var rawSummary = string.Join(" / ", e.Variables.Select(v => v.Value?.ToString() ?? "null"));
+            _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}", trapOid, rawSummary);
         }
 
         _vm.AddEvent(EventSeverity.Info, e.SourceIpAddress, $"{prefix}{variablesSummary}");

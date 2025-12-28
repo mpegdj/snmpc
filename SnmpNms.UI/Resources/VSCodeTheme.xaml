@@ -32,6 +32,7 @@
     <!-- Border Colors -->
     <SolidColorBrush x:Key="VSCodeBorder" Color="#E0E0E0"/>
     <SolidColorBrush x:Key="VSCodeDivider" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="VSCodeGridLine" Color="#EEEEEE"/>
     
     <!-- Activity Bar Button Style -->
     <Style x:Key="ActivityBarButtonStyle" TargetType="Button">

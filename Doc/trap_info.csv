@@ -1,0 +1,242 @@
+﻿1,Info,Power,Power ON,
+2,2,Info,Power,Power OFF
+3,3,Info,Power,Restarted by operation of RESET button
+4,4,Info,Power,Restarted by operation of WebGUI ($)
+5,6,Info,Power,Restarted by operation of SNMP ($)
+6,16,Error,General,Encode service starting failed
+7,17,Error,General,Web service starting failed
+8,18,Error,General,IP transmit service starting failed
+9,19,Warn,General,SNTP client starting failed
+10,20,Warn,General,Superimpose data initializing failed
+11,27,Notice,General,Superimpose font data is not found
+12,28,Notice,General,Superimpose font data error
+13,29,Notice,General,Superimpose font handler failed to start
+14,30,Notice,General,Superimpose character raster loading failed
+15,32,Info,General,SNTP time synchronization
+16,33,Notice,General,SNTP time loading from server failed
+17,34,Notice,General,SNTP time loading from server error
+18,35,Notice,General,SNTP time setting to RTC failed
+19,36,Notice,General,SNTP time setting to CPU failed
+20,37,Notice,General,SNTP task failed to start
+21,38,Notice,General,SNTP message buffer creation failed
+22,39,Notice,General,SNTP task creation failed
+23,40,Info,General,Login success ($)
+24,41,Notice,General,Login failed
+25,42,Info,General,Logout ($)
+26,43,Info,General,Login no auth
+27,44,Notice,General,Login authentication is changed
+28,45,Notice,General,Account is changed ($)
+29,46,Info,General,Change date and time
+30,48,Info,InOut,Video input select task started
+31,49,Info,InOut,SDI input signal is detected
+32,50,Info,InOut,Analog video input signal is detected
+33,51,Info,InOut,HDMI input signal is detected
+34,52,Warn,InOut,Video input select task failed to start
+35,53,Notice,InOut,Video input command process error
+36,54,Notice,InOut,SDI input LSI register writing failed
+37,55,Notice,InOut,SDI input LSI register reading failed
+38,56,Notice,InOut,SDI input LSI parameter setup failed
+39,57,Warn,InOut,SDI input signal is undetected
+40,58,Warn,InOut,SDI input format disagrees with parameter(Set:0x!; In:0x!)
+41,59,Warn,InOut,ASI Signal is detected in SDI input
+42,64,Notice,InOut,Analog video input LSI register writing failed
+43,65,Notice,InOut,Analog video input LSI register reading failed
+44,66,Notice,InOut,Analog video input LSI parameter setup failed
+45,67,Warn,InOut,Analog video input signal is undetected
+46,68,Warn,InOut,Analog video input format disagrees with set(Set:0x!; In:0x!)
+47,69,Warn,InOut,Macrovision is detected in analog video input
+48,80,Notice,InOut,HDMI input LSI register writing failed(Addr:0x! 0x!; Data:0x!)
+49,81,Notice,InOut,HDMI input LSI register reading failed(Addr:0x! 0x!)
+50,82,Notice,InOut,HDMI input LSI parameter setup failed
+51,83,Warn,InOut,HDMI input signal is undetected(TMDS:0x!; HPA:0x!)
+52,84,Warn,InOut,HDMI input format disagrees with parameter(Set:0x!; In:0x!)
+53,85,Warn,InOut,HDCP Signal is detected in HDMI input
+54,86,Info,InOut,HDMI audio input is detected
+55,87,Notice,InOut,No LPCM audio data in HDMI input(0x!)
+56,88,Notice,InOut,DVI signal is detected
+57,96,Notice,Video,Sync byte phase in output TS packet error
+58,100,Notice,Video,PES header is not detect in audio2
+59,101,Notice,Video,PES header is not detect in audio1
+60,105,Notice,Video,PES start is not detect in audio2
+61,106,Notice,Video,PES start is not detect in audio1
+62,107,Notice,Video,PES start is not detect in video
+63,111,Error,Video,FIFO overflow is detected in audio2
+64,112,Error,Video,FIFO overflow is detected in audio1
+65,113,Error,Video,FIFO overflow is detected in video
+66,114,Error,Video,Host interface protocol violation is detected
+67,115,Error,Video,LSI embedded CPU watch dog is timeout
+68,128,Notice,Video,Encoding initial parameter is incorrect
+69,129,Notice,Video,Encode process dynamic step over is detected
+70,130,Notice,Video,FSYNC and REQEND multiple interrupt is detected
+71,131,Notice,Video,CMSTAT=0 and FSYNC multiple interrupt is detected
+72,132,Notice,Video,CMSTAT=0 and REQEND multiple interrupt is detected
+73,133,Notice,Video,CMSTAT=0 status is too long
+74,134,Notice,Video,CMIRQ is detected after REQEND interrupt
+75,135,Notice,Video,CMIRQ protocol error
+76,136,Notice,Video,Stream buffer overflow
+77,137,Notice,Video,TSCLK undetected status is too long
+78,138,Notice,Video,VSYNC undetected status is too long
+79,139,Notice,Video,VCLK undetected status is too long
+80,140,Notice,Video,Frame rate disagreement status is too long
+81,144,Notice,Video,Video input clock switching FIFO is full
+82,145,Notice,Video,Video output clock switching FIFO is full
+83,146,Notice,Video,Video input clock switching FIFO is empty
+84,147,Notice,Video,Video output clock switching FIFO is empty
+85,148,Notice,Video,SDRAM reading is undetected after FS/TBC setup
+86,149,Notice,Video,SDI SYNC signal is undetected
+87,150,Notice,Video,SDI video input error
+88,151,Notice,Video,Analog video input is undetected
+89,152,Notice,Video,Video input error
+90,153,Notice,Video,TS from ENC LSI detection error
+91,154,Notice,Video,PLL is unlock to input video signal
+92,155,Error,Video,Internal address space access error
+93,156,Error,Video,DSP address space access error
+94,157,Error,Video,ENC LSI address space access error
+95,158,Notice,Video,CLK Unlock
+96,159,Notice,Video,FS Underflow(?)
+97,160,Notice,Video,FS Overflow(?)
+98,161,Notice,Video,TBC Underflow(?)
+99,162,Notice,Video,TBC Overflow(?)
+100,176,Error,Video,ENC LSI initial data download failed
+101,177,Error,Video,READY status after download is undetected in ENC LSI
+102,178,Error,Video,TSOUT status is undetected in ENC LSI
+103,179,Error,Video,Sync establish status is undetected in ENC LSI
+104,180,Error,Video,VRUN status is undetected in ENC LSI
+105,181,Error,Video,TSOUT1 status is undetected in ENC LSI
+106,182,Error,Video,READY1 status is undetected in ENC LSI
+107,183,Error,Video,Page register access right is not derived from ENC LSI
+108,184,Error,Video,Page register access right is not returned to ENC LSI
+109,185,Error,Video,ENC LSI setup failed in READY status
+110,186,Error,Video,ENC LSI setup failed in TSOUT status
+111,187,Error,Video,ENC LSI DDR fail error
+112,188,Error,Video,Data access failed
+113,192,Info,Video,ENC control task started
+114,193,Error,Video,ENC control task failed to start
+115,194,Error,Video,ENC control command process error
+116,195,Error,Video,Timer handler for ENC control failed to start
+117,196,Notice,Video,Video no sync between output and input after FS/TBC setup
+118,208,Notice,Audio,SDI audio input error
+119,209,Notice,Audio,Audio PES2 output is undetected
+120,210,Notice,Audio,Audio PES1 output is undetected
+121,211,Notice,Audio,Audio PES2 FIFO overflow
+122,212,Notice,Audio,Audio PES1 FIFO overflow
+123,213,Error,Audio,DSP farm download failed
+124,214,Error,Audio,DSP RUN status after start command is undetected
+125,215,Error,Audio,DSP HALT status after stop command is undetected
+126,216,Error,Audio,DSP command is not accepted
+127,217,Error,Audio,DSP HALT status after farm download is undetected
+128,218,Error,Audio,DSP RUN status is undetected
+129,219,Error,Audio,DSP error code is detected
+130,224,Notice,Audio,DSP command sending error (no ready)
+131,225,Notice,Audio,DSP response error
+132,226,Notice,Audio,DSP writing error (no ready)
+133,227,Notice,Audio,DSP writing failed
+134,228,Notice,Audio,Illegal sector ID is detected in DSP farm file
+135,229,Notice,Audio,DSP audio ENC mode is illegal
+136,230,Notice,Audio,DSP failed to start
+137,231,Notice,Audio,DSP boot failed to start
+138,336,Info,IP,Stream1 transmit started (****)
+139,337,Notice,IP,Stream1 transmit stopped
+140,340,Notice,IP,Stream1 destination updated (****)
+141,352,Info,IP,Stream2 transmit started (****)
+142,353,Notice,IP,Stream2 transmit stopped
+143,356,Notice,IP,Stream2 destination updated (****)
+144,368,Notice,IP,TS input stopped
+145,369,Info,IP,TS input started
+146,370,Notice,IP,GbE interface UDP cep making failed
+147,371,Notice,IP,FE interface UDP cep making failed
+148,372,Info,IP,Redundant service is disabled
+149,373,Info,IP,Redundant service is enabled (Standby)
+150,374,Info,IP,Redundant service status is changed (Active)
+151,375,Info,IP,Redundant service status is changed (Standby)
+152,383,Error,IP,Stream transmit task failed to start
+153,384,Error,Network,GbE interface failed to start
+154,385,Error,Network,FE interface failed to start
+155,386,Info,Network,GbE interface link is up ($)
+156,387,Info,Network,FE interface link is up ($)
+157,388,Notice,Network,GbE interface link is down
+158,389,Notice,Network,FE interface link is down
+159,390,Warn,Network,DHCP server undetected (**** set to GbE interface)
+160,391,Warn,Network,DHCP server undetected (**** set to FE interface)
+161,392,Warn,Network,IP address duplicated (****)
+162,393,Info,Network,IP address duplication dissolved (****)
+163,400,Error,Network,PPPoE service starting failed
+164,401,Warn,Network,PPPoE1 interface connection failed
+165,402,Warn,Network,PPPoE2 interface connection failed
+166,403,Info,Network,PPPoE1 interface connection established (****)
+167,404,Info,Network,PPPoE2 interface connection established (****)
+168,405,Warn,Network,PPPoE1 interface disconnection detected
+169,406,Warn,Network,PPPoE2 interface disconnection detected
+170,407,Info,Network,PPPoE1 interface reconnection detected (****)
+171,408,Info,Network,PPPoE2 interface reconnection detected (****)
+172,409,Info,Network,PPPoE session IP address duplicated (**** set to GbE interface)
+173,410,Info,Network,PPPoE session IP address duplicated (**** set to FE interface)
+174,432,Info,Network,GbE interface RA address changed
+175,433,Info,Network,FE interface RA address changed
+176,434,Notice,Network,GbE interface override MAC setting changed
+177,435,Notice,Network,FE interface override MAC setting changed
+178,436,Notice,Network,GbE promiscuous mode setting changed
+179,437,Notice,Network,FE promiscuous mode setting changed
+180,518,Warn,Pref,Installed file is invalid
+181,521,Warn,Pref,Default parameter loading failed
+182,523,Warn,Pref,Last parameter was corrupted
+183,524,Warn,Pref,Invalid value contained in last parameter was repaired
+184,525,Info,Pref,Parameters successfully applied
+185,526,Warn,Pref,Last parameter saving failed
+186,527,Info,Pref,User preset ? saved
+187,528,Info,Pref,User preset ? loaded
+188,529,Info,Pref,Default preset ? loaded
+189,530,Info,Pref,Default parameter loaded
+190,531,Warn,Pref,Updater initialization failed
+191,532,Info,Pref,Upload started
+192,533,Info,Pref,Upload completed
+193,534,Notice,Pref,Upload failed
+194,535,Info,Pref,Firmware updating started
+195,536,Info,Pref,Firmware updating completed
+196,537,Error,Pref,Firmware updating failed
+197,538,Warn,Pref,License key is corrupted
+198,539,Info,Pref,New license function is allowed
+199,540,Notice,Pref,License registration authority is lost
+200,542,Notice,Pref,Parameter file loading failed
+201,543,Notice,Pref,Preset in file loading uncompleted
+202,544,Info,Pref,Parameter file loading completed
+203,545,Notice,Pref,Video rate is less than recommended value
+204,547,Warn,Pref,Invalid parameter was repaired ($)
+205,548,Warn,Pref,Parameter is applied to after restarting($)
+206,560,Warn,Device,Front panel initialization failed
+207,561,Warn,Device,FAN stopped
+208,562,Notice,Device,FAN speed dropped
+209,563,Info,Device,FAN fault recovered
+210,564,Warn,Device,Temperature is high (? deg.C / ? deg.C)
+211,565,Error,Device,Temperature error (? deg.C / ? deg.C)
+212,566,Info,Device,Temperature returned to normal value (? deg.C / ? deg.C)
+213,567,Warn,Device,External RTC battery voltage is low
+214,568,Warn,Device,External RTC time loading failed
+215,569,Info,Device,EDID data is written
+216,570,Info,Device,EDID correct data already existed
+217,571,Notice,Device,EDID data writing failed
+218,572,Notice,Device,EDID data reading failed
+219,573,Notice,Device,EDID written value error
+220,601,Notice,General,Serial Pass-Thru task creation failed
+221,602,Notice,General,Serial Pass-Thru address is invalid
+222,603,Notice,General,Serial Pass-Thru UDP cep making failed
+223,604,Notice,General,Serial Pass-Thru TCP cep making failed
+224,605,Notice,General,Failed to connect to server due to Authentication ID
+225,606,Notice,General,Server is connected to another client
+226,607,Notice,General,Failed to connect to server
+227,608,Info,General,Establish Connection to Server(****)
+228,609,Notice,General,Server denied client due to Authentication ID
+229,610,Notice,General,Server denied subsequent client
+230,611,Notice,General,Failed to accept client
+231,612,Info,General,Establish Connection to Client(****)
+232,613,Notice,General,Session was abnormally disconnected
+233,614,Notice,General,Stop to connect to server
+234,615,Info,General,Serial Pass-Thru service has timed out
+235,616,Info,General,UDP destination address is changed(****)
+236,617,Info,General,UDP destination address is initialized(****)
+237,618,Info,General,Serial Pass Thru service assigned to $ port
+238,631,Notice,General,SNMP service starting failed
+239,632,Notice,General,SNMP Authentication Failure.
+240,640,Error,Network,Network Control Driver failure.
+241,650,Notice,General,Cannot login from this source address (****)
+242,661,Notice,General,SAP task creation failed
