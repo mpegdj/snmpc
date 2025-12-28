@@ -43,6 +43,12 @@
 
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
+                <MenuItem Header="_New" Click="MenuFileNew_Click" InputGestureText="Ctrl+N"/>
+                <MenuItem Header="_Open..." Click="MenuFileOpen_Click" InputGestureText="Ctrl+O"/>
+                <Separator/>
+                <MenuItem Header="_Save" Click="MenuFileSave_Click" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save _As..." Click="MenuFileSaveAs_Click"/>
+                <Separator/>
                 <MenuItem Header="E_xit" Click="MenuExit_Click"/>
             </MenuItem>
             <MenuItem Header="_View">
@@ -65,6 +71,16 @@
 
         <ToolBarTray DockPanel.Dock="Top">
             <ToolBar>
+                <Button Style="{StaticResource IconButton}" ToolTip="New (Ctrl+N)" Click="MenuFileNew_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8A5;"/>
+                </Button>
+                <Button Style="{StaticResource IconButton}" ToolTip="Open (Ctrl+O)" Click="MenuFileOpen_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8E5;"/>
+                </Button>
+                <Button Style="{StaticResource IconButton}" ToolTip="Save (Ctrl+S)" Click="MenuFileSave_Click">
+                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74E;"/>
+                </Button>
+                <Separator/>
                 <Button Style="{StaticResource IconButton}" ToolTip="Find Map Objects" Click="FindMapObjects_Click">
                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE721;"/>
                 </Button>

@@ -561,4 +561,291 @@ public partial class MapViewControl : UserControl
     }
 
     #endregion
+
+    #region Search
+
+    private List<MapNode> _searchResults = new();
+    private int _searchIndex = -1;
+
+    private void ToggleSearch_Click(object sender, RoutedEventArgs e)
+    {
+        if (SearchPanel.Visibility == Visibility.Visible)
+        {
+            CloseSearch();
+        }
+        else
+        {
+            OpenSearch();
+        }
+    }
+
+    private void OpenSearch()
+    {
+        SearchPanel.Visibility = Visibility.Visible;
+        btnSearch.Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x63, 0x9C));
+        SearchTextBox.Focus();
+        SearchTextBox.SelectAll();
+    }
+
+    private void CloseSearch()
+    {
+        SearchPanel.Visibility = Visibility.Collapsed;
+        btnSearch.Background = Brushes.Transparent;
+        ClearSearchHighlights();
+        _searchResults.Clear();
+        _searchIndex = -1;
+        UpdateSearchResultText();
+    }
+
+    private void CloseSearch_Click(object sender, RoutedEventArgs e)
+    {
+        CloseSearch();
+    }
+
+    private void SearchTextBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            if (Keyboard.Modifiers == ModifierKeys.Shift)
+                NavigateSearchResult(-1);
+            else
+                NavigateSearchResult(1);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            CloseSearch();
+            e.Handled = true;
+        }
+    }
+
+    private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        PerformSearch();
+    }
+
+    private void SearchScope_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        PerformSearch();
+    }
+
+    private void SearchPrev_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateSearchResult(-1);
+    }
+
+    private void SearchNext_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateSearchResult(1);
+    }
+
+    private void PerformSearch()
+    {
+        var vm = TryGetVm();
+        if (vm == null) return;
+
+        ClearSearchHighlights();
+        _searchResults.Clear();
+        _searchIndex = -1;
+
+        var query = SearchTextBox?.Text?.Trim() ?? "";
+        if (string.IsNullOrEmpty(query))
+        {
+            UpdateSearchResultText();
+            return;
+        }
+
+        // 검색 범위 결정
+        var scopeIndex = SearchScopeCombo?.SelectedIndex ?? 0;
+        
+        // 모든 노드 검색
+        SearchNodes(vm.RootSubnet, query, scopeIndex);
+
+        UpdateSearchResultText();
+
+        // 결과가 있으면 첫 번째로 이동
+        if (_searchResults.Count > 0)
+        {
+            _searchIndex = 0;
+            NavigateToCurrentResult();
+        }
+    }
+
+    private void SearchNodes(MapNode parent, string query, int scopeIndex)
+    {
+        foreach (var child in parent.Children)
+        {
+            var match = false;
+            
+            // scopeIndex: 0=All, 1=Device, 2=Site
+            if (scopeIndex == 0) // All
+            {
+                match = MatchesQuery(child, query);
+            }
+            else if (scopeIndex == 1 && child.NodeType == MapNodeType.Device) // Device only
+            {
+                match = MatchesQuery(child, query);
+            }
+            else if (scopeIndex == 2 && child.NodeType == MapNodeType.Subnet) // Site only
+            {
+                match = MatchesQuery(child, query);
+            }
+
+            if (match)
+            {
+                _searchResults.Add(child);
+            }
+
+            // 재귀적으로 하위 노드 검색
+            if (child.Children.Count > 0)
+            {
+                SearchNodes(child, query, scopeIndex);
+            }
+        }
+    }
+
+    private bool MatchesQuery(MapNode node, string query)
+    {
+        var q = query.ToLowerInvariant();
+        
+        // Name 검색
+        if (node.Name?.ToLowerInvariant().Contains(q) == true)
+            return true;
+        
+        // DisplayName 검색
+        if (node.DisplayName?.ToLowerInvariant().Contains(q) == true)
+            return true;
+        
+        // IP 주소 검색 (Device인 경우)
+        if (node.Target?.IpAddress?.ToLowerInvariant().Contains(q) == true)
+            return true;
+        
+        // Alias 검색
+        if (node.Target?.Alias?.ToLowerInvariant().Contains(q) == true)
+            return true;
+
+        return false;
+    }
+
+    private void NavigateSearchResult(int direction)
+    {
+        if (_searchResults.Count == 0) return;
+
+        _searchIndex += direction;
+        
+        // 순환
+        if (_searchIndex < 0) _searchIndex = _searchResults.Count - 1;
+        if (_searchIndex >= _searchResults.Count) _searchIndex = 0;
+
+        NavigateToCurrentResult();
+        UpdateSearchResultText();
+    }
+
+    private void NavigateToCurrentResult()
+    {
+        if (_searchIndex < 0 || _searchIndex >= _searchResults.Count) return;
+
+        var node = _searchResults[_searchIndex];
+        
+        // 해당 노드의 부모 Site 찾기
+        var parentSite = FindParentSite(node);
+        if (parentSite == null) return;
+
+        // Site Box 찾기
+        if (!_siteBoxes.TryGetValue(parentSite, out var siteBox)) return;
+
+        // Site Box 위치로 스크롤
+        var left = Canvas.GetLeft(siteBox);
+        var top = Canvas.GetTop(siteBox);
+        
+        // 줌 레벨 적용
+        left *= _zoomLevel;
+        top *= _zoomLevel;
+
+        // 스크롤 (중앙에 오도록)
+        var viewWidth = MainScrollViewer.ViewportWidth;
+        var viewHeight = MainScrollViewer.ViewportHeight;
+        
+        MainScrollViewer.ScrollToHorizontalOffset(Math.Max(0, left - viewWidth / 2 + siteBox.ActualWidth / 2));
+        MainScrollViewer.ScrollToVerticalOffset(Math.Max(0, top - viewHeight / 2 + siteBox.ActualHeight / 2));
+
+        // 하이라이트
+        HighlightSearchResult(node, parentSite, siteBox);
+
+        // ViewModel 선택 업데이트
+        if (TryGetVm() is { } vm)
+        {
+            vm.SelectedMapNodes.Clear();
+            vm.SelectedMapNodes.Add(node);
+        }
+    }
+
+    private MapNode? FindParentSite(MapNode node)
+    {
+        var vm = TryGetVm();
+        if (vm == null) return null;
+
+        // Device인 경우 부모 Site 찾기
+        if (node.NodeType == MapNodeType.Device)
+        {
+            foreach (var site in vm.RootSubnet.Children)
+            {
+                if (site.NodeType == MapNodeType.Subnet && site.Children.Contains(node))
+                {
+                    return site;
+                }
+            }
+        }
+        // Site인 경우 자기 자신 반환
+        else if (node.NodeType == MapNodeType.Subnet)
+        {
+            return node;
+        }
+
+        return null;
+    }
+
+    private Border? _highlightedBorder;
+    private Brush? _originalBorderBrush;
+    private Thickness _originalBorderThickness;
+
+    private void HighlightSearchResult(MapNode node, MapNode parentSite, Border siteBox)
+    {
+        ClearSearchHighlights();
+
+        // Site Box 하이라이트
+        _highlightedBorder = siteBox;
+        _originalBorderBrush = siteBox.BorderBrush;
+        _originalBorderThickness = siteBox.BorderThickness;
+        
+        siteBox.BorderBrush = new SolidColorBrush(Color.FromRgb(0x00, 0x7A, 0xCC)); // VSCode blue
+        siteBox.BorderThickness = new Thickness(2);
+    }
+
+    private void ClearSearchHighlights()
+    {
+        if (_highlightedBorder != null)
+        {
+            _highlightedBorder.BorderBrush = _originalBorderBrush;
+            _highlightedBorder.BorderThickness = _originalBorderThickness;
+            _highlightedBorder = null;
+        }
+    }
+
+    private void UpdateSearchResultText()
+    {
+        if (SearchResultText == null) return;
+
+        if (_searchResults.Count == 0)
+        {
+            var query = SearchTextBox?.Text?.Trim() ?? "";
+            SearchResultText.Text = string.IsNullOrEmpty(query) ? "" : "No results";
+        }
+        else
+        {
+            SearchResultText.Text = $"{_searchIndex + 1} of {_searchResults.Count}";
+        }
+    }
+
+    #endregion
 }

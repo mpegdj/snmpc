@@ -124,5 +124,18 @@ public partial class Sidebar : UserControl
     {
         CurrentView = ActivityBarView.Settings;
     }
+    
+    private void BtnToggleSearch_Click(object sender, RoutedEventArgs e)
+    {
+        // 현재 Content가 SidebarMapView인 경우 검색 패널 토글
+        if (contentArea.Content is SidebarMapView mapView)
+        {
+            mapView.OpenSearch();
+        }
+        else if (contentArea.Content is SidebarMibView mibView)
+        {
+            mibView.OpenSearch();
+        }
+    }
 }
 

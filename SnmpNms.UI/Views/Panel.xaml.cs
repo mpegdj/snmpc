@@ -1,32 +1,76 @@
+using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
+using SnmpNms.UI.ViewModels;
 using SnmpNms.UI.Views.EventLog;
 
 namespace SnmpNms.UI.Views;
 
 public partial class BottomPanel : UserControl
 {
+    private OutputViewModel? _outputViewModel;
+    
     public BottomPanel()
     {
         InitializeComponent();
-        
-        // TabControl 선택 변경 시 ContentControl 업데이트
-        tabPanel.SelectionChanged += TabPanel_SelectionChanged;
-        
-        // 초기 선택된 탭의 Content 설정
-        UpdateContent();
     }
-
-    private void TabPanel_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    
+    /// <summary>
+    /// OutputViewModel 설정
+    /// </summary>
+    public void SetOutputViewModel(OutputViewModel outputViewModel)
     {
-        UpdateContent();
+        _outputViewModel = outputViewModel;
+        
+        // Output ListView에 바인딩
+        lvOutput.ItemsSource = outputViewModel.TrafficLogs;
+        
+        // 자동 스크롤 설정
+        outputViewModel.TrafficLogs.CollectionChanged += TrafficLogs_CollectionChanged;
     }
-
-    private void UpdateContent()
+    
+    private void TrafficLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (tabPanel.SelectedItem is TabItem selectedTab)
+        if (chkAutoScroll?.IsChecked == true && e.Action == NotifyCollectionChangedAction.Add)
         {
-            contentArea.Content = selectedTab.Content;
+            // 자동 스크롤
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (lvOutput != null && lvOutput.Items.Count > 0)
+                {
+                    lvOutput.ScrollIntoView(lvOutput.Items[lvOutput.Items.Count - 1]);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+    }
+
+    private void TabRadio_Checked(object sender, RoutedEventArgs e)
+    {
+        UpdateTabVisibility();
+    }
+    
+    private void UpdateTabVisibility()
+    {
+        if (eventLogContent == null || outputContent == null || terminalContent == null)
+            return;
+            
+        // 모든 탭 숨기기
+        eventLogContent.Visibility = Visibility.Collapsed;
+        outputContent.Visibility = Visibility.Collapsed;
+        terminalContent.Visibility = Visibility.Collapsed;
+        
+        // 선택된 탭만 표시
+        if (rbEventLog?.IsChecked == true)
+        {
+            eventLogContent.Visibility = Visibility.Visible;
+        }
+        else if (rbOutput?.IsChecked == true)
+        {
+            outputContent.Visibility = Visibility.Visible;
+        }
+        else if (rbTerminal?.IsChecked == true)
+        {
+            terminalContent.Visibility = Visibility.Visible;
         }
     }
 
@@ -45,6 +89,23 @@ public partial class BottomPanel : UserControl
             {
                 // Expand
                 parent.Height = 220;
+            }
+        }
+    }
+    
+    private void BtnOutputClear_Click(object sender, RoutedEventArgs e)
+    {
+        _outputViewModel?.Clear();
+    }
+    
+    private void BtnOutputCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (_outputViewModel != null)
+        {
+            var text = _outputViewModel.ExportToText();
+            if (!string.IsNullOrEmpty(text))
+            {
+                Clipboard.SetText(text);
             }
         }
     }

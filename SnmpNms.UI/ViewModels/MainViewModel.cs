@@ -57,6 +57,9 @@ public class MainViewModel : INotifyPropertyChanged
     public EventLogFilterViewModel Custom6Log { get; }
     public EventLogFilterViewModel Custom7Log { get; }
     public EventLogFilterViewModel Custom8Log { get; }
+    
+    // Output (Traffic Log)
+    public OutputViewModel Output { get; } = new();
 
     private bool _isPollingRunning;
     public bool IsPollingRunning

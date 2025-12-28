@@ -7,7 +7,68 @@
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="280"
              Background="{StaticResource VSCodeSidebarBackground}">
+    <UserControl.Resources>
+        <!-- 검색 패널용 아이콘 버튼 스타일 -->
+        <Style x:Key="SearchIconButton" TargetType="Button">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3C3C3C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SearchIconGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
     <DockPanel>
+        <!-- 검색 패널 -->
+        <Border DockPanel.Dock="Top" Name="SearchPanel" Visibility="Collapsed"
+                Background="{StaticResource VSCodeSidebarBackground}" 
+                BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1">
+            <DockPanel Margin="8,6">
+                <!-- 닫기 버튼 -->
+                <Button DockPanel.Dock="Right" Style="{StaticResource SearchIconButton}" 
+                        ToolTip="Close (Esc)" Click="CloseSearch_Click" Margin="4,0,0,0">
+                    <TextBlock Style="{StaticResource SearchIconGlyph}" Text="&#xE711;"/>
+                </Button>
+                
+                <!-- 검색 결과 네비게이션 -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="4,0,0,0">
+                    <TextBlock Name="SearchResultText" Text="" VerticalAlignment="Center" 
+                               Foreground="{StaticResource VSCodeForeground}" FontSize="10" Margin="0,0,4,0"/>
+                    <Button Style="{StaticResource SearchIconButton}" ToolTip="Previous (Shift+Enter)" 
+                            Click="SearchPrev_Click">
+                        <TextBlock Style="{StaticResource SearchIconGlyph}" Text="&#xE70E;"/>
+                    </Button>
+                    <Button Style="{StaticResource SearchIconButton}" ToolTip="Next (Enter)" 
+                            Click="SearchNext_Click">
+                        <TextBlock Style="{StaticResource SearchIconGlyph}" Text="&#xE70D;"/>
+                    </Button>
+                </StackPanel>
+                
+                <!-- 검색 입력 -->
+                <Border BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="1" 
+                        Background="{StaticResource VSCodeEditorBackground}" CornerRadius="2">
+                    <TextBox Name="SearchTextBox" BorderThickness="0" Padding="6,3"
+                             Background="Transparent" Foreground="{StaticResource VSCodeForeground}"
+                             FontSize="11" VerticalAlignment="Center"
+                             KeyDown="SearchTextBox_KeyDown" TextChanged="SearchTextBox_TextChanged"/>
+                </Border>
+            </DockPanel>
+        </Border>
+        
         <TreeView Name="treeMib"
                   Background="Transparent"
                   Foreground="{StaticResource VSCodeForeground}">

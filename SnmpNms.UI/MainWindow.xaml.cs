@@ -9,10 +9,12 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Lextm.SharpSnmpLib;
 using Lextm.SharpSnmpLib.Messaging;
+using Microsoft.Win32;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using SnmpNms.Infrastructure;
 using SnmpNms.UI.Models;
+using SnmpNms.UI.Services;
 using SnmpNms.UI.ViewModels;
 using SnmpNms.UI.Views.Dialogs;
 using SnmpNms.UI.Views;
@@ -35,6 +37,7 @@ public partial class MainWindow : Window
     private readonly IPollingService _pollingService;
     private readonly ITrapListener _trapListener;
     private readonly MainViewModel _vm;
+    private readonly MapDataService _mapDataService;
 
     private Point _dragStartPoint;
     private MapNode? _selectionAnchor;
@@ -42,6 +45,8 @@ public partial class MainWindow : Window
     private TreeView? _tvDevices;
     private TreeView? _treeMib;
     private CancellationTokenSource? _walkCancellationTokenSource;
+    private string? _currentFilePath;
+    private bool _isModified;
 
     public MainWindow()
     {
@@ -52,6 +57,7 @@ public partial class MainWindow : Window
         _mibService = new MibService();
         _pollingService = new PollingService(_snmpClient);
         _trapListener = new TrapListener();
+        _mapDataService = new MapDataService();
         _vm = new MainViewModel();
         DataContext = _vm;
 
@@ -111,6 +117,7 @@ public partial class MainWindow : Window
 
         // BottomPanel에 Event Log DataContext 설정 (여러 탭이 각각 바인딩됨)
         bottomPanel.DataContext = _vm;
+        bottomPanel.SetOutputViewModel(_vm.Output);
 
         // Sidebar (Activity Bar 포함) 이벤트 연결
         sidebar.ViewChanged += ActivityBar_ViewChanged;
@@ -200,7 +207,13 @@ public partial class MainWindow : Window
                 break;
             case ActivityBarView.Search:
                 sidebar.HeaderText = "SEARCH";
-                sidebar.CurrentContent = new TextBlock { Text = "Search (Coming soon)", Foreground = System.Windows.Media.Brushes.Gray };
+                var searchView = new SidebarSearchView();
+                searchView.SetViewModel(_vm);
+                searchView.SetMibService(_mibService);
+                searchView.MapNodeSelected += SearchView_MapNodeSelected;
+                searchView.MibNodeSelected += SearchView_MibNodeSelected;
+                sidebar.CurrentContent = searchView;
+                searchView.FocusSearchBox();
                 break;
             case ActivityBarView.EventLog:
                 sidebar.HeaderText = "EVENT LOG";
@@ -283,18 +296,21 @@ public partial class MainWindow : Window
                 };
                 _vm.AddDeviceToSubnet(target, parent);
                 _vm.AddEvent(EventSeverity.Info, target.EndpointKey, $"[Map] Device added: {target.DisplayName} ({target.EndpointKey})");
+                MarkAsModified();
                 break;
             }
             case MapObjectType.Subnet:
             {
                 _vm.AddSubnet(dlg.Result.Alias, parent);
                 _vm.AddSystemInfo($"[Map] Subnet added: {dlg.Result.Alias}");
+                MarkAsModified();
                 break;
             }
             case MapObjectType.Goto:
             {
                 _vm.AddGoto(dlg.Result.Alias, dlg.Result.GotoSubnetName, parent);
                 _vm.AddSystemInfo($"[Map] Goto added: {dlg.Result.Alias} -> {dlg.Result.GotoSubnetName}");
+                MarkAsModified();
                 break;
             }
         }
@@ -504,10 +520,19 @@ public partial class MainWindow : Window
                 }
             }
 
+            // Output 로그: 송신
+            _vm.Output.LogSend("SNMP", "GET", $"{target.IpAddress}:{target.Port}", oid);
+            
             var result = await _snmpClient.GetAsync(target, oid);
 
             if (result.IsSuccess)
             {
+                // Output 로그: 수신
+                foreach (var v in result.Variables)
+                {
+                    _vm.Output.LogReceive("SNMP", "GET", $"{target.IpAddress}:{target.Port}", v.Oid, $"{v.TypeCode}: {v.Value}");
+                }
+                
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine($"Success! (Time: {result.ResponseTime}ms)");
                 foreach (var v in result.Variables)
@@ -525,6 +550,9 @@ public partial class MainWindow : Window
             }
             else
             {
+                // Output 로그: 에러
+                _vm.Output.LogError("SNMP", "GET", $"{target.IpAddress}:{target.Port}", oid, result.ErrorMessage ?? "Unknown error");
+                
                 var errorText = $"Failed: {result.ErrorMessage}";
                 txtSnmpResult.Text = errorText;
                 _vm.AddEvent(EventSeverity.Error, $"{target.IpAddress}:{target.Port}", errorText);
@@ -532,6 +560,9 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            // Output 로그: 예외
+            _vm.Output.LogError("SNMP", "GET", $"{txtIp.Text}:161", txtOid.Text, ex.Message);
+            
             var errorText = $"Error: {ex.Message}";
             txtSnmpResult.Text = errorText;
             _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", errorText);
@@ -580,10 +611,19 @@ public partial class MainWindow : Window
                 }
             }
 
+            // Output 로그: 송신
+            _vm.Output.LogSend("SNMP", "GET-NEXT", $"{target.IpAddress}:{target.Port}", oid);
+            
             var result = await _snmpClient.GetNextAsync(target, oid);
 
             if (result.IsSuccess && result.Variables.Count > 0)
             {
+                // Output 로그: 수신
+                foreach (var v in result.Variables)
+                {
+                    _vm.Output.LogReceive("SNMP", "GET-NEXT", $"{target.IpAddress}:{target.Port}", v.Oid, $"{v.TypeCode}: {v.Value}");
+                }
+                
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine($"Get-Next Success! (Time: {result.ResponseTime}ms)");
                 // Get Next는 단일 결과이므로 정렬 불필요, 순서대로 표시
@@ -608,6 +648,9 @@ public partial class MainWindow : Window
             }
             else
             {
+                // Output 로그: 에러
+                _vm.Output.LogError("SNMP", "GET-NEXT", $"{target.IpAddress}:{target.Port}", oid, result.ErrorMessage ?? "Unknown error");
+                
                 var errorText = $"Get-Next Failed: {result.ErrorMessage}";
                 if (txtSnmpResult != null)
                 {
@@ -618,6 +661,9 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            // Output 로그: 예외
+            _vm.Output.LogError("SNMP", "GET-NEXT", $"{txtIp.Text}:161", txtOid.Text, ex.Message);
+            
             var errorText = $"Error: {ex.Message}";
             if (txtSnmpResult != null)
             {
@@ -695,6 +741,9 @@ public partial class MainWindow : Window
             // 취소 토큰 체크
             token.ThrowIfCancellationRequested();
 
+            // Output 로그: 송신
+            _vm.Output.LogSend("SNMP", "WALK", $"{target.IpAddress}:{target.Port}", oid);
+            
             var result = await _snmpClient.WalkAsync(target, oid, token);
 
             // 취소되었는지 확인
@@ -710,6 +759,9 @@ public partial class MainWindow : Window
 
             if (result.IsSuccess)
             {
+                // Output 로그: 수신 (요약)
+                _vm.Output.LogReceive("SNMP", "WALK", $"{target.IpAddress}:{target.Port}", oid, $"{result.Variables.Count} variables, {result.ResponseTime}ms");
+                
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine($"Walk Success! (Time: {result.ResponseTime}ms, {result.Variables.Count} values)");
                 sb.AppendLine("");
@@ -730,6 +782,9 @@ public partial class MainWindow : Window
             }
             else
             {
+                // Output 로그: 에러
+                _vm.Output.LogError("SNMP", "WALK", $"{target.IpAddress}:{target.Port}", oid, result.ErrorMessage ?? "Unknown error");
+                
                 var errorText = $"Walk Failed: {result.ErrorMessage}";
                 if (txtSnmpResult != null)
                 {
@@ -748,6 +803,9 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            // Output 로그: 예외
+            _vm.Output.LogError("SNMP", "WALK", $"{txtIp.Text}:161", txtOid.Text, ex.Message);
+            
             var errorText = $"Error: {ex.Message}";
             if (txtSnmpResult != null)
             {
@@ -1321,6 +1379,7 @@ public partial class MainWindow : Window
         var selected = _vm.SelectedMapNodes.ToList();
         if (selected.Count == 0) return;
 
+        var deletedAny = false;
         foreach (var node in selected)
         {
             if (node.Parent is null) continue;
@@ -1331,7 +1390,10 @@ public partial class MainWindow : Window
             node.Parent.RemoveChild(node);
             if (node.NodeType == MapNodeType.Device) _vm.RemoveDeviceNode(node);
             _vm.AddSystemInfo($"[Map] Deleted: {node.DisplayName}");
+            deletedAny = true;
         }
+
+        if (deletedAny) MarkAsModified();
 
         ClearMapSelection();
         _vm.RootSubnet.RecomputeEffectiveStatus();
@@ -2053,6 +2115,179 @@ public partial class MainWindow : Window
 
     private void MenuExit_Click(object sender, RoutedEventArgs e) => Close();
 
+    // File Menu Handlers
+    private void MenuFileNew_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmDiscardChanges()) return;
+
+        // 기존 데이터 초기화
+        _vm.RootSubnet.Children.Clear();
+        _vm.DeviceNodes.Clear();
+        _vm.SelectedMapNodes.Clear();
+        _vm.SelectedDevice = null;
+        _vm.SelectedDeviceNode = null;
+
+        // Default Subnet 다시 추가
+        var defaultSubnet = new MapNode(MapNodeType.Subnet, "Default");
+        _vm.RootSubnet.AddChild(defaultSubnet);
+        _vm.RootSubnet.IsExpanded = true;
+        defaultSubnet.IsExpanded = true;
+
+        _currentFilePath = null;
+        _isModified = false;
+        UpdateTitle();
+
+        _vm.AddSystemInfo("[File] New map created");
+    }
+
+    private void MenuFileOpen_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmDiscardChanges()) return;
+
+        var dlg = new OpenFileDialog
+        {
+            Title = "Open Map File",
+            Filter = "SNMP Map Files (*.snmpmap)|*.snmpmap|JSON Files (*.json)|*.json|All Files (*.*)|*.*",
+            DefaultExt = ".snmpmap"
+        };
+
+        if (dlg.ShowDialog() != true) return;
+
+        try
+        {
+            var loadedRoot = _mapDataService.LoadFromFile(dlg.FileName);
+            if (loadedRoot == null)
+            {
+                MessageBox.Show("Failed to load map file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // 기존 데이터 초기화
+            _vm.RootSubnet.Children.Clear();
+            _vm.DeviceNodes.Clear();
+            _vm.SelectedMapNodes.Clear();
+            _vm.SelectedDevice = null;
+            _vm.SelectedDeviceNode = null;
+
+            // 로드된 데이터 적용
+            foreach (var child in loadedRoot.Children)
+            {
+                _vm.RootSubnet.AddChild(child);
+                CollectDeviceNodes(child);
+            }
+
+            _vm.RootSubnet.IsExpanded = loadedRoot.IsExpanded;
+            _vm.RootSubnet.RecomputeEffectiveStatus();
+
+            _currentFilePath = dlg.FileName;
+            _isModified = false;
+            UpdateTitle();
+
+            _vm.AddSystemInfo($"[File] Loaded: {Path.GetFileName(dlg.FileName)}");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to load map file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _vm.AddEvent(EventSeverity.Error, null, $"[File] Load error: {ex.Message}");
+        }
+    }
+
+    private void MenuFileSave_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_currentFilePath))
+        {
+            MenuFileSaveAs_Click(sender, e);
+            return;
+        }
+
+        SaveToFile(_currentFilePath);
+    }
+
+    private void MenuFileSaveAs_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new SaveFileDialog
+        {
+            Title = "Save Map File",
+            Filter = "SNMP Map Files (*.snmpmap)|*.snmpmap|JSON Files (*.json)|*.json|All Files (*.*)|*.*",
+            DefaultExt = ".snmpmap",
+            FileName = string.IsNullOrEmpty(_currentFilePath) ? "map" : Path.GetFileName(_currentFilePath)
+        };
+
+        if (dlg.ShowDialog() != true) return;
+
+        SaveToFile(dlg.FileName);
+    }
+
+    private void SaveToFile(string filePath)
+    {
+        try
+        {
+            _mapDataService.SaveToFile(_vm.RootSubnet, filePath);
+            _currentFilePath = filePath;
+            _isModified = false;
+            UpdateTitle();
+
+            _vm.AddSystemInfo($"[File] Saved: {Path.GetFileName(filePath)}");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to save map file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _vm.AddEvent(EventSeverity.Error, null, $"[File] Save error: {ex.Message}");
+        }
+    }
+
+    private bool ConfirmDiscardChanges()
+    {
+        if (!_isModified) return true;
+
+        var result = MessageBox.Show(
+            "You have unsaved changes. Do you want to save before continuing?",
+            "Unsaved Changes",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Cancel)
+            return false;
+
+        if (result == MessageBoxResult.Yes)
+        {
+            MenuFileSave_Click(this, new RoutedEventArgs());
+            return !_isModified; // 저장 성공 시 _isModified가 false가 됨
+        }
+
+        return true; // No 선택 시
+    }
+
+    private void CollectDeviceNodes(MapNode node)
+    {
+        if (node.NodeType == MapNodeType.Device)
+        {
+            if (!_vm.DeviceNodes.Contains(node))
+                _vm.DeviceNodes.Add(node);
+        }
+
+        foreach (var child in node.Children)
+        {
+            CollectDeviceNodes(child);
+        }
+    }
+
+    private void UpdateTitle()
+    {
+        var fileName = string.IsNullOrEmpty(_currentFilePath) ? "Untitled" : Path.GetFileName(_currentFilePath);
+        var modified = _isModified ? " *" : "";
+        Title = $"SnmpNms - {fileName}{modified}";
+    }
+
+    public void MarkAsModified()
+    {
+        if (!_isModified)
+        {
+            _isModified = true;
+            UpdateTitle();
+        }
+    }
+
     private void MenuRefresh_Click(object sender, RoutedEventArgs e)
     {
         _vm.AddSystemInfo("[System] Refresh requested");
@@ -2088,6 +2323,16 @@ public partial class MainWindow : Window
         mapViewControl?.AutoArrange();
     }
 
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!ConfirmDiscardChanges())
+        {
+            e.Cancel = true;
+            return;
+        }
+        base.OnClosing(e);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         if (_trapListener != null && _trapListener.IsListening)
@@ -2114,5 +2359,121 @@ public partial class MainWindow : Window
         var parts = oid.Split('.');
         var paddedParts = parts.Select(p => int.TryParse(p, out var num) ? num.ToString("D10") : p.PadLeft(10, '0')).ToArray();
         return string.Join(".", paddedParts);
+    }
+
+    // Search View 이벤트 핸들러
+    private void SearchView_MapNodeSelected(object? sender, MapNode node)
+    {
+        try
+        {
+            // Map 뷰로 전환 (이 시점에서 _tvDevices가 생성됨)
+            sidebar.CurrentView = ActivityBarView.Map;
+            
+            // 노드까지 경로 확장
+            ExpandToMapNode(node);
+            
+            // ViewModel에 선택 상태 설정 (SelectNode 대신 직접 처리)
+            ClearMapSelection();
+            node.IsSelected = true;
+            if (!_vm.SelectedMapNodes.Contains(node))
+                _vm.SelectedMapNodes.Add(node);
+            
+            // Device인 경우 SelectedDevice 설정
+            if (node.NodeType == MapNodeType.Device && node.Target != null)
+            {
+                _vm.SelectedDevice = node.Target;
+                _vm.SelectedDeviceNode = node;
+                
+                // Device 탭으로 이동
+                var deviceTab = tabMain.Items.Cast<TabItem>().FirstOrDefault(t => t.Header?.ToString() == "Device");
+                if (deviceTab != null)
+                {
+                    tabMain.SelectedItem = deviceTab;
+                }
+            }
+            
+            // TreeViewItem 찾아서 포커스 (Dispatcher로 지연 실행)
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_tvDevices != null)
+                {
+                    var container = FindTreeViewItemForNode(_tvDevices, node);
+                    if (container != null)
+                    {
+                        container.IsSelected = true;
+                        container.BringIntoView();
+                        container.Focus();
+                    }
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+            
+            _vm.AddSystemInfo($"[Search] Selected: {node.DisplayName}");
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Error, null, $"[Search] Error selecting node: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"SearchView_MapNodeSelected error: {ex}");
+        }
+    }
+    
+    private void ExpandToMapNode(MapNode node)
+    {
+        // 부모 체인을 찾아서 모두 확장
+        var parents = new List<MapNode>();
+        var current = node.Parent;
+        while (current != null)
+        {
+            parents.Insert(0, current);
+            current = current.Parent;
+        }
+        
+        foreach (var parent in parents)
+        {
+            parent.IsExpanded = true;
+        }
+    }
+
+    private void SearchView_MibNodeSelected(object? sender, MibTreeNode node)
+    {
+        try
+        {
+            // MIB 뷰로 전환 (이 시점에서 _treeMib이 생성됨)
+            sidebar.CurrentView = ActivityBarView.Mib;
+            
+            // MIB 트리에서 노드까지 경로 확장
+            var rootTree = _mibService.GetMibTree();
+            if (rootTree != null)
+            {
+                ExpandParentNodes(node, rootTree);
+            }
+            
+            // TreeViewItem 찾아서 선택 (Dispatcher로 지연 실행)
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_treeMib != null)
+                {
+                    var treeViewItem = FindTreeViewItem(_treeMib, node);
+                    if (treeViewItem != null)
+                    {
+                        treeViewItem.IsSelected = true;
+                        treeViewItem.BringIntoView();
+                        treeViewItem.Focus();
+                    }
+                }
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
+            
+            // OID 필드 업데이트
+            if (txtOid != null && !string.IsNullOrEmpty(node.Oid))
+            {
+                txtOid.Text = node.Oid;
+            }
+            
+            _vm.AddSystemInfo($"[Search] Selected MIB: {node.Name} ({node.Oid})");
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Error, null, $"[Search] Error selecting MIB node: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"SearchView_MibNodeSelected error: {ex}");
+        }
     }
 }

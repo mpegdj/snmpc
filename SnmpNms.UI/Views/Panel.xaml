@@ -14,7 +14,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <!-- Panel Header with Tabs -->
+        <!-- Panel Header with Tab Headers -->
         <Border Grid.Row="0" 
                 Style="{StaticResource PanelHeaderStyle}">
             <Grid>
@@ -23,33 +23,18 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <!-- Tabs -->
-                <TabControl Grid.Column="0"
-                           x:Name="tabPanel"
-                           Style="{StaticResource VSCodeTabControlStyle}"
-                           TabStripPlacement="Bottom"
-                           BorderThickness="0">
-                    <TabControl.Resources>
-                        <Style TargetType="TabItem" BasedOn="{StaticResource PanelTabItemStyle}"/>
-                    </TabControl.Resources>
-                    
-                    <TabItem Header="Event Log" x:Name="tabEventLog" IsSelected="True">
-                        <!-- Event Log: CurrentLog만 표시 (Map Object 선택과 연동) -->
-                        <eventLog:EventLogTabControl DataContext="{Binding CurrentLog}"/>
-                    </TabItem>
-                    
-                    <TabItem Header="Output" x:Name="tabOutput" IsEnabled="False">
-                        <TextBlock Text="Output (Coming soon)" 
-                                  Foreground="{StaticResource VSCodeSecondaryForeground}"
-                                  Margin="12"/>
-                    </TabItem>
-                    
-                    <TabItem Header="Terminal" x:Name="tabTerminal" IsEnabled="False">
-                        <TextBlock Text="Terminal (Coming soon)" 
-                                  Foreground="{StaticResource VSCodeSecondaryForeground}"
-                                  Margin="12"/>
-                    </TabItem>
-                </TabControl>
+                <!-- Tab Headers -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <RadioButton x:Name="rbEventLog" Content="Event Log" 
+                                 Style="{StaticResource PanelTabRadioStyle}"
+                                 IsChecked="True" Checked="TabRadio_Checked"/>
+                    <RadioButton x:Name="rbOutput" Content="Output" 
+                                 Style="{StaticResource PanelTabRadioStyle}"
+                                 Checked="TabRadio_Checked"/>
+                    <RadioButton x:Name="rbTerminal" Content="Terminal" 
+                                 Style="{StaticResource PanelTabRadioStyle}"
+                                 IsEnabled="False"/>
+                </StackPanel>
                 
                 <!-- Toggle Button -->
                 <Button Grid.Column="1"
@@ -66,9 +51,57 @@
         </Border>
         
         <!-- Panel Content -->
-        <ContentControl Grid.Row="1" 
-                       x:Name="contentArea"
-                       Background="{StaticResource VSCodePanelBackground}"/>
+        <Grid Grid.Row="1" Background="{StaticResource VSCodePanelBackground}">
+            <!-- Event Log Content -->
+            <eventLog:EventLogTabControl x:Name="eventLogContent" 
+                                         DataContext="{Binding CurrentLog}"
+                                         Visibility="Visible"/>
+            
+            <!-- Output Content -->
+            <DockPanel x:Name="outputContent" Visibility="Collapsed">
+                <!-- 툴바 -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,2">
+                    <Button Content="Clear" Click="BtnOutputClear_Click" Padding="8,2" Margin="0,0,4,0"
+                            ToolTip="Clear output log"/>
+                    <Button Content="Copy" Click="BtnOutputCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                            ToolTip="Copy to clipboard"/>
+                    <CheckBox x:Name="chkAutoScroll" Content="Auto-scroll" IsChecked="True" 
+                              VerticalAlignment="Center" Margin="8,0,0,0"/>
+                </StackPanel>
+                
+                <!-- 로그 리스트 -->
+                <ListView x:Name="lvOutput" 
+                          Background="{StaticResource VSCodeEditorBackground}"
+                          Foreground="{StaticResource VSCodeForeground}"
+                          BorderThickness="0"
+                          FontFamily="Consolas"
+                          FontSize="11"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding FormattedLine}" 
+                                       Foreground="{Binding IsError, Converter={StaticResource ErrorToBrushConverter}}"
+                                       TextWrapping="NoWrap"/>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="2,0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+            </DockPanel>
+            
+            <!-- Terminal Content (Coming soon) -->
+            <TextBlock x:Name="terminalContent" 
+                       Text="Terminal (Coming soon)" 
+                       Foreground="{StaticResource VSCodeSecondaryForeground}"
+                       Margin="12"
+                       Visibility="Collapsed"/>
+        </Grid>
     </Grid>
 </UserControl>
 

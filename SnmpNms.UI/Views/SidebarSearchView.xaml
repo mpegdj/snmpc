@@ -1,0 +1,238 @@
+<UserControl x:Class="SnmpNms.UI.Views.SidebarSearchView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:SnmpNms.UI.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="280"
+             Background="{StaticResource VSCodeSidebarBackground}">
+    <UserControl.Resources>
+        <!-- 검색 패널용 아이콘 버튼 스타일 -->
+        <Style x:Key="SearchIconButton" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E0E0E0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SearchIconGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- 검색 범위 라디오버튼 스타일 -->
+        <Style x:Key="SearchScopeRadio" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- 결과 항목 스타일 -->
+        <Style x:Key="ResultItemStyle" TargetType="Border">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource VSCodeHover}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    
+    <DockPanel>
+        <!-- 검색 입력 영역 -->
+        <Border DockPanel.Dock="Top" 
+                Background="{StaticResource VSCodeSidebarBackground}" 
+                BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1"
+                Padding="8">
+            <StackPanel>
+                <!-- 검색 입력 필드 -->
+                <Border BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="1" 
+                        Background="{StaticResource VSCodeEditorBackground}" CornerRadius="2">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- 검색 아이콘 -->
+                        <TextBlock Grid.Column="0" Style="{StaticResource SearchIconGlyph}" 
+                                   Text="&#xE721;" Margin="8,0,4,0"/>
+                        
+                        <!-- 검색 입력 -->
+                        <TextBox Name="SearchTextBox" Grid.Column="1" 
+                                 BorderThickness="0" Padding="4,6"
+                                 Background="Transparent" Foreground="{StaticResource VSCodeForeground}"
+                                 FontSize="12" VerticalAlignment="Center"
+                                 KeyDown="SearchTextBox_KeyDown" TextChanged="SearchTextBox_TextChanged">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Setter Property="CaretBrush" Value="{StaticResource VSCodeForeground}"/>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        
+                        <!-- 지우기 버튼 -->
+                        <Button Grid.Column="2" Style="{StaticResource SearchIconButton}" 
+                                ToolTip="Clear" Click="ClearSearch_Click" 
+                                Width="20" Height="20" Margin="0,0,4,0"
+                                Visibility="{Binding Text.Length, ElementName=SearchTextBox, Converter={StaticResource IntToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource SearchIconGlyph}" Text="&#xE711;" FontSize="10"/>
+                        </Button>
+                    </Grid>
+                </Border>
+                
+                <!-- 검색 범위 선택 -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <RadioButton Name="rbScopeAll" Content="All" 
+                                 Style="{StaticResource SearchScopeRadio}" 
+                                 IsChecked="True" Checked="SearchScope_Changed"/>
+                    <RadioButton Name="rbScopeMap" Content="Map" 
+                                 Style="{StaticResource SearchScopeRadio}"
+                                 Checked="SearchScope_Changed"/>
+                    <RadioButton Name="rbScopeMib" Content="MIB" 
+                                 Style="{StaticResource SearchScopeRadio}"
+                                 Checked="SearchScope_Changed"/>
+                </StackPanel>
+                
+                <!-- 검색 결과 요약 -->
+                <TextBlock Name="SearchSummaryText" 
+                           Foreground="{StaticResource VSCodeSecondaryForeground}" 
+                           FontSize="11" Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- 검색 결과 영역 -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Name="ResultsPanel">
+                <!-- Map 검색 결과 -->
+                <Expander Name="MapResultsExpander" IsExpanded="True" Visibility="Collapsed">
+                    <Expander.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE700;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                       Foreground="{StaticResource VSCodeForeground}" Margin="0,0,6,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Name="MapResultsHeader" Text="MAP OBJECTS" 
+                                       Foreground="{StaticResource VSCodeForeground}" 
+                                       FontSize="11" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Expander.Header>
+                    <ItemsControl Name="MapResultsList" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ResultItemStyle}" 
+                                        MouseLeftButtonDown="MapResult_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <!-- 아이콘 -->
+                                        <TextBlock Grid.Column="0" Grid.RowSpan="2" 
+                                                   Text="{Binding Icon}" 
+                                                   FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                                   Foreground="{Binding IconColor}" 
+                                                   Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        
+                                        <!-- 이름 -->
+                                        <TextBlock Grid.Column="1" Grid.Row="0" 
+                                                   Text="{Binding DisplayName}" 
+                                                   Foreground="{StaticResource VSCodeForeground}"
+                                                   FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        
+                                        <!-- 상세 정보 -->
+                                        <TextBlock Grid.Column="1" Grid.Row="1" 
+                                                   Text="{Binding Detail}" 
+                                                   Foreground="{StaticResource VSCodeSecondaryForeground}"
+                                                   FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Expander>
+                
+                <!-- MIB 검색 결과 -->
+                <Expander Name="MibResultsExpander" IsExpanded="True" Visibility="Collapsed" Margin="0,8,0,0">
+                    <Expander.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                       Foreground="{StaticResource VSCodeForeground}" Margin="0,0,6,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Name="MibResultsHeader" Text="MIB NODES" 
+                                       Foreground="{StaticResource VSCodeForeground}" 
+                                       FontSize="11" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Expander.Header>
+                    <ItemsControl Name="MibResultsList" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource ResultItemStyle}" 
+                                        MouseLeftButtonDown="MibResult_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <!-- 아이콘 -->
+                                        <TextBlock Grid.Column="0" Grid.RowSpan="2" 
+                                                   Text="{Binding Icon}" 
+                                                   FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                                   Foreground="{StaticResource VSCodeAccent}" 
+                                                   Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        
+                                        <!-- 이름 -->
+                                        <TextBlock Grid.Column="1" Grid.Row="0" 
+                                                   Text="{Binding DisplayName}" 
+                                                   Foreground="{StaticResource VSCodeForeground}"
+                                                   FontSize="12" TextTrimming="CharacterEllipsis"/>
+                                        
+                                        <!-- OID -->
+                                        <TextBlock Grid.Column="1" Grid.Row="1" 
+                                                   Text="{Binding Detail}" 
+                                                   Foreground="{StaticResource VSCodeSecondaryForeground}"
+                                                   FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Expander>
+                
+                <!-- 검색 결과 없음 -->
+                <TextBlock Name="NoResultsText" 
+                           Text="No results found" 
+                           Foreground="{StaticResource VSCodeSecondaryForeground}"
+                           FontSize="12" Margin="8,16"
+                           HorizontalAlignment="Center"
+                           Visibility="Collapsed"/>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
+

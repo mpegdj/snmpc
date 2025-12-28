@@ -37,6 +37,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -46,6 +47,12 @@
             <DockPanel Height="28">
                 <!-- 우측 아이콘 버튼들 -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="4,0">
+                    <!-- Search -->
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Search (Ctrl+F)" 
+                            Click="ToggleSearch_Click" Name="btnSearch">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE721;"/>
+                    </Button>
+                    <Rectangle Width="1" Fill="{StaticResource VSCodeDivider}" Margin="4,4"/>
                     <!-- Add Site Table -->
                     <Button Style="{StaticResource MapIconButton}" ToolTip="Add Site Table (click on canvas)" 
                             Click="AddSiteTable_Click" Name="btnAddSiteTable">
@@ -86,9 +93,54 @@
                            VerticalAlignment="Center" Margin="12,0,0,0"/>
             </DockPanel>
         </Border>
+        
+        <!-- 검색 패널 (토글) -->
+        <Border Grid.Row="1" Name="SearchPanel" Visibility="Collapsed"
+                Background="{StaticResource VSCodeSidebarBackground}" 
+                BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1">
+            <DockPanel Margin="8,6">
+                <!-- 닫기 버튼 -->
+                <Button DockPanel.Dock="Right" Style="{StaticResource MapIconButton}" 
+                        ToolTip="Close" Click="CloseSearch_Click" Margin="4,0,0,0">
+                    <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE711;" FontSize="12"/>
+                </Button>
+                
+                <!-- 검색 결과 네비게이션 -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
+                    <TextBlock Name="SearchResultText" Text="" VerticalAlignment="Center" 
+                               Foreground="{StaticResource VSCodeForeground}" FontSize="11" Margin="0,0,6,0"/>
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Previous (Shift+Enter)" 
+                            Click="SearchPrev_Click" Name="btnSearchPrev">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE70E;" FontSize="12"/>
+                    </Button>
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Next (Enter)" 
+                            Click="SearchNext_Click" Name="btnSearchNext">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE70D;" FontSize="12"/>
+                    </Button>
+                </StackPanel>
+                
+                <!-- 검색 범위 선택 -->
+                <ComboBox DockPanel.Dock="Right" Name="SearchScopeCombo" Width="80" Margin="8,0,0,0"
+                          VerticalAlignment="Center" FontSize="11" SelectedIndex="0"
+                          SelectionChanged="SearchScope_Changed">
+                    <ComboBoxItem Content="All"/>
+                    <ComboBoxItem Content="Device"/>
+                    <ComboBoxItem Content="Site"/>
+                </ComboBox>
+                
+                <!-- 검색 입력 -->
+                <Border BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="1" 
+                        Background="{StaticResource VSCodeEditorBackground}" CornerRadius="2">
+                    <TextBox Name="SearchTextBox" BorderThickness="0" Padding="6,3"
+                             Background="Transparent" Foreground="{StaticResource VSCodeForeground}"
+                             FontSize="12" VerticalAlignment="Center"
+                             KeyDown="SearchTextBox_KeyDown" TextChanged="SearchTextBox_TextChanged"/>
+                </Border>
+            </DockPanel>
+        </Border>
 
         <!-- 메인 캔버스 영역 -->
-        <Border Grid.Row="1" Margin="4" BorderBrush="{StaticResource VSCodeDivider}" 
+        <Border Grid.Row="2" Margin="4" BorderBrush="{StaticResource VSCodeDivider}" 
                 BorderThickness="1" Background="{StaticResource VSCodeEditorBackground}" CornerRadius="4"
                 ClipToBounds="True">
             <ScrollViewer Name="MainScrollViewer" 

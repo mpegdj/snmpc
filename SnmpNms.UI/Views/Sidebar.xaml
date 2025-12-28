@@ -17,44 +17,56 @@
         <!-- Header with Activity Bar -->
         <Border Grid.Row="0" 
                 Style="{StaticResource PanelHeaderStyle}">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Activity Bar Buttons -->
-                <Button x:Name="btnMap" 
-                        Style="{StaticResource ActivityBarButtonActiveStyle}"
-                        Click="BtnMap_Click"
-                        ToolTip="Map"
-                        Width="28" Height="28">
-                    <TextBlock x:Name="iconMap" Style="{StaticResource ActivityBarIconActiveStyle}" Text="&#xE700;" FontSize="14"/>
-                </Button>
-                <Button x:Name="btnMib" 
+            <DockPanel>
+                <!-- 우측: 검색 토글 버튼 -->
+                <Button x:Name="btnToggleSearch" 
+                        DockPanel.Dock="Right"
                         Style="{StaticResource ActivityBarButtonStyle}"
-                        Click="BtnMib_Click"
-                        ToolTip="MIB"
-                        Width="28" Height="28">
-                    <TextBlock x:Name="iconMib" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE8A5;" FontSize="14"/>
+                        Click="BtnToggleSearch_Click"
+                        ToolTip="Search in view (Ctrl+F)"
+                        Width="24" Height="24" Margin="4,0">
+                    <TextBlock Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;" FontSize="12"/>
                 </Button>
-                <Button x:Name="btnSearch" 
-                        Style="{StaticResource ActivityBarButtonStyle}"
-                        Click="BtnSearch_Click"
-                        ToolTip="Search"
-                        Width="28" Height="28">
-                    <TextBlock x:Name="iconSearch" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;" FontSize="14"/>
-                </Button>
-                <Button x:Name="btnEventLog" 
-                        Style="{StaticResource ActivityBarButtonStyle}"
-                        Click="BtnEventLog_Click"
-                        ToolTip="Event Log"
-                        Width="28" Height="28">
-                    <TextBlock x:Name="iconEventLog" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;" FontSize="14"/>
-                </Button>
-                <Button x:Name="btnSettings" 
-                        Style="{StaticResource ActivityBarButtonStyle}"
-                        Click="BtnSettings_Click"
-                        ToolTip="Settings"
-                        Width="28" Height="28">
-                    <TextBlock x:Name="iconSettings" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;" FontSize="14"/>
-                </Button>
-            </StackPanel>
+                
+                <!-- 좌측: Activity Bar Buttons -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="btnMap" 
+                            Style="{StaticResource ActivityBarButtonActiveStyle}"
+                            Click="BtnMap_Click"
+                            ToolTip="Map"
+                            Width="28" Height="28">
+                        <TextBlock x:Name="iconMap" Style="{StaticResource ActivityBarIconActiveStyle}" Text="&#xE700;" FontSize="14"/>
+                    </Button>
+                    <Button x:Name="btnMib" 
+                            Style="{StaticResource ActivityBarButtonStyle}"
+                            Click="BtnMib_Click"
+                            ToolTip="MIB"
+                            Width="28" Height="28">
+                        <TextBlock x:Name="iconMib" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE8A5;" FontSize="14"/>
+                    </Button>
+                    <Button x:Name="btnSearch" 
+                            Style="{StaticResource ActivityBarButtonStyle}"
+                            Click="BtnSearch_Click"
+                            ToolTip="Search"
+                            Width="28" Height="28">
+                        <TextBlock x:Name="iconSearch" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE721;" FontSize="14"/>
+                    </Button>
+                    <Button x:Name="btnEventLog" 
+                            Style="{StaticResource ActivityBarButtonStyle}"
+                            Click="BtnEventLog_Click"
+                            ToolTip="Event Log"
+                            Width="28" Height="28">
+                        <TextBlock x:Name="iconEventLog" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE7C3;" FontSize="14"/>
+                    </Button>
+                    <Button x:Name="btnSettings" 
+                            Style="{StaticResource ActivityBarButtonStyle}"
+                            Click="BtnSettings_Click"
+                            ToolTip="Settings"
+                            Width="28" Height="28">
+                        <TextBlock x:Name="iconSettings" Style="{StaticResource ActivityBarIconStyle}" Text="&#xE713;" FontSize="14"/>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
         </Border>
         
         <!-- Content Area -->
