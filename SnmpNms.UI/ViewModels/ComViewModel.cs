@@ -14,6 +14,8 @@ public class ComLogEntry
     public string Direction { get; set; } = ""; // "[out]" or "[in]"
     public byte[] RawData { get; set; } = Array.Empty<byte>();
     public string Target { get; set; } = ""; // IP:Port
+    public string Oid { get; set; } = ""; // 추가: OID
+    public string Description { get; set; } = ""; // 추가: 의미 있는 메시지/값 병합 텍스트
     
     public string TimestampString => Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
     
@@ -21,13 +23,17 @@ public class ComLogEntry
     {
         get
         {
+            // 의미 있는 메시지가 있으면 그걸 우선 표시
+            if (!string.IsNullOrEmpty(Description)) return Description;
+
             if (RawData == null || RawData.Length == 0) return "Empty Packet";
-            // 한 줄 요약: 방향, 대상, 데이터 길이, 그리고 데이터의 앞부분 일부
+            // 중복된 Direction, Target 제거하고 바이트 크기와 미리보기만 표시
             var text = TextString;
             var preview = text.Length > 50 ? text.Substring(0, 50) + "..." : text;
-            return $"{Direction} {Target} - {RawData.Length} bytes: {preview}";
+            return $"{RawData.Length} bytes: {preview}";
         }
     }
+    // ... HexString, TextString 생략 (기존과 동일)
     
     public string HexString
     {
@@ -109,27 +115,29 @@ public class ComViewModel : INotifyPropertyChanged
     /// <summary>
     /// 송신 로그 추가
     /// </summary>
-    public void LogSend(byte[] rawData, string target)
+    public void LogSend(byte[] rawData, string target, string oid = "", string description = "")
     {
-        AddLog("[out]", rawData, target);
+        AddLog("[out]", rawData, target, oid, description);
     }
     
     /// <summary>
     /// 수신 로그 추가
     /// </summary>
-    public void LogReceive(byte[] rawData, string target)
+    public void LogReceive(byte[] rawData, string target, string oid = "", string description = "")
     {
-        AddLog("[in]", rawData, target);
+        AddLog("[in]", rawData, target, oid, description);
     }
     
-    private void AddLog(string direction, byte[] rawData, string target)
+    private void AddLog(string direction, byte[] rawData, string target, string oid, string description)
     {
         var entry = new ComLogEntry
         {
             Timestamp = DateTime.Now,
             Direction = direction,
             RawData = rawData ?? Array.Empty<byte>(),
-            Target = target
+            Target = target,
+            Oid = oid,
+            Description = description
         };
         
         // UI 스레드에서 실행

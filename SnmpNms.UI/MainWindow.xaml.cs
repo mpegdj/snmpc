@@ -357,50 +357,50 @@ public partial class MainWindow : Window
             }
         }
 
-        // Trap 정보 요약
-        var trapDetails = new List<string>();
-        if (!string.IsNullOrEmpty(e.EnterpriseOid))
+        // Trap 이름 번역 (MIB 이용)
+        var trapName = string.IsNullOrEmpty(trapOid) ? "Unknown" : (_mibService?.GetOidName(trapOid) ?? trapOid);
+        
+        // 디바이스 식별 이름 결정 (사용자 요청: [mve5000])
+        string deviceDisplayName = "";
+        
+        // 1. 등록된 디바이스 노드에서 검색 (IP 기준)
+        var deviceNode = _vm.DeviceNodes.FirstOrDefault(n => n.Target?.IpAddress == e.SourceIpAddress);
+        if (deviceNode?.Target != null)
         {
-            trapDetails.Add($"Enterprise={e.EnterpriseOid}");
+            deviceDisplayName = !string.IsNullOrWhiteSpace(deviceNode.Target.Alias) 
+                ? deviceNode.Target.Alias 
+                : deviceNode.Target.Device;
         }
-        if (!string.IsNullOrEmpty(e.GenericTrapType))
+        
+        // 2. 검색 실패 시 Trap 이름에서 추출 시도 (mve5000Trap... -> mve5000)
+        if (string.IsNullOrWhiteSpace(deviceDisplayName))
         {
-            trapDetails.Add($"Generic={e.GenericTrapType}");
+            if (trapName.StartsWith("mve", StringComparison.OrdinalIgnoreCase))
+            {
+                int trapIdx = trapName.IndexOf("Trap", StringComparison.OrdinalIgnoreCase);
+                deviceDisplayName = trapIdx > 0 ? trapName.Substring(0, trapIdx) : trapName;
+            }
+            else
+            {
+                deviceDisplayName = trapName;
+            }
         }
-        if (e.Variables.Count > 0)
-        {
-            trapDetails.Add($"Variables={e.Variables.Count}");
-        }
-        var details = string.Join(", ", trapDetails);
 
-        // Com에 Trap 수신 로그 기록 (raw 데이터 포함)
+        // 결과 프리픽스 결정 (예: [mve5000], [Trap] 제거)
+        var prefix = $"[{deviceDisplayName}]";
+
+        // 이벤트 로그용 병합 텍스트 생성
+        var values = e.Variables.Select(v => v.Value?.ToString() ?? "null");
+        var mergedValues = string.Join(" / ", values);
+        var variablesSummary = e.Variables.Count > 0 ? ": " + mergedValues : "";
+
+        // Com에 Trap 수신 로그 기록
         if (e.RawData != null && e.RawData.Length > 0)
         {
-            _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}");
+            _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}", trapOid, mergedValues);
         }
 
-        var trapInfo = $"Trap from {e.SourceIpAddress}:{e.SourcePort}";
-        if (!string.IsNullOrEmpty(e.EnterpriseOid))
-        {
-            trapInfo += $" Enterprise: {e.EnterpriseOid}";
-        }
-        if (!string.IsNullOrEmpty(e.GenericTrapType))
-        {
-            trapInfo += $" Generic: {e.GenericTrapType}";
-        }
-        if (e.Variables.Count > 0)
-        {
-            trapInfo += $" ({e.Variables.Count} variables)";
-        }
-
-        _vm.AddEvent(EventSeverity.Info, e.SourceIpAddress, $"[Trap] {trapInfo}");
-        
-        // 변수들도 로그에 기록 (최대 5개만, MIB 이름 변환 포함)
-        foreach (var variable in e.Variables.Take(5))
-        {
-            var oidName = _mibService?.GetOidName(variable.Oid) ?? variable.Oid;
-            _vm.AddEvent(EventSeverity.Info, e.SourceIpAddress, $"  {oidName} = {variable.Value}");
-        }
+        _vm.AddEvent(EventSeverity.Info, e.SourceIpAddress, $"{prefix}{variablesSummary}");
     }
 
     private void ActivityBar_ViewChanged(object? sender, ActivityBarView view)

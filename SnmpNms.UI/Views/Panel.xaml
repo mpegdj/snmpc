@@ -168,16 +168,11 @@
                           ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ListView.View>
                         <GridView>
-                            <GridViewColumn Header="Time" Width="120">
-                                <GridViewColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding TimestampString, Mode=OneWay}" Foreground="#444444"/>
-                                    </DataTemplate>
-                                </GridViewColumn.CellTemplate>
-                            </GridViewColumn>
-                            <GridViewColumn Header="Dir" Width="40" DisplayMemberBinding="{Binding Direction}"/>
-                            <GridViewColumn Header="Target" Width="120" DisplayMemberBinding="{Binding Target}"/>
-                            <GridViewColumn Header="Data (Hex/Text Summary)" Width="600">
+                            <GridViewColumn Header="Time" Width="100" DisplayMemberBinding="{Binding TimestampString}"/>
+                            <GridViewColumn Header="Dir" Width="50" DisplayMemberBinding="{Binding Direction}"/>
+                            <GridViewColumn Header="Target" Width="130" DisplayMemberBinding="{Binding Target}"/>
+                            <GridViewColumn Header="OID" Width="150" DisplayMemberBinding="{Binding Oid}"/>
+                            <GridViewColumn Header="Summary" Width="400">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
