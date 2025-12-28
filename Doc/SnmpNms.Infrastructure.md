@@ -29,7 +29,8 @@ SharpSnmpLib 같은 외부 라이브러리 의존은 여기서만 가져가고, 
 SnmpNms.Infrastructure/
 ├── SnmpClient.cs          # ISnmpClient 구현
 ├── PollingService.cs      # IPollingService 구현
-└── MibService.cs          # IMibService 구현
+├── MibService.cs          # IMibService 구현
+└── TrapListener.cs        # ITrapListener 구현
 ```
 
 ---
@@ -59,8 +60,17 @@ public async Task<SnmpResult> GetNextAsync(ISnmpTarget target, string oid)
 
 **WalkAsync**
 ```csharp
-public async Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid)
+public async Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid, CancellationToken cancellationToken = default)
 ```
+- `CancellationToken` 지원으로 취소 가능
+- 하위 OID가 없으면 스칼라 OID 직접 조회
+
+**SetAsync**
+```csharp
+public async Task<SnmpResult> SetAsync(ISnmpTarget target, string oid, string value, string type)
+```
+- SNMP SET 요청 전송
+- 지원 타입: INTEGER, OCTETSTRING, IPADDRESS, COUNTER32, COUNTER64, GAUGE32, TIMETICKS, OBJECTIDENTIFIER
 
 #### 구현 세부사항
 
@@ -184,8 +194,10 @@ public class MibService : IMibService
 
 **MIB 파일 로딩**
 - `.mib`, `.txt` 파일을 모두 읽어서 파싱
-- 정규식을 사용하여 `OBJECT-TYPE ::= { parent n }` 패턴 파싱
+- 정규식을 사용하여 `OBJECT IDENTIFIER`, `MODULE-IDENTITY`, `OBJECT-TYPE` 패턴 파싱
 - 기본 표준 OID는 하드코딩 등록 (`sysDescr`, `sysUpTime` 등)
+- 키워드 필터링 (IMPORTS, EXPORTS, FROM, BEGIN, END 제외)
+- 소문자로 시작하는 이름만 등록
 
 **OID → 이름 변환**
 - 정확히 일치하는 OID 검색
@@ -199,6 +211,60 @@ public class MibService : IMibService
 **MIB 트리 구조**
 - 파싱된 MIB를 트리 구조로 구성
 - `MibTreeNode` 컬렉션으로 표현
+- 트리 노드는 OID 숫자 순으로 정렬 (`CompareOidForSort` 사용)
+- 루트: "Snmp Mibs"
+  - `mgmt` (1.3.6.1.2.1) - 표준 MIB 서브트리
+  - `Private` (1.3.6.1.4.1) - vendor-specific MIB 서브트리
+  - `Custom-Tables` - 사용자 정의 테이블
+
+### TrapListener
+
+`ITrapListener` 인터페이스의 구현체입니다. UDP 포트에서 SNMP Trap을 수신하고 처리합니다.
+
+#### 주요 속성 및 메서드
+
+```csharp
+public class TrapListener : ITrapListener
+{
+    public bool IsListening { get; }
+    
+    public event EventHandler<TrapEvent>? OnTrapReceived;
+    
+    public void Start(int port = 162);
+    public void Stop();
+    public (string ipAddress, int port) GetListenerInfo();
+    public string GetLocalNetworkIp();
+}
+```
+
+#### 구현 세부사항
+
+**UDP 소켓 관리**
+- `UdpClient`를 사용한 UDP 포트 리스닝 (기본 162)
+- `CancellationTokenSource`로 비동기 작업 제어
+- `Task.Run`으로 백그라운드 리스닝 루프
+
+**Trap 수신 루프**
+- `ListenAsync()`: 무한 루프로 UDP 패킷 수신
+- `ReceiveAsync()`: 비동기로 UDP 패킷 대기
+- 예외 처리: 네트워크 오류 시 에러 TrapEvent 발생
+
+**Trap 파싱**
+- `ProcessTrap()`: 수신한 바이트 배열을 SNMP 메시지로 파싱
+- `MessageFactory.ParseMessages()`: SharpSnmpLib로 메시지 파싱
+- PDU 타입별 처리:
+  - `TrapV1Pdu`: SNMPv1 Trap
+  - `TrapV2Pdu`: SNMPv2c Trap
+  - `InformRequestPdu`: SNMP Inform (기본 지원)
+
+**네트워크 IP 주소 감지**
+- `GetLocalNetworkIp()`: 실제 네트워크 IP 주소 자동 감지
+- 우선순위: Ethernet > Wireless > 기타
+- Loopback(127.0.0.1) 제외
+- 실패 시 기본값 "127.0.0.1" 반환
+
+**이벤트 발생**
+- `OnTrapReceived` 이벤트로 파싱된 TrapEvent 전달
 
 #### 사용 예시
 
@@ -315,6 +381,17 @@ string? name = mibService.GetOidName("1.3.6.1.2.1.1.1.0");
 ### v1.1 (PollingProtocol 지원)
 - PollingService에 PollingProtocol별 처리 로직 추가
 - SNMP, Ping, ARP, None 프로토콜 지원
+
+### v1.2 (Trap Listener 구현)
+- TrapListener 클래스 구현
+- UDP 소켓 기반 Trap 수신
+- SNMP v1/v2c Trap 파싱 및 처리
+- 실제 네트워크 IP 주소 자동 감지
+
+### v1.3 (MIB 파서 개선)
+- 키워드 필터링 추가 (IMPORTS, EXPORTS 등 제외)
+- 소문자로 시작하는 이름만 등록
+- 트리 정렬 개선 (OID 숫자 순)
 
 ---
 

@@ -41,6 +41,11 @@ SnmpNms.UI/
 │   ├── MainViewModel.cs                # 메인 ViewModel
 │   └── EventLogFilterViewModel.cs      # 이벤트 로그 필터 ViewModel
 ├── Views/
+│   ├── ActivityBar.xaml/.cs            # Activity Bar (왼쪽 세로 버튼 바)
+│   ├── Sidebar.xaml/.cs                # Sidebar (Activity Bar + 콘텐츠 영역)
+│   ├── SidebarMapView.xaml/.cs         # Sidebar의 Map 트리 뷰
+│   ├── SidebarMibView.xaml/.cs         # Sidebar의 MIB 트리 뷰
+│   ├── Panel.xaml/.cs                  # Bottom Panel (하단 패널)
 │   ├── Dialogs/
 │   │   ├── DiscoveryPollingAgentsDialog.xaml/.cs      # Discovery 설정 다이얼로그
 │   │   ├── DiscoveryProgressDialog.xaml/.cs          # Discovery 진행 다이얼로그
@@ -52,8 +57,13 @@ SnmpNms.UI/
 │   │   └── EventLogTabControl.xaml/.cs               # 이벤트 로그 탭 컨트롤
 │   └── MapView/
 │       └── MapViewControl.xaml/.cs                    # Map View 컨트롤
-└── Converters/
-    └── (데이터 변환기들)
+├── Converters/
+│   ├── DeviceStatusToBrushConverter.cs # 디바이스 상태 → 색상 변환
+│   ├── PollingStatusConverter.cs      # Polling 상태 변환
+│   ├── StringToVisibilityConverter.cs  # 문자열 → Visibility 변환
+│   └── TrapStatusConverter.cs         # Trap 상태 변환
+└── Resources/
+    └── VSCodeTheme.xaml                # VS Code 스타일 테마 정의
 ```
 
 ---
@@ -72,14 +82,21 @@ public partial class MainWindow : Window
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
     private readonly IPollingService _pollingService;
+    private readonly ITrapListener _trapListener;
     private readonly MainViewModel _vm;
+    
+    private SidebarMapView? _sidebarMapView;
+    private TreeView? _tvDevices;
+    private TreeView? _treeMib;
+    private CancellationTokenSource? _walkCancellationTokenSource;
 }
 ```
 
 #### 주요 메서드
 
 **초기화**
-- `MainWindow()`: 서비스 초기화, MIB 로드, 기본 디바이스 추가
+- `MainWindow()`: 서비스 초기화, MIB 로드, Trap Listener 시작
+- `InitializeVSCodeUI()`: VS Code 스타일 UI 초기화 (Activity Bar, Sidebar, Bottom Panel)
 
 **Discovery 관련**
 - `FindMapObjects_Click()`: Discovery/Polling Agents 다이얼로그 열기
@@ -88,56 +105,77 @@ public partial class MainWindow : Window
 
 **SNMP 테스트**
 - `BtnGet_Click()`: SNMP GET 요청 실행
-- `BtnGetNext_Click()`: SNMP GETNEXT 요청 실행
-- `BtnWalk_Click()`: SNMP WALK 요청 실행
+- `BtnGetNext_Click()`: SNMP GETNEXT 요청 실행 (연속 조회 지원)
+- `BtnWalk_Click()`: SNMP WALK 요청 실행 (취소 가능)
+- `BtnStopWalk_Click()`: WALK 취소
+- `BtnSendTrap_Click()`: SNMP Trap 전송 (테스트용)
 
 **Polling 관련**
 - `ChkAutoPoll_Checked()`: Auto Polling 시작
 - `ChkAutoPoll_Unchecked()`: Auto Polling 중지
 - `PollingService_OnPollingResult()`: Polling 결과 처리
 
+**Trap 관련**
+- `InitializeTrapListener()`: Trap Listener 초기화 및 시작
+- `TrapListener_OnTrapReceived()`: Trap 수신 처리 및 Event Log 기록
+
 **MIB 관련**
 - `LoadMibs()`: MIB 파일 로드
 - `InitializeMibTree()`: MIB 트리 초기화
+- `FilterMibTreeByDevice()`: 디바이스 선택에 따른 MIB 트리 필터링
+- `ResetMibTreeFilter()`: MIB 트리 필터 리셋
 - `LoadMibTableData()`: MIB 테이블 데이터 로드
 
 **Map 관련**
-- `SelectNode()`: Map 노드 선택
+- `SelectNode()`: Map 노드 선택 (MIB View 필터링 연동)
 - `DeleteSelectedNodes()`: 선택된 노드 삭제
 - `GetSelectedSubnetOrDefault()`: 선택된 Subnet 또는 기본 Subnet 반환
 
 #### 화면 구성
 
 **상단**
-- Menu Bar: File, Edit, View, Tools, Help
+- Menu Bar: File, Edit, View, Config, Tools, Help
 - Toolbar: 아이콘 버튼들
   - Find Map Objects (Discovery)
   - Add Device/Subnet/Goto
   - Edit Object Properties
+  - Start Poll, Stop Poll
   - 기타 도구들
 
 **좌측**
-- Selection Tool: Map Tree (Root Subnet → Subnet → Device/Goto)
-  - 다중 선택 지원 (Ctrl/Shift)
-  - 우클릭 컨텍스트 메뉴
-  - 드래그 앤 드롭 지원
+- Activity Bar (세로, 48px): Map, MIB, Search, Event Log, Settings 버튼
+- Sidebar (280px, 조절 가능): Activity Bar 선택에 따라 내용 변경
+  - Map 뷰: Map Tree (Root Subnet → Subnet → Device/Goto)
+    - 다중 선택 지원 (Ctrl/Shift)
+    - 우클릭 컨텍스트 메뉴
+    - 드래그 앤 드롭 지원
+    - 상태 색상 표시 (은은한 하늘색 선택)
+  - MIB 뷰: MIB 트리 (mgmt, Private, Custom-Tables)
+    - 디바이스 선택에 따른 필터링
+    - 컨텍스트 메뉴 (Get, Get Next, Walk, View Table, Copy OID, Copy Name)
+    - OID 선택 시 SNMP Test 탭 자동 업데이트
 
 **중앙**
-- View Window Area: Tab 기반
-  - Map View (내부 창 Cascade 지원)
-  - Device Details
-  - MIB Tree
-  - MIB Table
-  - MIB Graph
-  - SNMP Test
+- Editor Area: Tab 기반
   - Event Log
+  - Dashboard (미구현)
+  - Map View (내부 창 Cascade 지원)
+  - Device (DataGrid)
+  - MIB Table
+  - SNMP Test (Get, Get Next, Walk, Trap Test)
 
 **하단**
-- Event Log Tool: 탭/필터/검색
-  - Current, History, Custom 1-8 탭
-  - Severity 필터 (Info, Warning, Error, Critical)
-  - 검색 기능
-  - 자동 업데이트 및 자동 스크롤 (새 로그 추가 시)
+- Bottom Panel (220px, 조절 가능): 탭/필터/검색
+  - Event Log 탭: Current, History, Custom 1-8 탭
+    - Severity 필터 (Info, Warning, Error)
+    - Scope 필터 (All, SelectedDevice)
+    - 검색 기능
+    - 자동 업데이트 및 자동 스크롤 (새 로그 추가 시)
+  - Output 탭 (미구현)
+  - Terminal 탭 (미구현)
+
+**최하단**
+- Status Bar: 상태 정보 표시
 
 ---
 
@@ -197,8 +235,10 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
 {
     public string IpAddress { get; set; }           // IP 주소
     public int Port { get; set; }                  // 포트 (기본 161)
-    public string Alias { get; set; }              // 별칭
+    public string Alias { get; set; }              // 별칭 (표시 이름 우선 사용)
     public string Device { get; set; }             // 디바이스 이름
+    public string Maker { get; set; }              // 제조사 정보 (sysDescr 기반)
+    public string SysObjectId { get; set; }        // 시스템 OID (Enterprise OID 추출용)
     public string Community { get; set; }          // Community String
     public SnmpVersion Version { get; set; }        // SNMP 버전
     public int Timeout { get; set; }               // 타임아웃
@@ -206,7 +246,7 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
     public PollingProtocol PollingProtocol { get; set; }  // Polling 프로토콜
     
     public string EndpointKey { get; }             // "ip:port" 형식 키
-    public string DisplayName { get; }             // 표시 이름 (Alias 또는 EndpointKey)
+    public string DisplayName { get; }             // 표시 이름 (Alias 우선, 없으면 EndpointKey)
     public DeviceStatus Status { get; set; }       // 상태 (Up/Down/Unknown)
 }
 ```
@@ -216,6 +256,7 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
 - `INotifyPropertyChanged` 구현으로 UI 자동 업데이트
 - `Status` 변경 시 UI에 자동 반영
 - `DisplayName`은 Alias가 있으면 Alias, 없으면 EndpointKey 사용
+- `Maker` 및 `SysObjectId` 속성으로 디바이스 정보 관리
 
 ---
 
@@ -262,6 +303,8 @@ Discovery 및 Polling 설정을 구성하는 다이얼로그입니다.
 - SNMP 버전 선택 (v1, v2c, v3)
 - Find Options 설정
 - 설정 저장/로드 (`discovery_config.json`)
+- CIDR 기반 서브넷 자동 배치 기능
+- Trap 설정 일괄 처리 기능
 
 **자세한 내용**: `Doc/8_discovery_object.md` 참조
 
@@ -283,14 +326,17 @@ Discovery 진행 상황을 표시하는 다이얼로그입니다.
 Map Object (Device/Subnet/Goto)의 속성을 편집하는 다이얼로그입니다.
 
 **주요 기능:**
-- Attributes 탭: Alias, Device, Address, Polling Protocol
+- Attributes 탭: Alias, Device, Address (4개 입력 필드), Polling Protocol
 - General 탭: Node Group, Description
-- Access 탭: SNMP 버전, Community 설정
-- Polling 탭: Polling 간격, 타임아웃, 재시도
+- Access 탭: SNMP 버전, Community 설정, Trap 설정
+- Dependencies 탭: 의존성 설정 (미구현)
+- Trap 탭: Trap Destination IP/Port 설정, Get Trap Info, Configure Trap
+- Lookup 기능: Ping + SNMP GET으로 자동 정보 채움
+- Ping 테스트: PingLogWindow 연속 Ping
 
 **생성자:**
-- `MapObjectPropertiesDialog(MapObjectType type, ISnmpClient? snmpClient)`: 새 객체 추가용
-- `MapObjectPropertiesDialog(MapObjectType type, UiSnmpTarget target, ISnmpClient? snmpClient)`: 기존 객체 편집용
+- `MapObjectPropertiesDialog(MapObjectType type, ISnmpClient? snmpClient, ITrapListener? trapListener)`: 새 객체 추가용
+- `MapObjectPropertiesDialog(MapObjectType type, UiSnmpTarget target, ISnmpClient? snmpClient, ITrapListener? trapListener)`: 기존 객체 편집용
 
 **자세한 내용**: `Doc/8_discovery_object.md` 참조
 
@@ -307,22 +353,34 @@ Map Object (Device/Subnet/Goto)의 속성을 편집하는 다이얼로그입니�
    _snmpClient = new SnmpClient();
    _mibService = new MibService();
    _pollingService = new PollingService(_snmpClient);
+   _trapListener = new TrapListener();
    _vm = new MainViewModel();
    ```
 4. Polling 이벤트 연결
    ```csharp
    _pollingService.OnPollingResult += PollingService_OnPollingResult;
    ```
-5. MIB 파일 로드
+5. Trap 이벤트 연결
+   ```csharp
+   _trapListener.OnTrapReceived += TrapListener_OnTrapReceived;
+   ```
+6. Trap Listener 시작
+   ```csharp
+   InitializeTrapListener();
+   ```
+7. MIB 파일 로드
    ```csharp
    LoadMibs();
    ```
-6. MIB 트리 초기화
+8. MIB 트리 초기화
    ```csharp
    InitializeMibTree();
    ```
-7. 기본 디바이스 추가 (127.0.0.1)
-8. UI 표시
+9. VS Code 스타일 UI 초기화
+   ```csharp
+   InitializeVSCodeUI();
+   ```
+10. UI 표시
 
 ### SNMP GET 요청
 
@@ -515,6 +573,22 @@ private void PollingService_OnPollingResult(object? sender, PollingResult e)
 ### v1.2 (Polling Protocol)
 - MapObjectPropertiesDialog에 Polling Protocol 선택 추가
 - Device Properties 편집 기능
+
+### v1.3 (Trap Listener 통합)
+- Trap Listener 초기화 및 시작
+- Trap 수신 시 Event Log에 자동 기록
+- Trap 설정 기능 추가 (MapObjectPropertiesDialog, Discovery)
+
+### v1.4 (VS Code 스타일 UI)
+- Activity Bar, Sidebar, Bottom Panel 구조로 전환
+- VS Code 스타일 밝은 테마 적용
+- Sidebar에 Map/MIB 트리 통합
+- TreeView 선택 색상 개선 (은은한 하늘색)
+
+### v1.5 (MIB View 필터링 및 SNMP Test 개선)
+- 디바이스 선택에 따른 MIB View 필터링
+- SNMP Test 탭에 Get Next 및 Walk 기능 추가
+- MIB View에서 OID 선택 시 SNMP Test 탭 자동 업데이트
 
 ---
 

@@ -89,6 +89,7 @@ SnmpNms.sln
   - `ISnmpTarget.cs`: SNMP 타겟 디바이스 인터페이스
   - `IPollingService.cs`: Polling 서비스 인터페이스
   - `IMibService.cs`: MIB 서비스 인터페이스
+  - `ITrapListener.cs`: Trap 수신 인터페이스
 - `Models/`: 데이터 모델 정의
   - `DeviceStatus.cs`: 디바이스 상태 열거형
   - `PollingProtocol.cs`: Polling 프로토콜 열거형
@@ -97,6 +98,7 @@ SnmpNms.sln
   - `SnmpVariable.cs`: SNMP 변수 모델
   - `SnmpVersion.cs`: SNMP 버전 열거형
   - `MibTreeNode.cs`: MIB 트리 노드 모델
+  - `TrapEvent.cs`: Trap 이벤트 모델
 
 **의존성**: 없음 (순수 인터페이스 및 모델)
 
@@ -108,6 +110,7 @@ SnmpNms.sln
 - `SnmpClient.cs`: SNMP 통신 구현 (SharpSnmpLib 사용)
 - `PollingService.cs`: 주기적 Polling 서비스 구현
 - `MibService.cs`: MIB 파일 파싱 및 트리 생성 구현
+- `TrapListener.cs`: SNMP Trap 수신 서비스 구현
 
 **의존성**:
 - `SnmpNms.Core`: 인터페이스 및 모델 참조
@@ -170,7 +173,8 @@ SnmpNms.sln
 Task<SnmpResult> GetAsync(ISnmpTarget target, string oid)
 Task<SnmpResult> GetAsync(ISnmpTarget target, IEnumerable<string> oids)
 Task<SnmpResult> GetNextAsync(ISnmpTarget target, string oid)
-Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid)
+Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid, CancellationToken cancellationToken = default)
+Task<SnmpResult> SetAsync(ISnmpTarget target, string oid, string value, string type)
 ```
 
 ### 2. Polling Service (`PollingService.cs`)
@@ -215,7 +219,9 @@ event EventHandler<PollingResult> OnPollingResult
 - 정규표현식 기반 MIB 파일 파싱
 - 의존성 해결을 위한 반복 파싱 (최대 10회)
 - 기본 표준 MIB 하드코딩 (sysDescr, sysUpTime 등)
-- 트리 구조 생성 및 정렬
+- 트리 구조 생성 및 정렬 (OID 숫자 순)
+- 키워드 필터링 (IMPORTS, EXPORTS 등 제외)
+- 소문자로 시작하는 이름만 등록
 
 **주요 메서드**:
 ```csharp
@@ -225,7 +231,33 @@ string GetOid(string name)
 MibTreeNode GetMibTree()
 ```
 
-### 4. Main ViewModel (`MainViewModel.cs`)
+### 4. Trap Listener (`TrapListener.cs`)
+
+**인터페이스**: `ITrapListener`
+
+**기능**:
+- UDP 포트에서 SNMP Trap 수신
+- Trap 파싱 및 이벤트 발생
+- 실제 네트워크 IP 주소 자동 감지
+
+**구현 세부사항**:
+- UDP 소켓 기반 Trap 수신 (기본 포트 162)
+- `CancellationTokenSource`로 비동기 작업 제어
+- `Task.Run`으로 백그라운드 리스닝 루프
+- SharpSnmpLib의 `MessageFactory.ParseMessages`로 Trap 파싱
+- SNMP v1/v2c Trap 지원
+- 실제 네트워크 IP 주소 자동 감지 (Ethernet > Wireless 우선순위, Loopback 제외)
+
+**주요 메서드**:
+```csharp
+void Start(int port = 162)
+void Stop()
+event EventHandler<TrapEvent> OnTrapReceived
+(string ipAddress, int port) GetListenerInfo()
+string GetLocalNetworkIp()
+```
+
+### 5. Main ViewModel (`MainViewModel.cs`)
 
 **기능**:
 - 애플리케이션 상태 관리
@@ -507,7 +539,10 @@ void SetEventLogContent(EventLogTabControl control)
 **주요 이벤트 핸들러**:
 - `TvDevices_MouseLeftButtonDown`: 맵 트리 클릭 처리
 - `PollingService_OnPollingResult`: Polling 결과 처리
+- `TrapListener_OnTrapReceived`: Trap 수신 처리
 - `ActivityBar_ViewChanged`: Activity Bar 뷰 변경 처리
+- `FilterMibTreeByDevice()`: 디바이스 선택에 따른 MIB 트리 필터링
+- `ResetMibTreeFilter()`: MIB 트리 필터 리셋
 
 ### 다이얼로그
 
@@ -537,9 +572,10 @@ void SetEventLogContent(EventLogTabControl control)
 
 **탭**:
 - **General**: 기본 정보 (Address, Name, Icon, Description)
-- **Access**: SNMP 접근 설정 (Read/Write Community)
+- **Access**: SNMP 접근 설정 (Read/Write Community, Version)
 - **Attributes**: Polling 설정 (Interval, Timeout, Retries, Polling Protocol)
 - **Dependencies**: 의존성 설정 (미구현)
+- **Trap**: Trap 설정 (Trap Destination IP/Port, Get Trap Info, Configure Trap)
 
 #### 4. CompileMibsDialog
 
@@ -624,9 +660,14 @@ void SetEventLogContent(EventLogTabControl control)
 
 **지원 SNMP 작업**:
 - **Get**: 단일 OID 값 조회
-- **Get Next**: 다음 OID 값 조회
-- **Walk**: OID 서브트리 순회
+- **Get Next**: 다음 OID 값 조회 (연속 조회 지원)
+- **Walk**: OID 서브트리 순회 (취소 가능)
 - **View Table**: 테이블 뷰 (미구현)
+
+**MIB View 필터링**:
+- 디바이스 선택에 따른 Enterprise OID 필터링
+- `IsVisible` 속성으로 필터링 제어
+- 디바이스 선택 해제 시 필터 리셋
 
 ### 4. 이벤트 로그 기능
 
@@ -814,9 +855,10 @@ dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
 ## 향후 계획
 
 ### 단기 계획
-- Trap Listener 구현
+- ✅ Trap Listener 구현 (완료)
 - Polling 안정화 (재진입 방지, Retry 정책)
 - MIB 경로/로딩 전략 개선
+- MIB View 필터링 개선 (nel 하위 노드 사라지는 문제 해결)
 
 ### 중기 계획
 - Alarm/Event 모델 고도화
@@ -831,5 +873,5 @@ dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
 ---
 
 **문서 작성일**: 2025-12-26
-**최종 업데이트**: 2025-12-26 (Event Log 자동 업데이트 및 자동 스크롤 기능 추가)
+**최종 업데이트**: 2025-12-26 (전체 문서 갱신 - Trap Listener, MIB View 필터링, SNMP Test 개선, VS Code 스타일 UI 반영)
 

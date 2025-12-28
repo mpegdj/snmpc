@@ -29,11 +29,13 @@ SnmpNms.Core/
 │   ├── ISnmpClient.cs          # SNMP 통신 인터페이스
 │   ├── ISnmpTarget.cs          # SNMP 타겟 정보 인터페이스
 │   ├── IPollingService.cs      # Polling 서비스 인터페이스
-│   └── IMibService.cs          # MIB 서비스 인터페이스
+│   ├── IMibService.cs          # MIB 서비스 인터페이스
+│   └── ITrapListener.cs        # Trap 수신 인터페이스
 └── Models/
     ├── SnmpResult.cs           # SNMP 요청 결과
     ├── SnmpVariable.cs         # SNMP 변수 (OID + 값)
     ├── PollingResult.cs        # Polling 결과
+    ├── TrapEvent.cs            # Trap 이벤트 모델
     ├── DeviceStatus.cs         # 디바이스 상태 enum
     ├── SnmpVersion.cs          # SNMP 버전 enum
     ├── PollingProtocol.cs      # Polling 프로토콜 enum
@@ -54,7 +56,8 @@ public interface ISnmpClient
     Task<SnmpResult> GetAsync(ISnmpTarget target, string oid);
     Task<SnmpResult> GetAsync(ISnmpTarget target, IEnumerable<string> oids);
     Task<SnmpResult> GetNextAsync(ISnmpTarget target, string oid);
-    Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid);
+    Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid, CancellationToken cancellationToken = default);
+    Task<SnmpResult> SetAsync(ISnmpTarget target, string oid, string value, string type);
 }
 ```
 
@@ -118,9 +121,35 @@ public interface IMibService
 
 **주요 기능:**
 - MIB 파일 로드 및 파싱
-- OID를 이름으로 변환
+- OID를 이름으로 변환 (Longest prefix match 지원)
 - 이름을 OID로 변환
-- MIB 트리 구조 제공
+- MIB 트리 구조 제공 (계층적 트리, OID 숫자 순 정렬)
+
+### ITrapListener
+
+SNMP Trap을 수신하는 리스너 인터페이스입니다.
+
+```csharp
+public interface ITrapListener
+{
+    bool IsListening { get; }
+    
+    void Start(int port = 162);
+    void Stop();
+    
+    event EventHandler<TrapEvent> OnTrapReceived;
+    
+    (string ipAddress, int port) GetListenerInfo();
+    string GetLocalNetworkIp();
+}
+```
+
+**주요 기능:**
+- UDP 포트에서 Trap 수신
+- Trap 수신 상태 확인
+- Trap 수신 이벤트 발생
+- 리스너 정보 제공 (IP 주소, 포트)
+- 실제 네트워크 IP 주소 자동 감지
 
 ---
 
@@ -236,12 +265,42 @@ public class MibTreeNode
     public string Name { get; set; }           // 노드 이름 (예: "sysDescr")
     public string Oid { get; set; }           // OID (예: "1.3.6.1.2.1.1.1")
     public string? Description { get; set; }   // 설명
-    public string NodeType { get; set; }       // 노드 타입
+    public MibNodeType NodeType { get; set; }  // 노드 타입 (Folder/Table/Scalar/CustomTable)
     public ObservableCollection<MibTreeNode> Children { get; }  // 자식 노드
     public bool IsExpanded { get; set; }       // UI 확장 상태
     public bool IsSelected { get; set; }       // UI 선택 상태
+    public bool IsVisible { get; set; }        // UI 표시 상태 (필터링용)
 }
 ```
+
+**특징:**
+- `INotifyPropertyChanged` 구현으로 UI 바인딩 지원
+- `IsVisible` 속성으로 필터링 제어 가능
+- 계층적 트리 구조 표현
+
+### TrapEvent
+
+SNMP Trap 이벤트를 표현하는 모델입니다.
+
+```csharp
+public class TrapEvent
+{
+    public DateTime Timestamp { get; }              // Trap 수신 시간
+    public string SourceIpAddress { get; }          // Trap을 보낸 장비의 IP 주소
+    public int SourcePort { get; }                  // Trap을 보낸 장비의 포트
+    public SnmpVersion Version { get; }             // SNMP 버전 (V1/V2c/V3)
+    public string? Community { get; }                // SNMP 커뮤니티 문자열 (v1/v2c)
+    public string? EnterpriseOid { get; }            // SNMPv1 Trap의 Enterprise OID
+    public string? GenericTrapType { get; }         // SNMPv1 Trap의 Generic Trap 타입
+    public string? SpecificTrapType { get; }        // SNMPv1 Trap의 Specific Trap 타입
+    public List<SnmpVariable> Variables { get; }     // Trap에 포함된 SNMP 변수들 (VarBind)
+    public string? ErrorMessage { get; }            // 파싱 오류 시 에러 메시지
+}
+```
+
+**SNMPv1 vs SNMPv2c 차이:**
+- **SNMPv1**: EnterpriseOid, GenericTrapType, SpecificTrapType 포함
+- **SNMPv2c**: 첫 번째 변수가 sysUpTime, 두 번째가 snmpTrapOID
 
 ---
 
@@ -359,6 +418,15 @@ string? name = mibService.GetOidName("1.3.6.1.2.1.1.1.0");
 - `PollingProtocol` enum 추가
 - `ISnmpTarget`에 `PollingProtocol` 속성 추가
 - 다양한 프로토콜로 상태 확인 지원
+
+### v1.2 (Trap Listener 추가)
+- `ITrapListener` 인터페이스 추가
+- `TrapEvent` 모델 추가
+- Trap 수신 기능 인터페이스 정의
+
+### v1.3 (MIB 트리 개선)
+- `MibTreeNode`에 `IsVisible` 속성 추가 (필터링 지원)
+- `MibNodeType` enum 추가 (Folder/Table/Scalar/CustomTable)
 
 ---
 
