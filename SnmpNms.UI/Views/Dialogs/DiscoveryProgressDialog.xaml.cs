@@ -45,6 +45,7 @@ public partial class DiscoveryProgressDialog : Window
         public string Maker { get; set; } = "";
         public string DeviceName { get; set; } = "";
         public string SubnetName { get; set; } = "";  // 서브넷 이름 (예: "192.168.0.0/24")
+        public string SysObjectId { get; set; } = "";  // sysObjectID (기기 식별용)
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
@@ -109,6 +110,9 @@ public partial class DiscoveryProgressDialog : Window
 
     private async Task StartDiscoveryAsync()
     {
+        // Discovery 시작 시간 초기화
+        _discoveryStartTime = DateTime.Now;
+        
         btnStop.IsEnabled = true;
         btnOk.IsEnabled = false;
         btnCancel.IsEnabled = true;
@@ -195,12 +199,14 @@ public partial class DiscoveryProgressDialog : Window
                 AddLog("");
                 AddLog($"=== Discovery Complete ===");
                 AddLog($"Total devices found: {DiscoveredDevices.Count}");
+                TrimLogTrailingNewline(); // 마지막 개행만 제거 (로그 메시지 사이의 개행은 유지)
                 txtStatus.Text = "Discovery completed";
             }
             else
             {
                 AddLog("");
                 AddLog("=== Discovery Stopped ===");
+                TrimLogTrailingNewline(); // 마지막 개행만 제거 (로그 메시지 사이의 개행은 유지)
                 txtStatus.Text = "Discovery stopped by user";
             }
         }
@@ -473,7 +479,8 @@ public partial class DiscoveryProgressDialog : Window
                         IsSnmpSupported = true,  // SNMP 지원 기기
                         Maker = maker,
                         DeviceName = sysName ?? "",
-                        SubnetName = subnetName
+                        SubnetName = subnetName,
+                        SysObjectId = sysObjectId ?? ""
                     };
                     
                     DiscoveredDevices.Add(device);
@@ -535,17 +542,34 @@ public partial class DiscoveryProgressDialog : Window
         }
     }
 
+    private DateTime _discoveryStartTime = DateTime.MinValue;
+
     private void AddLog(string message)
     {
         Dispatcher.Invoke(() =>
         {
-            var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            // 경과 시간 계산 (초 단위, 소수점 1자리)
+            var elapsed = (DateTime.Now - _discoveryStartTime).TotalSeconds;
+            var timestamp = elapsed.ToString("00.0");
+            
             txtLog.Text += $"[{timestamp}] {message}\n";
             
             // 스크롤을 맨 아래로
             if (txtLog.Parent is ScrollViewer scrollViewer)
             {
                 scrollViewer.ScrollToEnd();
+            }
+        });
+    }
+    
+    private void TrimLogTrailingNewline()
+    {
+        Dispatcher.Invoke(() =>
+        {
+            // 텍스트 끝의 마지막 개행 문자만 제거 (로그 메시지 사이의 개행은 유지)
+            if (!string.IsNullOrEmpty(txtLog.Text) && txtLog.Text.EndsWith("\n"))
+            {
+                txtLog.Text = txtLog.Text.Substring(0, txtLog.Text.Length - 1);
             }
         });
     }
@@ -663,8 +687,8 @@ public partial class DiscoveryProgressDialog : Window
             if (sysObjectId.StartsWith("1.3.6.1.4.1.311.")) return "Microsoft";
             if (sysObjectId.StartsWith("1.3.6.1.4.1.8072.")) return "Net-SNMP";
             if (sysObjectId.StartsWith("1.3.6.1.4.1.2011.")) return "Huawei";
-            if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.36")) return "NTT (MVE5000)";
-            if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.35")) return "NTT (MVD5000)";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.36")) return "NTT";
+            if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.35")) return "NTT";
             if (sysObjectId.StartsWith("1.3.6.1.4.1.3930.")) return "NTT";
             if (sysObjectId.StartsWith("1.3.6.1.4.1.171.")) return "D-Link";
             if (sysObjectId.StartsWith("1.3.6.1.4.1.5624.")) return "HP";
@@ -722,8 +746,8 @@ public partial class DiscoveryProgressDialog : Window
             selectedMaker = maker;
         }
         
-        // "None"이면 아무것도 하지 않음
-        if (selectedMaker == null || selectedMaker == "None" || selectedMaker == "")
+        // "Maker"이면 아무것도 하지 않음 (기본값)
+        if (selectedMaker == null || selectedMaker == "Maker" || selectedMaker == "")
         {
             return;
         }
@@ -740,12 +764,12 @@ public partial class DiscoveryProgressDialog : Window
             device.IsSelected = !allSelected;
         }
         
-        // 선택을 "None"으로 리셋
+        // 선택을 "Maker"로 리셋
         Dispatcher.Invoke(() =>
         {
             if (cmbMakerFilter.Items.Count > 0)
             {
-                cmbMakerFilter.SelectedIndex = 0; // "None" 선택
+                cmbMakerFilter.SelectedIndex = 0; // "Maker" 선택
             }
         });
     }
@@ -764,8 +788,8 @@ public partial class DiscoveryProgressDialog : Window
             selectedDevice = device;
         }
         
-        // "None"이면 아무것도 하지 않음
-        if (selectedDevice == null || selectedDevice == "None" || selectedDevice == "")
+        // "Device"이면 아무것도 하지 않음 (기본값)
+        if (selectedDevice == null || selectedDevice == "Device" || selectedDevice == "")
         {
             return;
         }
@@ -782,12 +806,12 @@ public partial class DiscoveryProgressDialog : Window
             device.IsSelected = !allSelected;
         }
         
-        // 선택을 "None"으로 리셋
+        // 선택을 "Device"로 리셋
         Dispatcher.Invoke(() =>
         {
             if (cmbDeviceFilter.Items.Count > 0)
             {
-                cmbDeviceFilter.SelectedIndex = 0; // "None" 선택
+                cmbDeviceFilter.SelectedIndex = 0; // "Device" 선택
             }
         });
     }
@@ -800,13 +824,13 @@ public partial class DiscoveryProgressDialog : Window
         var currentMaker = cmbMakerFilter.SelectedItem;
         var currentMakerValue = currentMaker is ComboBoxItem cbi ? cbi.Content?.ToString() : currentMaker?.ToString();
         cmbMakerFilter.Items.Clear();
-        cmbMakerFilter.Items.Add(new ComboBoxItem { Content = "None", IsSelected = true });
+        cmbMakerFilter.Items.Add(new ComboBoxItem { Content = "Maker", IsSelected = true });
         foreach (var maker in AvailableMakers.OrderBy(m => m))
         {
             cmbMakerFilter.Items.Add(maker);
         }
-        // 현재 선택값 유지 또는 "None" 선택
-        if (currentMakerValue != null && currentMakerValue != "None")
+        // 현재 선택값 유지 또는 "Maker" 선택
+        if (currentMakerValue != null && currentMakerValue != "Maker" && currentMakerValue != "None")
         {
             var itemToSelect = cmbMakerFilter.Items.Cast<object>().FirstOrDefault(item =>
                 (item is ComboBoxItem itemCbi && itemCbi.Content?.ToString() == currentMakerValue) ||
@@ -817,25 +841,25 @@ public partial class DiscoveryProgressDialog : Window
             }
             else
             {
-                cmbMakerFilter.SelectedIndex = 0; // "None" 선택
+                cmbMakerFilter.SelectedIndex = 0; // "Maker" 선택
             }
         }
         else if (cmbMakerFilter.Items.Count > 0)
         {
-            cmbMakerFilter.SelectedIndex = 0; // "None" 선택
+            cmbMakerFilter.SelectedIndex = 0; // "Maker" 선택
         }
         
         // 디바이스 드롭다운 업데이트
         var currentDevice = cmbDeviceFilter.SelectedItem;
         var currentDeviceValue = currentDevice is ComboBoxItem cdi ? cdi.Content?.ToString() : currentDevice?.ToString();
         cmbDeviceFilter.Items.Clear();
-        cmbDeviceFilter.Items.Add(new ComboBoxItem { Content = "None", IsSelected = true });
+        cmbDeviceFilter.Items.Add(new ComboBoxItem { Content = "Device", IsSelected = true });
         foreach (var device in AvailableDevices.OrderBy(d => d))
         {
             cmbDeviceFilter.Items.Add(device);
         }
-        // 현재 선택값 유지 또는 "None" 선택
-        if (currentDeviceValue != null && currentDeviceValue != "None")
+        // 현재 선택값 유지 또는 "Device" 선택
+        if (currentDeviceValue != null && currentDeviceValue != "Device" && currentDeviceValue != "None")
         {
             var itemToSelect = cmbDeviceFilter.Items.Cast<object>().FirstOrDefault(item =>
                 (item is ComboBoxItem itemCdi && itemCdi.Content?.ToString() == currentDeviceValue) ||
@@ -846,12 +870,12 @@ public partial class DiscoveryProgressDialog : Window
             }
             else
             {
-                cmbDeviceFilter.SelectedIndex = 0; // "None" 선택
+                cmbDeviceFilter.SelectedIndex = 0; // "Device" 선택
             }
         }
         else if (cmbDeviceFilter.Items.Count > 0)
         {
-            cmbDeviceFilter.SelectedIndex = 0; // "None" 선택
+            cmbDeviceFilter.SelectedIndex = 0; // "Device" 선택
         }
     }
 

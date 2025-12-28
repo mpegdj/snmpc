@@ -674,6 +674,20 @@ public partial class MainWindow : Window
                 }
             }
 
+            // Walk는 스칼라 OID에 대해 하위 트리를 순회하므로, 인스턴스 OID(.0)는 제거
+            // 예: 1.3.6.1.2.1.1.1.0 -> 1.3.6.1.2.1.1.1 (스칼라 OID로 변환)
+            // (75aa832: nel child disappear 에서 사용하던 규칙을 포팅)
+            if (!string.IsNullOrEmpty(oid) && oid.EndsWith(".0"))
+            {
+                var scalarOid = oid.Substring(0, oid.Length - 2);
+                // 스칼라 OID인지 확인 (MIB 서비스에서 이름을 찾을 수 있으면 스칼라 OID)
+                var testName = _mibService.GetOidName(scalarOid);
+                if (testName != scalarOid)
+                {
+                    oid = scalarOid;
+                }
+            }
+
             // 취소 토큰 체크
             token.ThrowIfCancellationRequested();
 
@@ -1549,10 +1563,26 @@ public partial class MainWindow : Window
             // SNMP Test 탭의 OID 필드에 자동으로 채워주기
             if (txtOid != null && !string.IsNullOrEmpty(node.Oid))
             {
-                // OID 또는 이름 중 선택 (이름이 있으면 이름 우선, 없으면 OID)
-                txtOid.Text = !string.IsNullOrEmpty(node.Name) && node.Name != node.Oid 
-                    ? node.Name 
-                    : node.Oid;
+                // OID 또는 이름 중 선택 (이름이 유효한 OID면 이름 우선, 아니면 OID 사용)
+                // + 스칼라 OID면 .0을 붙여 인스턴스 OID로 제공 (GET/GET-NEXT UX 일관성)
+                // (75aa832: nel child disappear 에서 사용하던 규칙을 포팅)
+                bool isNameValidOid =
+                    !string.IsNullOrEmpty(node.Name) &&
+                    node.Name != node.Oid &&
+                    System.Text.RegularExpressions.Regex.IsMatch(node.Name, @"^\d+(\.\d+)+$");
+
+                var oidToUse = isNameValidOid ? node.Name : node.Oid;
+
+                if (!oidToUse.EndsWith(".0"))
+                {
+                    var testName = _mibService.GetOidName(oidToUse);
+                    if (testName != oidToUse && !testName.EndsWith(".0"))
+                    {
+                        oidToUse = oidToUse + ".0";
+                    }
+                }
+
+                txtOid.Text = oidToUse;
             }
         }
     }

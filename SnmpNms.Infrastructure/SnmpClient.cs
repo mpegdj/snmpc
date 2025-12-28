@@ -106,17 +106,35 @@ public class SnmpClient : ISnmpClient
 
                 var result = new List<Variable>();
                 
-                // WalkMode.Default: 지정된 OID부터 시작하여 모든 하위 OID를 순회
+                // WalkMode.WithinSubtree: 지정된 OID의 하위 트리만 순회 (같은 레벨의 다음 OID로 넘어가지 않음)
+                // - 1.3.6.1.2.1.1에서 시작하면 1.3.6.1.2.1.1.x만 가져옴 (1.3.6.1.2.1.2로 넘어가지 않음)
                 // - 하위 OID가 있으면: 하위로 내려가서 모든 하위 OID를 가져옴
-                // - 하위 OID가 없으면: 현재 OID만 가져옴 (리프 노드)
-                // WalkMode.WithinSubtree는 자기 자신을 제외하고 하위만 가져오므로, Default 사용
+                // - 하위 OID가 없으면: 빈 결과 반환 (리프 노드)
                 // 
                 // 주의: Messenger.Walk는 동기 메서드이고 CancellationToken을 직접 지원하지 않음
                 // 취소는 Walk 완료 후 체크하거나, 별도 스레드에서 실행하여 취소 처리
-                Messenger.Walk(version, endpoint, community, rootParams, result, target.Timeout, WalkMode.Default);
+                Messenger.Walk(version, endpoint, community, rootParams, result, target.Timeout, WalkMode.WithinSubtree);
                 
                 // Walk 완료 후 취소 체크
                 cancellationToken.ThrowIfCancellationRequested();
+                
+                // WithinSubtree 모드에서는 하위가 없는 경우 빈 결과가 반환될 수 있음
+                // 이 경우 현재 OID를 직접 조회하여 스칼라 값 가져오기
+                if (result.Count == 0)
+                {
+                    try
+                    {
+                        var getResult = Messenger.Get(version, endpoint, community, new[] { new Variable(rootParams) }, target.Timeout);
+                        if (getResult != null && getResult.Count > 0)
+                        {
+                            result.AddRange(getResult);
+                        }
+                    }
+                    catch
+                    {
+                        // Get 실패 시 무시 (하위가 없는 노드일 수 있음)
+                    }
+                }
                 
                 stopwatch.Stop();
 
