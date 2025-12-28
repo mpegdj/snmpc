@@ -4,17 +4,19 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using SnmpNms.UI.Converters;
 using SnmpNms.UI.Models;
 using SnmpNms.UI.ViewModels;
+using SnmpNms.UI.Views.Dialogs;
 
 namespace SnmpNms.UI.Views.MapView;
 
 public partial class MapViewControl : UserControl
 {
     private bool _initialized;
-    private readonly DeviceStatusToBackgroundConverter _statusBgConverter = new();
+    private readonly DeviceStatusToLightBackgroundConverter _statusBgConverter = new();
     private readonly Dictionary<MapNode, Border> _siteBoxes = new();
     
     // 설정
@@ -29,6 +31,13 @@ public partial class MapViewControl : UserControl
     private Point _dragStart;
     private double _dragStartLeft;
     private double _dragStartTop;
+    
+    // 배치 모드 (Add 버튼 클릭 후 캔버스 클릭 대기)
+    private MapObjectType? _pendingAddType;
+    
+    // 외부 서비스 (MainWindow에서 주입)
+    public ISnmpClient? SnmpClient { get; set; }
+    public ITrapListener? TrapListener { get; set; }
 
     public MapViewControl()
     {
@@ -232,29 +241,26 @@ public partial class MapViewControl : UserControl
         var box = new Border
         {
             MinWidth = 150,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x50, 0x50, 0x50)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4),
             Tag = subnet,
-            Cursor = Cursors.Hand
+            Cursor = Cursors.Hand,
+            Background = Brushes.White
         };
 
         var mainStack = new StackPanel();
         box.Child = mainStack;
 
-        // 헤더 (Site 이름 + 톱니바퀴)
+        // 헤더 (Site 이름 + 톱니바퀴) - 하얀색 테마
         var header = new Border
         {
             Padding = new Thickness(8, 6, 8, 6),
-            CornerRadius = new CornerRadius(4, 4, 0, 0)
+            CornerRadius = new CornerRadius(4, 4, 0, 0),
+            Background = new SolidColorBrush(Color.FromRgb(0xF5, 0xF5, 0xF5)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)),
+            BorderThickness = new Thickness(0, 0, 0, 1)
         };
-        
-        // 헤더 배경색 바인딩 (Site 집계 상태)
-        header.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(MapNode.EffectiveStatus))
-        {
-            Source = subnet,
-            Converter = _statusBgConverter
-        });
 
         var headerPanel = new DockPanel { LastChildFill = true };
         
@@ -266,7 +272,7 @@ public partial class MapViewControl : UserControl
             Padding = new Thickness(4, 0, 4, 0),
             Background = Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Foreground = Brushes.White,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x60, 0x60, 0x60)),
             Cursor = Cursors.Hand,
             ToolTip = "Site Config"
         };
@@ -278,7 +284,7 @@ public partial class MapViewControl : UserControl
         var nameText = new TextBlock
         {
             FontWeight = FontWeights.SemiBold,
-            Foreground = Brushes.White,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)),
             VerticalAlignment = VerticalAlignment.Center
         };
         nameText.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(MapNode.Name))
@@ -290,10 +296,10 @@ public partial class MapViewControl : UserControl
         header.Child = headerPanel;
         mainStack.Children.Add(header);
 
-        // 장비 목록
+        // 장비 목록 - 하얀색 배경
         var deviceList = new ItemsControl
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x25, 0x25, 0x25)),
+            Background = Brushes.White,
             Padding = new Thickness(0)
         };
         deviceList.SetBinding(ItemsControl.ItemsSourceProperty, new System.Windows.Data.Binding(nameof(MapNode.Children))
@@ -301,10 +307,46 @@ public partial class MapViewControl : UserControl
             Source = subnet
         });
 
-        // 장비 행 템플릿
+        // 장비 행 템플릿 (폴링 시 상태 색상 표시)
         deviceList.ItemTemplate = CreateDeviceRowTemplate();
         
         mainStack.Children.Add(deviceList);
+
+        // + 행 (Device 추가 버튼) - 하얀색 테마
+        var addDeviceRow = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xFA)),
+            Padding = new Thickness(8, 3, 8, 3),
+            Cursor = Cursors.Hand,
+            CornerRadius = new CornerRadius(0, 0, 4, 4),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)),
+            BorderThickness = new Thickness(0, 1, 0, 0)
+        };
+        var addDeviceText = new TextBlock
+        {
+            Text = "+",
+            Foreground = new SolidColorBrush(Color.FromRgb(0x99, 0x99, 0x99)),
+            FontSize = 12,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            ToolTip = "Add Device"
+        };
+        addDeviceRow.Child = addDeviceText;
+        addDeviceRow.MouseEnter += (_, _) =>
+        {
+            addDeviceRow.Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xE8, 0xE8));
+            addDeviceText.Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+        };
+        addDeviceRow.MouseLeave += (_, _) =>
+        {
+            addDeviceRow.Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFA, 0xFA));
+            addDeviceText.Foreground = new SolidColorBrush(Color.FromRgb(0x99, 0x99, 0x99));
+        };
+        addDeviceRow.MouseLeftButtonDown += (_, args) =>
+        {
+            args.Handled = true;
+            OnAddDeviceToSubnet(subnet);
+        };
+        mainStack.Children.Add(addDeviceRow);
 
         // 드래그 이벤트
         header.MouseLeftButtonDown += (_, args) =>
@@ -372,17 +414,17 @@ public partial class MapViewControl : UserControl
         
         var borderFactory = new FrameworkElementFactory(typeof(Border));
         borderFactory.SetValue(Border.PaddingProperty, new Thickness(8, 4, 8, 4));
-        borderFactory.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(0x3C, 0x3C, 0x3C)));
+        borderFactory.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)));
         borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(0, 0, 0, 1));
         
-        // 배경색 바인딩 (장비 상태)
+        // 배경색 바인딩 (장비 상태) - 폴링 시작 전에는 투명, 시작 후에는 상태 색상
         borderFactory.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(MapNode.EffectiveStatus))
         {
             Converter = _statusBgConverter
         });
 
         var textFactory = new FrameworkElementFactory(typeof(TextBlock));
-        textFactory.SetValue(TextBlock.ForegroundProperty, Brushes.White);
+        textFactory.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)));
         textFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
         textFactory.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(MapNode.DisplayName)));
         
@@ -399,10 +441,60 @@ public partial class MapViewControl : UserControl
             "Site Config", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    private void OnAddDeviceToSubnet(MapNode subnet)
+    {
+        var vm = TryGetVm();
+        if (vm == null) return;
+
+        // MapObjectPropertiesDialog로 Device 추가
+        var dialog = new MapObjectPropertiesDialog(MapObjectType.Device, SnmpClient, TrapListener)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var result = dialog.Result;
+            var target = new UiSnmpTarget
+            {
+                IpAddress = result.IpOrHost,
+                Port = result.Port,
+                Alias = result.Alias,
+                Device = result.Device,
+                Community = result.ReadCommunity,
+                Version = result.SnmpVersion,
+                Timeout = result.TimeoutMs,
+                Retries = result.Retries,
+                PollingProtocol = result.PollingProtocol
+            };
+            vm.AddDeviceToSubnet(target, subnet);
+            vm.AddSystemInfo($"[Map] Device added: {target.DisplayName} to {subnet.Name}");
+        }
+    }
+
     #endregion
 
     private void MapCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        // 배치 모드인 경우 클릭 위치에 객체 추가
+        if (_pendingAddType.HasValue && (e.OriginalSource == MapCanvas || e.OriginalSource == GridCanvas))
+        {
+            var clickPos = e.GetPosition(MapCanvas);
+            
+            // Snap to Grid
+            if (SnapToGridCheck?.IsChecked == true)
+            {
+                clickPos = new Point(SnapToGrid(clickPos.X), SnapToGrid(clickPos.Y));
+            }
+            
+            AddObjectAtPosition(_pendingAddType.Value, clickPos);
+            
+            // 배치 모드 해제
+            ExitPlacementMode();
+            e.Handled = true;
+            return;
+        }
+        
         // 빈 공간 클릭 시 선택 해제
         if (e.OriginalSource == MapCanvas || e.OriginalSource == GridCanvas)
         {
@@ -412,4 +504,54 @@ public partial class MapViewControl : UserControl
             }
         }
     }
+    
+    private void Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        RebuildSiteBoxes();
+    }
+
+    #region Add Site Table (배치 모드)
+
+    private void AddSiteTable_Click(object sender, RoutedEventArgs e)
+    {
+        EnterPlacementMode(MapObjectType.Subnet);
+    }
+
+    private void EnterPlacementMode(MapObjectType type)
+    {
+        _pendingAddType = type;
+        
+        // 커서 변경으로 배치 모드 표시
+        MapCanvas.Cursor = Cursors.Cross;
+        
+        // 버튼 하이라이트
+        if (btnAddSiteTable != null)
+            btnAddSiteTable.Background = new SolidColorBrush(Color.FromRgb(0x0E, 0x63, 0x9C));
+    }
+
+    private void ExitPlacementMode()
+    {
+        _pendingAddType = null;
+        MapCanvas.Cursor = Cursors.Arrow;
+        
+        // 버튼 하이라이트 해제
+        if (btnAddSiteTable != null)
+            btnAddSiteTable.Background = Brushes.Transparent;
+    }
+
+    private void AddObjectAtPosition(MapObjectType objectType, Point position)
+    {
+        var vm = TryGetVm();
+        if (vm == null) return;
+
+        // 다이얼로그 없이 바로 빈 Site Table 생성
+        var siteCount = vm.RootSubnet.Children.Count(c => c.NodeType == MapNodeType.Subnet);
+        var subnetName = $"Site {siteCount + 1}";
+        var subnetNode = vm.AddSubnet(subnetName, vm.RootSubnet);
+        subnetNode.X = position.X;
+        subnetNode.Y = position.Y;
+        vm.AddSystemInfo($"[Map] Site Table added: {subnetName} at ({position.X:F0}, {position.Y:F0})");
+    }
+
+    #endregion
 }

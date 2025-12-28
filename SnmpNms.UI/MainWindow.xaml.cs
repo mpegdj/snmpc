@@ -114,6 +114,10 @@ public partial class MainWindow : Window
 
         // Sidebar (Activity Bar 포함) 이벤트 연결
         sidebar.ViewChanged += ActivityBar_ViewChanged;
+        
+        // MapViewControl에 서비스 주입
+        mapViewControl.SnmpClient = _snmpClient;
+        mapViewControl.TrapListener = _trapListener;
     }
 
     private void InitializeTrapListener()

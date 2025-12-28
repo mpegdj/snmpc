@@ -8,6 +8,30 @@
     <UserControl.Resources>
         <conv:DeviceStatusToBackgroundConverter x:Key="StatusBgConverter"/>
         <conv:DeviceStatusToBrushConverter x:Key="StatusBrushConverter"/>
+        
+        <!-- VSCode 스타일 아이콘 버튼 -->
+        <Style x:Key="MapIconButton" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3C3C3C"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="MapIconGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{StaticResource VSCodeForeground}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
     </UserControl.Resources>
     
     <Grid>
@@ -16,23 +40,52 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 툴바 -->
-        <ToolBarTray Grid.Row="0" Background="{StaticResource VSCodeSidebarBackground}">
-            <ToolBar Background="Transparent" Band="0" BandIndex="0">
-                <Button Content="+" Click="ZoomIn_Click" Padding="8,2" ToolTip="Zoom In"/>
-                <Button Content="-" Click="ZoomOut_Click" Padding="8,2" ToolTip="Zoom Out"/>
-                <TextBlock Name="ZoomLevelText" Text="100%" VerticalAlignment="Center" Margin="8,0" 
-                           Foreground="{StaticResource VSCodeForeground}"/>
-                <Separator/>
-                <CheckBox Name="ShowGridCheck" Content="Grid" IsChecked="True" 
-                          Checked="ShowGrid_Changed" Unchecked="ShowGrid_Changed"
-                          VerticalAlignment="Center" Foreground="{StaticResource VSCodeForeground}"/>
-                <CheckBox Name="SnapToGridCheck" Content="Snap" IsChecked="True" 
-                          VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource VSCodeForeground}"/>
-                <Separator/>
-                <Button Content="Auto Arrange" Click="AutoArrange_Click" Padding="8,2"/>
-            </ToolBar>
-        </ToolBarTray>
+        <!-- VSCode 스타일 헤더 (모든 버튼 포함) -->
+        <Border Grid.Row="0" Background="{StaticResource VSCodeSidebarBackground}" 
+                BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1">
+            <DockPanel Height="28">
+                <!-- 우측 아이콘 버튼들 -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="4,0">
+                    <!-- Add Site Table -->
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Add Site Table (click on canvas)" 
+                            Click="AddSiteTable_Click" Name="btnAddSiteTable">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE710;"/>
+                    </Button>
+                    <Rectangle Width="1" Fill="{StaticResource VSCodeDivider}" Margin="4,4"/>
+                    <!-- Zoom -->
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Zoom In" Click="ZoomIn_Click">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE8A3;"/>
+                    </Button>
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Zoom Out" Click="ZoomOut_Click">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE71F;"/>
+                    </Button>
+                    <TextBlock Name="ZoomLevelText" Text="100%" VerticalAlignment="Center" Margin="4,0" 
+                               Foreground="{StaticResource VSCodeForeground}" FontSize="11"/>
+                    <Rectangle Width="1" Fill="{StaticResource VSCodeDivider}" Margin="4,4"/>
+                    <!-- Grid/Snap -->
+                    <CheckBox Name="ShowGridCheck" Content="Grid" IsChecked="True" 
+                              Checked="ShowGrid_Changed" Unchecked="ShowGrid_Changed"
+                              VerticalAlignment="Center" Foreground="{StaticResource VSCodeForeground}" FontSize="11"/>
+                    <CheckBox Name="SnapToGridCheck" Content="Snap" IsChecked="True" 
+                              VerticalAlignment="Center" Margin="6,0,0,0" Foreground="{StaticResource VSCodeForeground}" FontSize="11"/>
+                    <Rectangle Width="1" Fill="{StaticResource VSCodeDivider}" Margin="4,4"/>
+                    <!-- Auto Arrange -->
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Auto Arrange" Click="AutoArrange_Click">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE8CB;"/>
+                    </Button>
+                    <!-- Refresh -->
+                    <Button Style="{StaticResource MapIconButton}" ToolTip="Refresh" Click="Refresh_Click">
+                        <TextBlock Style="{StaticResource MapIconGlyph}" Text="&#xE72C;"/>
+                    </Button>
+                </StackPanel>
+                
+                <!-- 타이틀 -->
+                <TextBlock Text="MAP VIEW" 
+                           Foreground="{StaticResource VSCodeForeground}"
+                           FontSize="11" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </DockPanel>
+        </Border>
 
         <!-- 메인 캔버스 영역 -->
         <Border Grid.Row="1" Margin="4" BorderBrush="{StaticResource VSCodeDivider}" 
