@@ -41,33 +41,91 @@
             <conv:DeviceStatusToBrushConverter x:Key="DeviceStatusToBrushConverter"/>
         </DockPanel.Resources>
 
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File">
-                <MenuItem Header="_New" Click="MenuFileNew_Click" InputGestureText="Ctrl+N"/>
-                <MenuItem Header="_Open..." Click="MenuFileOpen_Click" InputGestureText="Ctrl+O"/>
-                <Separator/>
-                <MenuItem Header="_Save" Click="MenuFileSave_Click" InputGestureText="Ctrl+S"/>
-                <MenuItem Header="Save _As..." Click="MenuFileSaveAs_Click"/>
-                <Separator/>
-                <MenuItem Header="E_xit" Click="MenuExit_Click"/>
-            </MenuItem>
-            <MenuItem Header="_View">
-                <MenuItem Header="Refresh" Click="MenuRefresh_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Window">
-                <MenuItem Header="Cascade" Click="MenuWindowsCascade_Click"/>
-                <MenuItem Header="Tile (Todo)" IsEnabled="False"/>
-            </MenuItem>
-            <MenuItem Header="_Config">
-                <MenuItem Header="MIB Database..." Click="MenuConfigMibDatabase_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Tools">
-                <MenuItem Header="SNMP Test" Click="MenuSnmpTest_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Help">
-                <MenuItem Header="About" Click="MenuAbout_Click"/>
-            </MenuItem>
-        </Menu>
+        <Grid DockPanel.Dock="Top" Background="#F3F3F3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/> <!-- Menu -->
+                <ColumnDefinition Width="*"/>    <!-- Status (Centered) -->
+                <ColumnDefinition Width="Auto"/> <!-- Right padding/Help -->
+            </Grid.ColumnDefinitions>
+
+            <Menu Grid.Column="0" Background="Transparent" BorderThickness="0">
+                <MenuItem Header="_File">
+                    <MenuItem Header="_New" Click="MenuFileNew_Click" InputGestureText="Ctrl+N"/>
+                    <MenuItem Header="_Open..." Click="MenuFileOpen_Click" InputGestureText="Ctrl+O"/>
+                    <Separator/>
+                    <MenuItem Header="_Save" Click="MenuFileSave_Click" InputGestureText="Ctrl+S"/>
+                    <MenuItem Header="Save _As..." Click="MenuFileSaveAs_Click"/>
+                    <Separator/>
+                    <MenuItem Header="E_xit" Click="MenuExit_Click"/>
+                </MenuItem>
+                <MenuItem Header="_View">
+                    <MenuItem Header="Refresh" Click="MenuRefresh_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Window">
+                    <MenuItem Header="Cascade" Click="MenuWindowsCascade_Click"/>
+                    <MenuItem Header="Tile (Todo)" IsEnabled="False"/>
+                </MenuItem>
+                <MenuItem Header="_Config">
+                    <MenuItem Header="MIB Database..." Click="MenuConfigMibDatabase_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Tools">
+                    <MenuItem Header="SNMP Test" Click="MenuSnmpTest_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Help">
+                    <MenuItem Header="About" Click="MenuAbout_Click"/>
+                </MenuItem>
+            </Menu>
+
+            <!-- Global Status Dashboard (Centralized in the menu bar) -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,10,0">
+                <TextBlock Text="Status:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,8,0" FontSize="11" Foreground="#444444"/>
+                <TextBlock Text="{Binding IsPollingRunning, Converter={StaticResource PollingStatusConverter}}" 
+                           VerticalAlignment="Center" Margin="0,0,12,0" FontSize="11" Foreground="#444444"/>
+                <TextBlock Text="{Binding IsTrapListening, Converter={StaticResource TrapStatusConverter}}" 
+                           VerticalAlignment="Center" Margin="0,0,12,0" FontSize="11" Foreground="#444444"/>
+                <TextBlock Text="Polling ALL" 
+                           FontStyle="Italic" VerticalAlignment="Center" Margin="0,0,15,0" FontSize="11" Foreground="#666666"/>
+
+                <Separator Margin="0,6,15,6" Background="#CFCFCF" Width="1"/>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,10,0" ToolTip="Polling Status">
+                        <Ellipse Width="8" Height="8" Fill="{Binding IsPollingRunning, Converter={StaticResource BoolToBrushConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="Poll" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,10,0" ToolTip="Trap Received">
+                        <Ellipse Width="8" Height="8" Fill="{Binding TrapPulse, Converter={StaticResource TrapPulseConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="Trap" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" ToolTip="Port 161 (TX/RX)">
+                        <Ellipse Width="8" Height="8" Fill="{Binding Port161TxPulse, Converter={StaticResource PortPulseConverter}}" Margin="0,0,2,0"/>
+                        <Ellipse Width="8" Height="8" Fill="{Binding Port161RxPulse, Converter={StaticResource PortPulseConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="161" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,0" ToolTip="Port 162 (TX/RX)">
+                        <Ellipse Width="8" Height="8" Fill="{Binding Port162TxPulse, Converter={StaticResource PortPulseConverter}}" Margin="0,0,2,0"/>
+                        <Ellipse Width="8" Height="8" Fill="{Binding Port162RxPulse, Converter={StaticResource PortPulseConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="162" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,10,0" ToolTip="Error Level">
+                        <Ellipse Width="8" Height="8" Fill="{Binding ErrorPulse, Converter={StaticResource ErrorPulseConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="Error" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,10,0" ToolTip="Notice Level">
+                        <Ellipse Width="8" Height="8" Fill="{Binding NoticePulse, Converter={StaticResource NoticePulseConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="Notice" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" ToolTip="Warning Level">
+                        <Ellipse Width="8" Height="8" Fill="{Binding WarningPulse, Converter={StaticResource WarningPulseConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="Warn" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="10,0,0,0" ToolTip="Info Level">
+                        <Ellipse Width="8" Height="8" Fill="{Binding InfoPulse, Converter={StaticResource InfoPulseConverter}}" Margin="0,0,4,0"/>
+                        <TextBlock Text="Info" FontSize="11" VerticalAlignment="Center" Foreground="#444444"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
 
         <ToolBarTray DockPanel.Dock="Top">
             <ToolBar>

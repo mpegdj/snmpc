@@ -14,58 +14,30 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Status Bar -->
-        <Border Grid.Row="0" Background="#F7F7F7" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1" Padding="8,6">
+        <!-- Tool Bar Header (Only Filter Info and Tool Buttons) -->
+        <Border Grid.Row="0" Background="#F7F7F7" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1" Padding="8,4">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="Status:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,8,0"/>
+                <!-- Hidden Spinner to satisfy code-behind reference -->
+                <TextBlock x:Name="spinnerIcon" Visibility="Collapsed">
+                    <TextBlock.RenderTransform>
+                        <RotateTransform/>
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+
+                <!-- 필터링 정보 (왼쪽) -->
+                <TextBlock Grid.Column="0" Text="{Binding FilterInfo}"
+                          VerticalAlignment="Center"
+                          Foreground="{StaticResource VSCodeForeground}"
+                          FontStyle="Italic"
+                          Margin="5,0"/>
                 
-                <!-- Polling 및 Trap 상태 및 필터링 정보 표시 -->
+                <!-- 도구 버튼 (오른쪽) -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- 회전하는 아이콘 (Polling 중일 때만 표시) -->
-                    <TextBlock x:Name="spinnerIcon" 
-                              Text="&#xE76C;" 
-                              FontFamily="Segoe MDL2 Assets"
-                              FontSize="14"
-                              Foreground="{StaticResource VSCodeForeground}"
-                              VerticalAlignment="Center"
-                              Margin="0,0,6,0"
-                              RenderTransformOrigin="0.5,0.5"
-                              Visibility="{Binding Tag.IsPollingRunning, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock.RenderTransform>
-                            <RotateTransform/>
-                        </TextBlock.RenderTransform>
-                    </TextBlock>
-                    
-                    <!-- Polling 상태 텍스트 -->
-                    <TextBlock Text="{Binding Tag.IsPollingRunning, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource PollingStatusConverter}}"
-                              VerticalAlignment="Center"
-                              Foreground="{StaticResource VSCodeForeground}"
-                              Margin="0,0,12,0"/>
-                    
-                    <!-- Trap 상태 텍스트 -->
-                    <TextBlock Text="{Binding Tag.IsTrapListening, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource TrapStatusConverter}}"
-                              VerticalAlignment="Center"
-                              Foreground="{StaticResource VSCodeForeground}"
-                              Margin="0,0,12,0"/>
-                    
-                    <!-- 필터링 정보 -->
-                    <TextBlock Text="{Binding FilterInfo}"
-                              VerticalAlignment="Center"
-                              Foreground="{StaticResource VSCodeForeground}"
-                              FontStyle="Italic"/>
-                </StackPanel>
-                
-                <!-- 필터링 정보 (우측 상단 툴바처럼 사용) -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Separator Margin="8,2" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
-                    
                     <Button x:Name="btnEventClear" Click="BtnEventClear_Click" Width="26" Height="26" Padding="4"
                             ToolTip="Clear all events" Background="Transparent" BorderThickness="0">
                         <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#444444"/>
@@ -113,5 +85,3 @@
         </DataGrid>
     </Grid>
 </UserControl>
-
-

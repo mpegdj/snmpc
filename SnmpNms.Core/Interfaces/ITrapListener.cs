@@ -10,6 +10,7 @@ public interface ITrapListener
     void Stop();
     
     event EventHandler<TrapEvent> OnTrapReceived;
+    event Action<bool> OnPacketReceived;
     
     (string ipAddress, int port) GetListenerInfo();
     

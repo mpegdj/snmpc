@@ -12,6 +12,14 @@ namespace SnmpNms.Infrastructure;
 
 public class SnmpClient : ISnmpClient
 {
+    public event Action? OnRequestSent;
+    public event Action<bool>? OnResponseReceived;
+
+    private void FireRequestSent()
+    {
+        OnRequestSent?.Invoke();
+    }
+
     public async Task<SnmpResult> GetAsync(ISnmpTarget target, string oid)
     {
         return await GetAsync(target, new[] { oid });
@@ -21,6 +29,7 @@ public class SnmpClient : ISnmpClient
     {
         return await Task.Run(() =>
         {
+            FireRequestSent();
             try
             {
                 var endpoint = new IPEndPoint(IPAddress.Parse(target.IpAddress), target.Port);
@@ -35,10 +44,12 @@ public class SnmpClient : ISnmpClient
                 stopwatch.Stop();
 
                 var snmpVariables = result.Select(MapVariable).ToList();
+                OnResponseReceived?.Invoke(true);
                 return SnmpResult.Success(snmpVariables, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
+                OnResponseReceived?.Invoke(false);
                 return SnmpResult.Fail(ex.Message);
             }
         });
@@ -48,6 +59,7 @@ public class SnmpClient : ISnmpClient
     {
          return await Task.Run(() =>
         {
+            FireRequestSent();
             try
             {
                 var endpoint = new IPEndPoint(IPAddress.Parse(target.IpAddress), target.Port);
@@ -79,10 +91,12 @@ public class SnmpClient : ISnmpClient
                 stopwatch.Stop();
 
                 var snmpVariables = response.Pdu().Variables.Select(MapVariable).ToList();
+                OnResponseReceived?.Invoke(true);
                 return SnmpResult.Success(snmpVariables, stopwatch.ElapsedMilliseconds);
             }
             catch (Exception ex)
             {
+                OnResponseReceived?.Invoke(false);
                 return SnmpResult.Fail(ex.Message);
             }
         });
@@ -92,6 +106,7 @@ public class SnmpClient : ISnmpClient
     {
         return await Task.Run(() =>
         {
+            FireRequestSent();
             try
             {
                 // 취소 토큰 체크
@@ -178,6 +193,7 @@ public class SnmpClient : ISnmpClient
     {
         return await Task.Run(() =>
         {
+            FireRequestSent();
             try
             {
                 var endpoint = new IPEndPoint(IPAddress.Parse(target.IpAddress), target.Port);

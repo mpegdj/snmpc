@@ -20,6 +20,7 @@ public class TrapListener : ITrapListener
     public bool IsListening => _udpClient != null && _listeningTask != null && !_listeningTask.IsCompleted;
 
     public event EventHandler<TrapEvent>? OnTrapReceived;
+    public event Action<bool>? OnPacketReceived;
 
     public void Start(int port = 162)
     {
@@ -144,6 +145,7 @@ public class TrapListener : ITrapListener
             {
                 System.Diagnostics.Debug.WriteLine($"[TrapListener] Waiting for trap on port {_port}...");
                 var result = await _udpClient.ReceiveAsync(cancellationToken);
+                OnPacketReceived?.Invoke(true);
                 System.Diagnostics.Debug.WriteLine($"[TrapListener] Received UDP packet: {result.Buffer.Length} bytes from {result.RemoteEndPoint}");
                 ProcessTrap(result.Buffer, result.RemoteEndPoint);
             }

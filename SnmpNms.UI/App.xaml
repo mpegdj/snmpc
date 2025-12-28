@@ -15,6 +15,13 @@
             <converters:TrapStatusConverter x:Key="TrapStatusConverter"/>
             <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
             <converters:ErrorToBrushConverter x:Key="ErrorToBrushConverter"/>
+            <converters:BoolToBrushConverter x:Key="BoolToBrushConverter" TrueBrush="Lime" FalseBrush="Gray"/>
+            <converters:BoolToBrushConverter x:Key="TrapPulseConverter" TrueBrush="Lime" FalseBrush="Gray"/>
+            <converters:BoolToBrushConverter x:Key="PortPulseConverter" TrueBrush="DeepSkyBlue" FalseBrush="Gray"/>
+            <converters:BoolToBrushConverter x:Key="ErrorPulseConverter" TrueBrush="Red" FalseBrush="Gray"/>
+            <converters:BoolToBrushConverter x:Key="NoticePulseConverter" TrueBrush="Yellow" FalseBrush="Gray"/>
+            <converters:BoolToBrushConverter x:Key="WarningPulseConverter" TrueBrush="Orange" FalseBrush="Gray"/>
+            <converters:BoolToBrushConverter x:Key="InfoPulseConverter" TrueBrush="Cyan" FalseBrush="Gray"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>

@@ -63,6 +63,11 @@ public partial class MainWindow : Window
 
         // Trap 이벤트 연결
         _trapListener.OnTrapReceived += TrapListener_OnTrapReceived;
+        _trapListener.OnPacketReceived += (isValid) => Dispatcher.Invoke(() => _vm.TriggerPort162RxPulse());
+
+        // 소켓 레벨 161 활동 연결
+        _snmpClient.OnRequestSent += () => Dispatcher.Invoke(() => _vm.TriggerPort161TxPulse());
+        _snmpClient.OnResponseReceived += (isSuccess) => Dispatcher.Invoke(() => _vm.TriggerPort161RxPulse(isSuccess));
 
         // 포트 161, 162 체크 및 권한 요청
         CheckPortsOnStartup();
@@ -417,14 +422,30 @@ public partial class MainWindow : Window
         var variablesSummary = e.Variables.Count > 0 ? ": " + mergedValues : "";
 
         // Com에 Trap 수신 로그 기록 (Raw 데이터 위주)
-        if (e.RawData != null && e.RawData.Length > 0)
-        {
-            var rawSummary = string.Join(" / ", e.Variables.Select(v => v.Value?.ToString() ?? "null"));
-            _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}", trapOid, rawSummary);
-        }
-
-        _vm.AddEvent(EventSeverity.Info, e.SourceIpAddress, $"{prefix}{variablesSummary}");
+    if (e.RawData != null && e.RawData.Length > 0)
+    {
+    var rawSummary = string.Join(" / ", e.Variables.Select(v => v.Value?.ToString() ?? "null"));
+        _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}", trapOid, rawSummary);
     }
+
+    // Trap Level(인덱스 2)을 파싱하여 EventSeverity 결정
+    var severity = EventSeverity.Info;
+    if (e.Variables.Count > 2)
+    {
+        var levelValue = e.Variables[2].Value?.ToString() ?? "";
+        var levelName = NttTrapMappers.GetLevelName(levelValue);
+        
+        severity = levelName.ToLower() switch
+        {
+            "error" => EventSeverity.Error,
+            "warning" => EventSeverity.Warning,
+            "notice" => EventSeverity.Notice,
+            _ => EventSeverity.Info
+        };
+    }
+
+    _vm.AddEvent(severity, e.SourceIpAddress, $"{prefix}{variablesSummary}");
+}
 
     private void ActivityBar_ViewChanged(object? sender, ActivityBarView view)
     {
@@ -1308,6 +1329,9 @@ public partial class MainWindow : Window
                 trapObjectId,
                 0,
                 variables);
+
+            // 162 TX 펄스 트리거
+            _vm.TriggerPort162TxPulse();
 
             // 디버그: Trap 전송 완료 확인
             System.Diagnostics.Debug.WriteLine($"[TrapTest] Trap sent successfully to {targetIp}:{port}");

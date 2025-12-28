@@ -10,5 +10,7 @@ public interface ISnmpClient
     Task<SnmpResult> GetNextAsync(ISnmpTarget target, string oid);
     Task<SnmpResult> WalkAsync(ISnmpTarget target, string rootOid, CancellationToken cancellationToken = default);
     Task<SnmpResult> SetAsync(ISnmpTarget target, string oid, string value, string type);
+    event Action OnRequestSent;
+    event Action<bool> OnResponseReceived;
 }
 

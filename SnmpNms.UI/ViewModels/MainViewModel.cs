@@ -103,11 +103,17 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private bool _port161Pulse;
-    public bool Port161Pulse { get => _port161Pulse; set { _port161Pulse = value; OnPropertyChanged(); } }
+    private bool _port161TxPulse;
+    public bool Port161TxPulse { get => _port161TxPulse; set { _port161TxPulse = value; OnPropertyChanged(); } }
 
-    private bool _port162Pulse;
-    public bool Port162Pulse { get => _port162Pulse; set { _port162Pulse = value; OnPropertyChanged(); } }
+    private bool _port161RxPulse;
+    public bool Port161RxPulse { get => _port161RxPulse; set { _port161RxPulse = value; OnPropertyChanged(); } }
+
+    private bool _port162RxPulse;
+    public bool Port162RxPulse { get => _port162RxPulse; set { _port162RxPulse = value; OnPropertyChanged(); } }
+
+    private bool _port162TxPulse;
+    public bool Port162TxPulse { get => _port162TxPulse; set { _port162TxPulse = value; OnPropertyChanged(); } }
 
     private bool _trapPulse;
     public bool TrapPulse { get => _trapPulse; set { _trapPulse = value; OnPropertyChanged(); } }
@@ -115,8 +121,14 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _errorPulse;
     public bool ErrorPulse { get => _errorPulse; set { _errorPulse = value; OnPropertyChanged(); } }
 
+    private bool _noticePulse;
+    public bool NoticePulse { get => _noticePulse; set { _noticePulse = value; OnPropertyChanged(); } }
+
     private bool _warningPulse;
     public bool WarningPulse { get => _warningPulse; set { _warningPulse = value; OnPropertyChanged(); } }
+
+    private bool _infoPulse;
+    public bool InfoPulse { get => _infoPulse; set { _infoPulse = value; OnPropertyChanged(); } }
 
     public MainViewModel()
     {
@@ -157,10 +169,9 @@ public class MainViewModel : INotifyPropertyChanged
 
         // Pulse Triggers
         if (severity == EventSeverity.Error) TriggerErrorPulse();
+        else if (severity == EventSeverity.Notice) TriggerNoticePulse();
         else if (severity == EventSeverity.Warning) TriggerWarningPulse();
-
-        if (message.Contains("[T:", StringComparison.OrdinalIgnoreCase)) TriggerTrapPulse();
-        else if (message.Contains("[P:", StringComparison.OrdinalIgnoreCase)) TriggerPort161Pulse();
+        else if (severity == EventSeverity.Info) TriggerInfoPulse();
 
         var entry = new SnmpEventLog(DateTime.Now, severity, device, message);
         
@@ -185,11 +196,15 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private void TriggerPort161Pulse() { Port161Pulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => Port161Pulse = false); }
-    public void TriggerPort162Pulse() { Port162Pulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => Port162Pulse = false); }
+    public void TriggerPort161TxPulse() { Port161TxPulse = true; System.Threading.Tasks.Task.Delay(300).ContinueWith(_ => Port161TxPulse = false); }
+    public void TriggerPort161RxPulse(bool success) { Port161RxPulse = true; System.Threading.Tasks.Task.Delay(300).ContinueWith(_ => Port161RxPulse = false); }
+    public void TriggerPort162TxPulse() { Port162TxPulse = true; System.Threading.Tasks.Task.Delay(300).ContinueWith(_ => Port162TxPulse = false); }
+    public void TriggerPort162RxPulse() { Port162RxPulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => Port162RxPulse = false); }
     private void TriggerTrapPulse() { TrapPulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => TrapPulse = false); }
     private void TriggerErrorPulse() { ErrorPulse = true; System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => ErrorPulse = false); }
+    private void TriggerNoticePulse() { NoticePulse = true; System.Threading.Tasks.Task.Delay(800).ContinueWith(_ => NoticePulse = false); }
     private void TriggerWarningPulse() { WarningPulse = true; System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => WarningPulse = false); }
+    private void TriggerInfoPulse() { InfoPulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => InfoPulse = false); }
 
     public void AddSystemInfo(string message)
     {

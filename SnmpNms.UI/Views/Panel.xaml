@@ -42,16 +42,6 @@
                                  Checked="TabRadio_Checked"/>
                 </StackPanel>
 
-                <!-- Status Info Area -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
-                    <TextBlock Text="Status:" FontWeight="Bold" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding IsPollingRunning, Converter={StaticResource PollingStatusConverter}}" 
-                               Margin="10,0,0,0" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding IsTrapListening, Converter={StaticResource TrapStatusConverter}}" 
-                               Margin="15,0,0,0" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
-                    <TextBlock Text="Polling ALL" 
-                               FontStyle="Italic" Margin="15,0,0,0" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
-                </StackPanel>
                 
                 <!-- Toggle Button -->
                 <Button Grid.Column="2"

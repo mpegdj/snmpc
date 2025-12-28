@@ -5,8 +5,9 @@ namespace SnmpNms.UI.Models;
 public enum EventSeverity
 {
     Info = 0,
-    Warning = 1,
-    Error = 2
+    Notice = 1,
+    Warning = 2,
+    Error = 3
 }
 
 public class SnmpEventLog
