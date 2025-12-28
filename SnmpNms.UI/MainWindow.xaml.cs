@@ -1079,12 +1079,12 @@ public partial class MainWindow : Window
         var node = (sender as FrameworkElement)?.DataContext as MapNode;
         if (node is null) return;
 
-        // Double-click subnet name -> open subnet as Map View internal window
+        // Double-click subnet name -> select in Map Graph View
         if (node.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet)
         {
-            mapViewControl?.OpenSubnet(node.DisplayName);
-            mapViewControl?.CascadeWindows();
-            _vm.AddSystemInfo($"[Map] Open subnet: {node.DisplayName}");
+            // 새로운 Map Graph View에서는 Site 박스가 이미 표시되어 있음
+            // 해당 Site를 선택하거나 스크롤하는 동작으로 변경 가능
+            _vm.AddSystemInfo($"[Map] Selected subnet: {node.DisplayName}");
         }
     }
 
@@ -1109,8 +1109,13 @@ public partial class MainWindow : Window
         if (e.Parameter is not MapNode node) return;
         if (node.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet)
         {
-            mapViewControl?.OpenSubnet(node.DisplayName);
-            mapViewControl?.CascadeWindows();
+            // 새로운 Map Graph View에서는 Site 박스가 이미 표시되어 있음
+            // Map View 탭으로 전환
+            if (tabMain.Items.Cast<TabItem>().FirstOrDefault(t => t.Header?.ToString() == "Map View") is { } mapTab)
+            {
+                tabMain.SelectedItem = mapTab;
+            }
+            _vm.AddSystemInfo($"[Map] Open subnet: {node.DisplayName}");
         }
     }
 
@@ -2075,9 +2080,8 @@ public partial class MainWindow : Window
 
     private void MenuWindowsCascade_Click(object sender, RoutedEventArgs e)
     {
-        // SNMPc 스타일: View Window Area 내부 창 정렬(Cascade)
-        // 현재는 Map View 탭 내부에서 겹치는 내부 창을 제공한다.
-        mapViewControl?.CascadeWindows();
+        // 새로운 Map Graph View에서는 Auto Arrange 기능으로 대체
+        mapViewControl?.AutoArrange();
     }
 
     protected override void OnClosed(EventArgs e)

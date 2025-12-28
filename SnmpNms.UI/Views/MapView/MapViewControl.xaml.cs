@@ -1,9 +1,10 @@
+using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Data;
 using System.Windows.Shapes;
+using SnmpNms.Core.Models;
 using SnmpNms.UI.Converters;
 using SnmpNms.UI.Models;
 using SnmpNms.UI.ViewModels;
@@ -12,13 +13,22 @@ namespace SnmpNms.UI.Views.MapView;
 
 public partial class MapViewControl : UserControl
 {
-    private int _windowSeq = 1;
-    private readonly List<Border> _windows = new();
-    private readonly Dictionary<string, Border> _subnetWindows = new(StringComparer.OrdinalIgnoreCase);
-    private Border? _objectPropertiesWindow;
-    private ContentControl? _objectPropertiesContent;
     private bool _initialized;
-    private readonly DeviceStatusToBrushConverter _statusBrush = new();
+    private readonly DeviceStatusToBackgroundConverter _statusBgConverter = new();
+    private readonly Dictionary<MapNode, Border> _siteBoxes = new();
+    
+    // 설정
+    private double _zoomLevel = 1.0;
+    private const double ZoomStep = 0.1;
+    private const double MinZoom = 0.5;
+    private const double MaxZoom = 2.0;
+    private const int GridSize = 50;
+    
+    // 드래그 상태
+    private Border? _draggingBox;
+    private Point _dragStart;
+    private double _dragStartLeft;
+    private double _dragStartTop;
 
     public MapViewControl()
     {
@@ -30,518 +40,376 @@ public partial class MapViewControl : UserControl
         if (_initialized) return;
         _initialized = true;
 
-        // DataContext(MainViewModel) 연결 이후 기본 창을 생성
+        DrawGrid();
+        
         if (TryGetVm() is { } vm)
         {
-            OpenSubnet(vm.DefaultSubnet.Name);
+            // Site(Subnet) 노드들을 박스로 표시
+            BuildSiteBoxes(vm);
             
-            // Object Properties 창 생성 (동적 콘텐츠를 위한 ContentControl 사용)
-            _objectPropertiesContent = new ContentControl
+            // 컬렉션 변경 구독
+            vm.RootSubnet.Children.CollectionChanged += (_, _) => RebuildSiteBoxes();
+        }
+    }
+
+    private MainViewModel? TryGetVm() => DataContext as MainViewModel;
+
+    #region Grid
+
+    private void DrawGrid()
+    {
+        // XAML 초기화 중에는 GridCanvas/MapCanvas가 아직 null일 수 있음
+        if (GridCanvas == null || MapCanvas == null) return;
+        
+        GridCanvas.Children.Clear();
+        
+        if (ShowGridCheck?.IsChecked != true) return;
+
+        var dotBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+        dotBrush.Freeze();
+
+        for (var x = GridSize; x < MapCanvas.Width; x += GridSize)
+        {
+            for (var y = GridSize; y < MapCanvas.Height; y += GridSize)
             {
-                Margin = new Thickness(10),
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                VerticalAlignment = VerticalAlignment.Stretch
-            };
-            
-            // 초기 Content 설정
-            _objectPropertiesContent.Content = new TextBlock
-            {
-                Text = "No object selected.\nSelect a device or subnet to view properties.",
-                Foreground = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)),
-                Margin = new Thickness(10),
-                TextWrapping = TextWrapping.Wrap
-            };
-            
-            _objectPropertiesWindow = AddInternalWindow("Object Properties", _objectPropertiesContent);
-            
-            // 초기 상태 표시
-            UpdateObjectProperties();
-            
-            // SelectedDevice 변경 구독
-            vm.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName == nameof(MainViewModel.SelectedDevice) || 
-                    args.PropertyName == nameof(MainViewModel.SelectedDeviceNode))
+                var dot = new Ellipse
                 {
-                    UpdateObjectProperties();
-                }
-            };
-            
-            // SelectedMapNodes 변경 구독
-            vm.SelectedMapNodes.CollectionChanged += (_, _) => UpdateObjectProperties();
-            
-            CascadeWindows();
-        }
-        else
-        {
-            AddInternalWindow("Map View", new TextBlock
-            {
-                Text = "MapViewControl DataContext is not MainViewModel. (Todo: inject VM)",
-                Foreground = Brushes.White,
-                Margin = new Thickness(10),
-                TextWrapping = TextWrapping.Wrap
-            });
-        }
-    }
-    
-    private void UpdateObjectProperties()
-    {
-        if (_objectPropertiesContent == null)
-        {
-            Console.WriteLine("[MapViewControl] UpdateObjectProperties: _objectPropertiesContent is null");
-            return;
-        }
-        
-        var vm = TryGetVm();
-        if (vm == null)
-        {
-            Console.WriteLine("[MapViewControl] UpdateObjectProperties: ViewModel is null");
-            return;
-        }
-        
-        // UI 스레드에서 실행 보장
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(UpdateObjectProperties);
-            return;
-        }
-        
-        Console.WriteLine($"[MapViewControl] UpdateObjectProperties: SelectedMapNodes.Count={vm.SelectedMapNodes.Count}, SelectedDevice={vm.SelectedDevice?.IpAddress ?? "null"}");
-        
-        // 선택된 MapNode 중 Device를 우선 표시
-        var selectedDeviceNode = vm.SelectedMapNodes.FirstOrDefault(n => n.NodeType == MapNodeType.Device);
-        if (selectedDeviceNode?.Target != null)
-        {
-            Console.WriteLine($"[MapViewControl] Showing device: {selectedDeviceNode.Target.IpAddress}");
-            _objectPropertiesContent.Content = CreateDevicePropertiesContent(selectedDeviceNode.Target, selectedDeviceNode);
-            return;
-        }
-        
-        // SelectedDevice가 있으면 표시
-        if (vm.SelectedDevice != null)
-        {
-            Console.WriteLine($"[MapViewControl] Showing SelectedDevice: {vm.SelectedDevice.IpAddress}");
-            _objectPropertiesContent.Content = CreateDevicePropertiesContent(vm.SelectedDevice, null);
-            return;
-        }
-        
-        // 선택된 Subnet이 있으면 표시
-        var selectedSubnet = vm.SelectedMapNodes.FirstOrDefault(n => 
-            n.NodeType == MapNodeType.Subnet || n.NodeType == MapNodeType.RootSubnet);
-        if (selectedSubnet != null)
-        {
-            Console.WriteLine($"[MapViewControl] Showing subnet: {selectedSubnet.Name}");
-            _objectPropertiesContent.Content = CreateSubnetPropertiesContent(selectedSubnet);
-            return;
-        }
-        
-        // 아무것도 선택되지 않았을 때
-        Console.WriteLine("[MapViewControl] No object selected");
-        _objectPropertiesContent.Content = new TextBlock
-        {
-            Text = "No object selected.\nSelect a device or subnet to view properties.",
-            Foreground = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)),
-            Margin = new Thickness(10),
-            TextWrapping = TextWrapping.Wrap
-        };
-    }
-    
-    private UIElement CreateDevicePropertiesContent(UiSnmpTarget target, MapNode? node)
-    {
-        var stack = new StackPanel
-        {
-            Orientation = Orientation.Vertical,
-            Margin = new Thickness(0)
-        };
-        
-        // 제목
-        var title = new TextBlock
-        {
-            Text = "Device Properties",
-            FontSize = 14,
-            FontWeight = FontWeights.Bold,
-            Foreground = Brushes.White,
-            Margin = new Thickness(0, 0, 0, 12)
-        };
-        stack.Children.Add(title);
-        
-        // 정보 항목들
-        void AddProperty(string label, string value)
-        {
-            var panel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            
-            var labelBlock = new TextBlock
-            {
-                Text = $"{label}:",
-                FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)),
-                Width = 90,
-                VerticalAlignment = VerticalAlignment.Top
-            };
-            
-            var valueBlock = new TextBlock
-            {
-                Text = value,
-                Foreground = Brushes.White,
-                TextWrapping = TextWrapping.Wrap,
-                VerticalAlignment = VerticalAlignment.Top
-            };
-            
-            panel.Children.Add(labelBlock);
-            panel.Children.Add(valueBlock);
-            stack.Children.Add(panel);
-        }
-        
-        AddProperty("Alias", target.Alias ?? "-");
-        AddProperty("IP Address", target.IpAddress);
-        AddProperty("Port", target.Port.ToString());
-        AddProperty("Community", target.Community ?? "-");
-        AddProperty("Version", target.Version.ToString());
-        AddProperty("Timeout", $"{target.Timeout} ms");
-        AddProperty("Retries", target.Retries.ToString());
-        AddProperty("Status", target.Status.ToString());
-        
-        if (!string.IsNullOrWhiteSpace(target.Device))
-        {
-            AddProperty("Device", target.Device);
-        }
-        
-        if (node != null && node.Parent != null)
-        {
-            AddProperty("Subnet", node.Parent.Name);
-        }
-        
-        var scroll = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = stack
-        };
-        
-        return scroll;
-    }
-    
-    private UIElement CreateSubnetPropertiesContent(MapNode subnet)
-    {
-        var stack = new StackPanel
-        {
-            Orientation = Orientation.Vertical,
-            Margin = new Thickness(0)
-        };
-        
-        // 제목
-        var title = new TextBlock
-        {
-            Text = "Subnet Properties",
-            FontSize = 14,
-            FontWeight = FontWeights.Bold,
-            Foreground = Brushes.White,
-            Margin = new Thickness(0, 0, 0, 12)
-        };
-        stack.Children.Add(title);
-        
-        // 정보 항목들
-        void AddProperty(string label, string value)
-        {
-            var panel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 0, 0, 8)
-            };
-            
-            var labelBlock = new TextBlock
-            {
-                Text = $"{label}:",
-                FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255)),
-                Width = 90,
-                VerticalAlignment = VerticalAlignment.Top
-            };
-            
-            var valueBlock = new TextBlock
-            {
-                Text = value,
-                Foreground = Brushes.White,
-                TextWrapping = TextWrapping.Wrap,
-                VerticalAlignment = VerticalAlignment.Top
-            };
-            
-            panel.Children.Add(labelBlock);
-            panel.Children.Add(valueBlock);
-            stack.Children.Add(panel);
-        }
-        
-        AddProperty("Name", subnet.Name);
-        AddProperty("Type", subnet.NodeType.ToString());
-        AddProperty("Status", subnet.EffectiveStatus.ToString());
-        AddProperty("Children", subnet.Children.Count.ToString());
-        
-        if (subnet.Parent != null)
-        {
-            AddProperty("Parent", subnet.Parent.Name);
-        }
-        
-        var scroll = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = stack
-        };
-        
-        return scroll;
-    }
-
-    public void OpenSubnet(string subnetName)
-    {
-        // 이미 열려 있으면 앞으로 가져오기
-        if (_subnetWindows.TryGetValue(subnetName, out var existing))
-        {
-            BringToFront(existing);
-            return;
-        }
-
-        var vm = TryGetVm();
-        var subnet = vm is null ? null : FindSubnet(vm.RootSubnet, subnetName);
-
-        var title = $"Subnet: {subnetName}";
-        var content = subnet is null
-            ? new TextBlock
-            {
-                Text = $"Subnet not found: {subnetName}",
-                Foreground = Brushes.White,
-                Margin = new Thickness(10),
-                TextWrapping = TextWrapping.Wrap
+                    Width = 2,
+                    Height = 2,
+                    Fill = dotBrush
+                };
+                Canvas.SetLeft(dot, x - 1);
+                Canvas.SetTop(dot, y - 1);
+                GridCanvas.Children.Add(dot);
             }
-            : CreateSubnetContent(subnet);
-
-        var w = AddInternalWindow(title, content);
-        _subnetWindows[subnetName] = w;
-        BringToFront(w);
+        }
     }
 
-    public void CascadeWindows()
+    private void ShowGrid_Changed(object sender, RoutedEventArgs e)
+    {
+        DrawGrid();
+    }
+
+    #endregion
+
+    #region Zoom
+
+    private void UpdateZoom()
+    {
+        CanvasScale.ScaleX = _zoomLevel;
+        CanvasScale.ScaleY = _zoomLevel;
+        ZoomLevelText.Text = $"{(int)(_zoomLevel * 100)}%";
+    }
+
+    private void ZoomIn_Click(object sender, RoutedEventArgs e)
+    {
+        _zoomLevel = Math.Min(MaxZoom, _zoomLevel + ZoomStep);
+        UpdateZoom();
+    }
+
+    private void ZoomOut_Click(object sender, RoutedEventArgs e)
+    {
+        _zoomLevel = Math.Max(MinZoom, _zoomLevel - ZoomStep);
+        UpdateZoom();
+    }
+
+    private void MapCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.Control) return;
+        
+        if (e.Delta > 0)
+            _zoomLevel = Math.Min(MaxZoom, _zoomLevel + ZoomStep);
+        else
+            _zoomLevel = Math.Max(MinZoom, _zoomLevel - ZoomStep);
+        
+        UpdateZoom();
+        e.Handled = true;
+    }
+
+    #endregion
+
+    #region Auto Arrange
+
+    private void AutoArrange_Click(object sender, RoutedEventArgs e)
+    {
+        AutoArrange();
+    }
+
+    /// <summary>
+    /// Site 박스들을 자동 정렬 (왼쪽 위부터)
+    /// </summary>
+    public void AutoArrange()
     {
         const double startX = 20;
         const double startY = 20;
-        const double step = 28;
+        const double spacingX = 180;
+        const double spacingY = 200;
+        const int columns = 5;
 
-        for (var i = 0; i < _windows.Count; i++)
+        var index = 0;
+        foreach (var box in _siteBoxes.Values)
         {
-            Canvas.SetLeft(_windows[i], startX + step * i);
-            Canvas.SetTop(_windows[i], startY + step * i);
+            var col = index % columns;
+            var row = index / columns;
+            
+            var x = startX + col * spacingX;
+            var y = startY + row * spacingY;
+            
+            if (SnapToGridCheck?.IsChecked == true)
+            {
+                x = SnapToGrid(x);
+                y = SnapToGrid(y);
+            }
+            
+            Canvas.SetLeft(box, x);
+            Canvas.SetTop(box, y);
+            
+            // MapNode에 위치 저장
+            if (box.Tag is MapNode node)
+            {
+                node.X = x;
+                node.Y = y;
+            }
+            
+            index++;
         }
     }
 
-    private void Cascade_Click(object sender, RoutedEventArgs e) => CascadeWindows();
-
-    private void AddWindow_Click(object sender, RoutedEventArgs e)
+    private double SnapToGrid(double value)
     {
-        AddInternalWindow($"Window {_windowSeq++}", new TextBlock
-        {
-            Text = "Todo content",
-            Foreground = Brushes.White,
-            Margin = new Thickness(10),
-            TextWrapping = TextWrapping.Wrap
-        });
-        CascadeWindows();
+        return Math.Round(value / GridSize) * GridSize;
     }
 
-    private Border AddInternalWindow(string title, UIElement body)
+    #endregion
+
+    #region Site Boxes
+
+    private void BuildSiteBoxes(MainViewModel vm)
     {
-        var header = new DockPanel
+        _siteBoxes.Clear();
+        
+        // Canvas에서 SiteBoxesControl 내부의 ItemsControl 대신 직접 Canvas에 추가
+        // (ItemsControl의 Canvas ItemsPanel은 위치 지정이 복잡하므로)
+        
+        var index = 0;
+        foreach (var child in vm.RootSubnet.Children)
         {
-            Background = new SolidColorBrush(Color.FromRgb(240, 240, 240)),
-            LastChildFill = true,
-            Height = 28
-        };
+            if (child.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet)
+            {
+                var box = CreateSiteBox(child);
+                
+                // 초기 위치 (Auto Arrange 스타일)
+                var x = child.X > 0 ? child.X : 20 + (index % 5) * 180;
+                var y = child.Y > 0 ? child.Y : 20 + (index / 5) * 200;
+                
+                Canvas.SetLeft(box, x);
+                Canvas.SetTop(box, y);
+                
+                MapCanvas.Children.Add(box);
+                _siteBoxes[child] = box;
+                index++;
+            }
+        }
+    }
 
-        var titleBlock = new TextBlock
+    private void RebuildSiteBoxes()
+    {
+        // 기존 박스 제거
+        foreach (var box in _siteBoxes.Values)
         {
-            Text = title,
-            FontWeight = FontWeights.Bold,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(8, 0, 0, 0)
-        };
-
-        var closeBtn = new Button
+            MapCanvas.Children.Remove(box);
+        }
+        _siteBoxes.Clear();
+        
+        if (TryGetVm() is { } vm)
         {
-            Content = "X",
-            Width = 26,
-            Height = 22,
-            Margin = new Thickness(0, 2, 4, 2)
-        };
+            BuildSiteBoxes(vm);
+        }
+    }
 
-        DockPanel.SetDock(closeBtn, Dock.Right);
-        header.Children.Add(closeBtn);
-        header.Children.Add(titleBlock);
-
-        var root = new DockPanel { LastChildFill = true };
-        DockPanel.SetDock(header, Dock.Top);
-        root.Children.Add(header);
-        root.Children.Add(body);
-
-        var windowBorder = new Border
+    private Border CreateSiteBox(MapNode subnet)
+    {
+        var box = new Border
         {
-            Width = 360,
-            Height = 220,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(30, 30, 30)),
+            MinWidth = 150,
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x50, 0x50, 0x50)),
             BorderThickness = new Thickness(1),
-            Background = new SolidColorBrush(Color.FromRgb(0, 120, 120)),
-            CornerRadius = new CornerRadius(3),
-            Child = root
+            CornerRadius = new CornerRadius(4),
+            Tag = subnet,
+            Cursor = Cursors.Hand
         };
 
-        // 드래그 이동(간단 구현)
-        Point? dragStart = null;
-        double startLeft = 0, startTop = 0;
+        var mainStack = new StackPanel();
+        box.Child = mainStack;
 
+        // 헤더 (Site 이름 + 톱니바퀴)
+        var header = new Border
+        {
+            Padding = new Thickness(8, 6, 8, 6),
+            CornerRadius = new CornerRadius(4, 4, 0, 0)
+        };
+        
+        // 헤더 배경색 바인딩 (Site 집계 상태)
+        header.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(MapNode.EffectiveStatus))
+        {
+            Source = subnet,
+            Converter = _statusBgConverter
+        });
+
+        var headerPanel = new DockPanel { LastChildFill = true };
+        
+        // 톱니바퀴 버튼
+        var configBtn = new Button
+        {
+            Content = "⚙",
+            FontSize = 12,
+            Padding = new Thickness(4, 0, 4, 0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Foreground = Brushes.White,
+            Cursor = Cursors.Hand,
+            ToolTip = "Site Config"
+        };
+        configBtn.Click += (_, _) => OnSiteConfigClick(subnet);
+        DockPanel.SetDock(configBtn, Dock.Right);
+        headerPanel.Children.Add(configBtn);
+        
+        // Site 이름
+        var nameText = new TextBlock
+        {
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brushes.White,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        nameText.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(MapNode.Name))
+        {
+            Source = subnet
+        });
+        headerPanel.Children.Add(nameText);
+        
+        header.Child = headerPanel;
+        mainStack.Children.Add(header);
+
+        // 장비 목록
+        var deviceList = new ItemsControl
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0x25, 0x25, 0x25)),
+            Padding = new Thickness(0)
+        };
+        deviceList.SetBinding(ItemsControl.ItemsSourceProperty, new System.Windows.Data.Binding(nameof(MapNode.Children))
+        {
+            Source = subnet
+        });
+
+        // 장비 행 템플릿
+        deviceList.ItemTemplate = CreateDeviceRowTemplate();
+        
+        mainStack.Children.Add(deviceList);
+
+        // 드래그 이벤트
         header.MouseLeftButtonDown += (_, args) =>
         {
-            dragStart = args.GetPosition(MdiCanvas);
-            startLeft = Canvas.GetLeft(windowBorder);
-            startTop = Canvas.GetTop(windowBorder);
+            _draggingBox = box;
+            _dragStart = args.GetPosition(MapCanvas);
+            _dragStartLeft = Canvas.GetLeft(box);
+            _dragStartTop = Canvas.GetTop(box);
             header.CaptureMouse();
             args.Handled = true;
         };
 
         header.MouseMove += (_, args) =>
         {
-            if (dragStart is null) return;
-            var p = args.GetPosition(MdiCanvas);
-            Canvas.SetLeft(windowBorder, startLeft + (p.X - dragStart.Value.X));
-            Canvas.SetTop(windowBorder, startTop + (p.Y - dragStart.Value.Y));
+            if (_draggingBox != box) return;
+            
+            var pos = args.GetPosition(MapCanvas);
+            var newX = _dragStartLeft + (pos.X - _dragStart.X);
+            var newY = _dragStartTop + (pos.Y - _dragStart.Y);
+            
+            Canvas.SetLeft(box, newX);
+            Canvas.SetTop(box, newY);
         };
 
         header.MouseLeftButtonUp += (_, _) =>
         {
-            dragStart = null;
+            if (_draggingBox != box) return;
+            
+            var finalX = Canvas.GetLeft(box);
+            var finalY = Canvas.GetTop(box);
+            
+            // Snap to Grid
+            if (SnapToGridCheck?.IsChecked == true)
+            {
+                finalX = SnapToGrid(finalX);
+                finalY = SnapToGrid(finalY);
+                Canvas.SetLeft(box, finalX);
+                Canvas.SetTop(box, finalY);
+            }
+            
+            // MapNode에 위치 저장
+            subnet.X = finalX;
+            subnet.Y = finalY;
+            
+            _draggingBox = null;
             header.ReleaseMouseCapture();
         };
 
-        closeBtn.Click += (_, _) =>
+        // 더블클릭 - Properties
+        header.MouseLeftButtonDown += (_, args) =>
         {
-            MdiCanvas.Children.Remove(windowBorder);
-            _windows.Remove(windowBorder);
-            var subnetKey = _subnetWindows.FirstOrDefault(kv => ReferenceEquals(kv.Value, windowBorder)).Key;
-            if (!string.IsNullOrWhiteSpace(subnetKey)) _subnetWindows.Remove(subnetKey);
+            if (args.ClickCount == 2)
+            {
+                OnSiteConfigClick(subnet);
+                args.Handled = true;
+            }
         };
 
-        // Z-order: 클릭된 창을 앞으로
-        windowBorder.MouseLeftButtonDown += (_, _) =>
-        {
-            var maxZ = _windows.Count == 0 ? 0 : _windows.Select(System.Windows.Controls.Panel.GetZIndex).Max();
-            System.Windows.Controls.Panel.SetZIndex(windowBorder, maxZ + 1);
-        };
-
-        System.Windows.Controls.Panel.SetZIndex(windowBorder, _windows.Count + 1);
-        _windows.Add(windowBorder);
-        MdiCanvas.Children.Add(windowBorder);
-        return windowBorder;
+        return box;
     }
 
-    private void BringToFront(Border windowBorder)
+    private DataTemplate CreateDeviceRowTemplate()
     {
-        var maxZ = _windows.Count == 0 ? 0 : _windows.Select(Panel.GetZIndex).Max();
-        Panel.SetZIndex(windowBorder, maxZ + 1);
+        var template = new DataTemplate(typeof(MapNode));
+        
+        var borderFactory = new FrameworkElementFactory(typeof(Border));
+        borderFactory.SetValue(Border.PaddingProperty, new Thickness(8, 4, 8, 4));
+        borderFactory.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(0x3C, 0x3C, 0x3C)));
+        borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(0, 0, 0, 1));
+        
+        // 배경색 바인딩 (장비 상태)
+        borderFactory.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(MapNode.EffectiveStatus))
+        {
+            Converter = _statusBgConverter
+        });
+
+        var textFactory = new FrameworkElementFactory(typeof(TextBlock));
+        textFactory.SetValue(TextBlock.ForegroundProperty, Brushes.White);
+        textFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+        textFactory.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(MapNode.DisplayName)));
+        
+        borderFactory.AppendChild(textFactory);
+        template.VisualTree = borderFactory;
+        
+        return template;
     }
 
-    private MainViewModel? TryGetVm() => DataContext as MainViewModel;
-
-    private static MapNode? FindSubnet(MapNode root, string subnetName)
+    private void OnSiteConfigClick(MapNode subnet)
     {
-        if (root.NodeType is MapNodeType.Subnet or MapNodeType.RootSubnet)
+        // TODO: Site Config 다이얼로그 또는 패널 표시
+        MessageBox.Show($"Site: {subnet.Name}\nDevices: {subnet.Children.Count}\nStatus: {subnet.EffectiveStatus}", 
+            "Site Config", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    #endregion
+
+    private void MapCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // 빈 공간 클릭 시 선택 해제
+        if (e.OriginalSource == MapCanvas || e.OriginalSource == GridCanvas)
         {
-            if (string.Equals(root.Name, subnetName, StringComparison.OrdinalIgnoreCase))
-                return root;
+            if (TryGetVm() is { } vm)
+            {
+                vm.SelectedMapNodes.Clear();
+            }
         }
-
-        foreach (var c in root.Children)
-        {
-            var found = FindSubnet(c, subnetName);
-            if (found is not null) return found;
-        }
-        return null;
-    }
-
-    private UIElement CreateSubnetContent(MapNode subnet)
-    {
-        // DataContext = subnet, ItemsSource = Children (ObservableCollection) -> 추가/삭제 즉시 반영
-        var items = new ItemsControl
-        {
-            Margin = new Thickness(10)
-        };
-        items.SetBinding(ItemsControl.ItemsSourceProperty, new Binding(nameof(MapNode.Children)));
-
-        // WrapPanel layout
-        var panelFactory = new FrameworkElementFactory(typeof(WrapPanel));
-        panelFactory.SetValue(WrapPanel.ItemWidthProperty, 150.0);
-        panelFactory.SetValue(WrapPanel.ItemHeightProperty, 64.0);
-        items.ItemsPanel = new ItemsPanelTemplate(panelFactory);
-
-        // Item template: [status dot] Name / Type
-        var rootBorder = new FrameworkElementFactory(typeof(Border));
-        rootBorder.SetValue(Border.MarginProperty, new Thickness(6));
-        rootBorder.SetValue(Border.PaddingProperty, new Thickness(8));
-        rootBorder.SetValue(Border.CornerRadiusProperty, new CornerRadius(4));
-        rootBorder.SetValue(Border.BackgroundProperty, new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)));
-        rootBorder.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromArgb(80, 255, 255, 255)));
-        rootBorder.SetValue(Border.BorderThicknessProperty, new Thickness(1));
-
-        var stack = new FrameworkElementFactory(typeof(StackPanel));
-        stack.SetValue(StackPanel.OrientationProperty, Orientation.Vertical);
-        rootBorder.AppendChild(stack);
-
-        var header = new FrameworkElementFactory(typeof(StackPanel));
-        header.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
-        stack.AppendChild(header);
-
-        var dot = new FrameworkElementFactory(typeof(Rectangle));
-        dot.SetValue(Rectangle.WidthProperty, 10.0);
-        dot.SetValue(Rectangle.HeightProperty, 10.0);
-        dot.SetValue(Rectangle.MarginProperty, new Thickness(0, 2, 6, 0));
-        dot.SetBinding(Shape.FillProperty, new Binding(nameof(MapNode.EffectiveStatus)) { Converter = _statusBrush });
-        header.AppendChild(dot);
-
-        var name = new FrameworkElementFactory(typeof(TextBlock));
-        name.SetValue(TextBlock.ForegroundProperty, Brushes.White);
-        name.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
-        name.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-        name.SetBinding(TextBlock.TextProperty, new Binding(nameof(MapNode.DisplayName)));
-        header.AppendChild(name);
-
-        var type = new FrameworkElementFactory(typeof(TextBlock));
-        type.SetValue(TextBlock.MarginProperty, new Thickness(0, 6, 0, 0));
-        type.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)));
-        type.SetBinding(TextBlock.TextProperty, new Binding(nameof(MapNode.NodeType)));
-        stack.AppendChild(type);
-
-        items.ItemTemplate = new DataTemplate { VisualTree = rootBorder };
-
-        var scroll = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = items
-        };
-
-        var root = new DockPanel { LastChildFill = true };
-        var hint = new TextBlock
-        {
-            Text = "Add Device/Subnet/Goto 하면 이 목록이 즉시 갱신됩니다.",
-            Foreground = new SolidColorBrush(Color.FromArgb(180, 255, 255, 255)),
-            Margin = new Thickness(10, 8, 10, 0)
-        };
-        DockPanel.SetDock(hint, Dock.Top);
-        root.Children.Add(hint);
-        root.Children.Add(scroll);
-
-        root.DataContext = subnet;
-        return root;
     }
 }
-
-

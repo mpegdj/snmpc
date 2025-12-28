@@ -1,27 +1,69 @@
 <UserControl x:Class="SnmpNms.UI.Views.MapView.MapViewControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:SnmpNms.UI.Converters"
+             xmlns:models="clr-namespace:SnmpNms.UI.Models"
              MinHeight="200" MinWidth="200"
              Loaded="UserControl_Loaded">
+    <UserControl.Resources>
+        <conv:DeviceStatusToBackgroundConverter x:Key="StatusBgConverter"/>
+        <conv:DeviceStatusToBrushConverter x:Key="StatusBrushConverter"/>
+    </UserControl.Resources>
+    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <ToolBarTray Grid.Row="0">
-            <ToolBar>
-                <Button Content="Cascade" Click="Cascade_Click" Padding="10,2"/>
-                <Button Content="Add Window" Click="AddWindow_Click" Padding="10,2"/>
+        <!-- 툴바 -->
+        <ToolBarTray Grid.Row="0" Background="{StaticResource VSCodeSidebarBackground}">
+            <ToolBar Background="Transparent" Band="0" BandIndex="0">
+                <Button Content="+" Click="ZoomIn_Click" Padding="8,2" ToolTip="Zoom In"/>
+                <Button Content="-" Click="ZoomOut_Click" Padding="8,2" ToolTip="Zoom Out"/>
+                <TextBlock Name="ZoomLevelText" Text="100%" VerticalAlignment="Center" Margin="8,0" 
+                           Foreground="{StaticResource VSCodeForeground}"/>
                 <Separator/>
-                <TextBlock Text="(내부 창은 Map View 탭 안에서 겹쳐 표시됩니다)" VerticalAlignment="Center"/>
+                <CheckBox Name="ShowGridCheck" Content="Grid" IsChecked="True" 
+                          Checked="ShowGrid_Changed" Unchecked="ShowGrid_Changed"
+                          VerticalAlignment="Center" Foreground="{StaticResource VSCodeForeground}"/>
+                <CheckBox Name="SnapToGridCheck" Content="Snap" IsChecked="True" 
+                          VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource VSCodeForeground}"/>
+                <Separator/>
+                <Button Content="Auto Arrange" Click="AutoArrange_Click" Padding="8,2"/>
             </ToolBar>
         </ToolBarTray>
 
-        <Border Grid.Row="1" Margin="8" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="1" Background="#0E6B6B" CornerRadius="4">
-            <Canvas Name="MdiCanvas"/>
+        <!-- 메인 캔버스 영역 -->
+        <Border Grid.Row="1" Margin="4" BorderBrush="{StaticResource VSCodeDivider}" 
+                BorderThickness="1" Background="{StaticResource VSCodeEditorBackground}" CornerRadius="4"
+                ClipToBounds="True">
+            <ScrollViewer Name="MainScrollViewer" 
+                          HorizontalScrollBarVisibility="Auto" 
+                          VerticalScrollBarVisibility="Auto"
+                          PanningMode="Both">
+                <Canvas Name="MapCanvas" 
+                        Width="2000" Height="1500"
+                        Background="Transparent"
+                        MouseLeftButtonDown="MapCanvas_MouseLeftButtonDown"
+                        MouseWheel="MapCanvas_MouseWheel">
+                    <Canvas.LayoutTransform>
+                        <ScaleTransform x:Name="CanvasScale" ScaleX="1" ScaleY="1"/>
+                    </Canvas.LayoutTransform>
+                    
+                    <!-- 그리드 점들 (코드에서 그림) -->
+                    <Canvas Name="GridCanvas" IsHitTestVisible="False"/>
+                    
+                    <!-- Site 박스들 -->
+                    <ItemsControl Name="SiteBoxesControl" Canvas.Left="0" Canvas.Top="0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Canvas>
+            </ScrollViewer>
         </Border>
     </Grid>
 </UserControl>
-
-

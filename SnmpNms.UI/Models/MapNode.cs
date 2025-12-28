@@ -61,6 +61,31 @@ public class MapNode : INotifyPropertyChanged
         }
     }
 
+    // Map Graph View 위치 (Canvas.Left, Canvas.Top)
+    private double _x;
+    public double X
+    {
+        get => _x;
+        set
+        {
+            if (Math.Abs(_x - value) < 0.001) return;
+            _x = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private double _y;
+    public double Y
+    {
+        get => _y;
+        set
+        {
+            if (Math.Abs(_y - value) < 0.001) return;
+            _y = value;
+            OnPropertyChanged();
+        }
+    }
+
     // SNMPc 스타일: 색상은 "가장 높은 우선순위" 상태를 표시(Down > Unknown > Up)
     private DeviceStatus _effectiveStatus = DeviceStatus.Unknown;
     public DeviceStatus EffectiveStatus
