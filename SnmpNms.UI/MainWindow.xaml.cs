@@ -64,6 +64,12 @@ public partial class MainWindow : Window
         // Trap Listener 시작
         InitializeTrapListener();
 
+        // MIB 로딩/파싱 로그를 GUI Event Log로 연결
+        if (_mibService is MibService mibService)
+        {
+            mibService.OnLog += msg => _vm.AddSystemInfo(msg);
+        }
+
         // MIB 파일 로드 (Mib 폴더가 실행 파일 위치 또는 상위에 있다고 가정)
         LoadMibs();
         
@@ -1677,7 +1683,7 @@ public partial class MainWindow : Window
             dataGridMibTable.Columns.Clear();
 
             // SNMP WALK으로 테이블 데이터 가져오기
-            var result = await _snmpClient.WalkAsync(_vm.SelectedDevice, tableOid);
+            var result = await _snmpClient.WalkAsync(_vm.SelectedDevice, tableOid, CancellationToken.None);
             
             if (!result.IsSuccess)
             {
@@ -1980,7 +1986,7 @@ public partial class MainWindow : Window
         try
         {
             _vm.AddEvent(EventSeverity.Info, _vm.SelectedDevice.IpAddress, $"WALK {oid} ({_mibService.GetOidName(oid)})");
-            var result = await _snmpClient.WalkAsync(_vm.SelectedDevice, oid);
+            var result = await _snmpClient.WalkAsync(_vm.SelectedDevice, oid, CancellationToken.None);
             
             if (result.IsSuccess && result.Variables.Count > 0)
             {

@@ -13,6 +13,15 @@ public class MibService : IMibService
     // Name -> OID (e.g., "sysUpTime" -> "1.3.6.1.2.1.1.3")
     private readonly Dictionary<string, string> _nameToOid = new();
 
+    // UI/Host에서 구독할 수 있는 로딩/파싱 로그 이벤트 (GUI Event Log로 연결용)
+    public event Action<string>? OnLog;
+
+    private void Log(string message)
+    {
+        try { OnLog?.Invoke(message); } catch { /* ignore logging failures */ }
+        System.Diagnostics.Debug.WriteLine(message);
+    }
+
     public MibService()
     {
         // 기본 표준 MIB 중 가장 흔한 것들만 하드코딩으로 미리 등록 (필수)
@@ -46,6 +55,8 @@ public class MibService : IMibService
             .Concat(Directory.GetFiles(directoryPath, "*.txt", SearchOption.AllDirectories))
             .ToList();
 
+        Log($"[MIB][LOAD] directory={directoryPath} files={files.Count}");
+
         foreach (var file in files)
         {
             ParseMibFile(file);
@@ -57,6 +68,8 @@ public class MibService : IMibService
         try
         {
             var content = File.ReadAllText(filePath);
+            var lineCount = content.Count(ch => ch == '\n') + 1;
+            Log($"[MIB][READ] file={Path.GetFileName(filePath)} lines={lineCount} path={filePath}");
             var previousCount = _oidToName.Count;
             
             // 여러 번 반복 파싱하여 의존성 해결 (최대 10회)
@@ -101,8 +114,12 @@ public class MibService : IMibService
                 
                 // 2단계: MODULE-IDENTITY 정의 파싱
                 // 예: mvd5000 MODULE-IDENTITY ... ::= { nel 37 }
-                // MODULE-IDENTITY 다음에 여러 줄이 올 수 있으므로 .*? 사용
-                var moduleIdentityRegex = new Regex(@"^([a-zA-Z0-9_-]+)\s+MODULE-IDENTITY[\s\S]*?::=\s*\{\s*([a-zA-Z0-9_-]+)\s+(\d+)\s*\}", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+                // NOTE:
+                // - IMPORTS 섹션에 "MODULE-IDENTITY, ..."가 등장하므로, 개행까지 먹는 \s+를 쓰면
+                //   "^IMPORTS"가 name으로 잡히는 오인식이 발생할 수 있다.
+                // - 따라서 name과 "MODULE-IDENTITY" 사이에는 공백/탭만 허용([ \t]+)하고,
+                //   라인 시작 공백도 허용(^\s*)하여 실제 정의 라인을 정확히 잡는다.
+                var moduleIdentityRegex = new Regex(@"^\s*([a-zA-Z0-9_-]+)[ \t]+MODULE-IDENTITY\b[\s\S]*?::=\s*\{\s*([a-zA-Z0-9_-]+)[ \t]+(\d+)\s*\}", RegexOptions.Multiline | RegexOptions.IgnoreCase);
                 var moduleMatches = moduleIdentityRegex.Matches(content);
                 
                 foreach (Match match in moduleMatches)
@@ -161,19 +178,12 @@ public class MibService : IMibService
             }
             
             var addedCount = _oidToName.Count - previousCount;
-            if (addedCount > 0)
-            {
-                System.Diagnostics.Debug.WriteLine($"MIB File parsed: {Path.GetFileName(filePath)}, Added {addedCount} OIDs (Total: {_oidToName.Count})");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"MIB File parsed: {Path.GetFileName(filePath)}, No OIDs added (Total: {_oidToName.Count})");
-            }
+            Log($"[MIB][BRIEF] file={Path.GetFileName(filePath)} addedOids={addedCount} totalOids={_oidToName.Count}");
         }
         catch (Exception ex)
         {
             // 파싱 오류는 무시하되, 디버깅을 위해 로그 남길 수 있음
-            System.Diagnostics.Debug.WriteLine($"MIB Parse Error: {filePath} - {ex.Message}");
+            Log($"[MIB][ERROR] file={Path.GetFileName(filePath)} msg={ex.Message}");
         }
     }
 

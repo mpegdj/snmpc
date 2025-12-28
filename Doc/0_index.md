@@ -4,6 +4,7 @@
 dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
 방법 2: UI 프로젝트 디렉토리로 이동 후 실행
 cd SnmpNms.UIdotnet runcd ..
+dotnet build .\SnmpNms.UI\SnmpNms.UI.csproj -c Debug
 방법 3: 솔루션 빌드 후 실행
 dotnet build SnmpNms.slndotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
 실행 전 확인사항
