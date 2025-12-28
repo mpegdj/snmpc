@@ -34,7 +34,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public ObservableCollection<EventLogEntry> Events { get; } = new();
+    public ObservableCollection<SnmpEventLog> Events { get; } = new();
 
     private UiSnmpTarget? _selectedDevice;
     public UiSnmpTarget? SelectedDevice
@@ -133,7 +133,14 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void AddEvent(EventSeverity severity, string? device, string message)
     {
-        var entry = new EventLogEntry(DateTime.Now, severity, device, message);
+        // System 메시지는 Debug에만 기록하고 트래픽 로그(Events)에는 넣지 않음
+        if (message.StartsWith("[System]", StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.LogSystem(message);
+            return;
+        }
+
+        var entry = new SnmpEventLog(DateTime.Now, severity, device, message);
         
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
@@ -145,20 +152,14 @@ public class MainViewModel : INotifyPropertyChanged
                 Events.RemoveAt(0);
             }
             
-            // 기본 탭은 마지막에 추가된 이벤트가 보이도록 Current만 Refresh
+            // 필터링된 뷰 갱신
             CurrentLog.Refresh();
         });
         
-        // 파일 저장 (백그라운드에서 수행해도 무관하나 entry는 불변이므로 그대로 전달)
+        // 파일 저장
         if (LogSaveService.IsEnabled)
         {
             LogSaveService.SaveLogEntry(entry);
-        }
-        
-        // System 메시지는 Debug에도 기록 (DebugViewModel 내부에 Dispatcher 처리 있음)
-        if (message.StartsWith("[System]", StringComparison.OrdinalIgnoreCase))
-        {
-            Debug.LogSystem(message);
         }
     }
 
@@ -169,7 +170,40 @@ public class MainViewModel : INotifyPropertyChanged
         Debug.LogSystem(message);
     }
 
-    public void ClearEvents() => Events.Clear();
+    public void ClearEvents()
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            Events.Clear();
+            CurrentLog.Refresh();
+        });
+    }
+
+    public void SaveEvents()
+    {
+        var sfd = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv",
+            FileName = $"EventLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+        };
+
+        if (sfd.ShowDialog() == true)
+        {
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var ev in Events)
+                {
+                    sb.AppendLine($"[{ev.TimestampString}] [{ev.Severity}] [{ev.Device ?? "System"}] {ev.Message}");
+                }
+                System.IO.File.WriteAllText(sfd.FileName, sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to save log: {ex.Message}");
+            }
+        }
+    }
 
     public MapNode AddDeviceToSubnet(UiSnmpTarget target, MapNode? subnet = null)
     {

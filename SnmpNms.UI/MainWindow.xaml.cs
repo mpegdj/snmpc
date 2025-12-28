@@ -29,10 +29,6 @@ namespace SnmpNms.UI;
 /// </summary>
 public partial class MainWindow : Window
 {
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool AllocConsole();
-
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
     private readonly IPollingService _pollingService;
@@ -92,9 +88,38 @@ public partial class MainWindow : Window
         // VS Code 스타일 UI 초기화
         this.Loaded += (s, e) => InitializeVSCodeUI();
         
-        // 시작 메시지를 터미널에 표시 (콘솔 할당)
-        AllocConsole();
-        Console.WriteLine("SNMPc Start");
+        // 디버그 출력을 앱 내부로 리다이렉트
+        InitializeDebugRedirector();
+        
+        _vm.Debug.LogSystem("[System] SNMPc initialized. External console removed.");
+    }
+
+    private void InitializeDebugRedirector()
+    {
+        // System.Diagnostics.Debug 출력을 가로채서 DebugViewModel로 전달
+        System.Diagnostics.Trace.Listeners.Add(new DebugTabTraceListener(_vm.Debug));
+
+        // Console.WriteLine 출력을 가로채서 DebugViewModel로 전달
+        Console.SetOut(new DebugTabStreamWriter(_vm.Debug));
+    }
+
+    private class DebugTabTraceListener : System.Diagnostics.TraceListener
+    {
+        private readonly DebugViewModel _debugVm;
+        public DebugTabTraceListener(DebugViewModel debugVm) => _debugVm = debugVm;
+
+        public override void Write(string? message) { if (message != null) _debugVm.LogSystem(message); }
+        public override void WriteLine(string? message) { if (message != null) _debugVm.LogSystem(message); }
+    }
+
+    private class DebugTabStreamWriter : System.IO.TextWriter
+    {
+        private readonly DebugViewModel _debugVm;
+        public DebugTabStreamWriter(DebugViewModel debugVm) => _debugVm = debugVm;
+        public override System.Text.Encoding Encoding => System.Text.Encoding.UTF8;
+
+        public override void WriteLine(string? value) { if (value != null) _debugVm.LogSystem(value); }
+        public override void Write(string? value) { if (value != null) _debugVm.LogSystem(value); }
     }
 
     private void InitializeVSCodeUI()
@@ -246,17 +271,17 @@ public partial class MainWindow : Window
 
         // 2. 포트 및 방화벽 상태 로그 출력
         
-        // 161 (Outbound) - 항상 긍정적 메시지 (Binding이 필요 없으므로)
-        _vm.Debug.LogSystem("[System] Port 161 (SNMP Polling) is ready for Outbound - [OK]");
+        // 161 (Outbound)
+        _vm.Debug.LogSystem("[System] Port 161 (SNMP Polling) Outbound ready - [OK]");
         
         // 162 (Inbound) 방화벽 상태
         if (result.Firewall162Registered)
         {
-            _vm.Debug.LogSystem("[System] Firewall rule for Port 162 (Trap) is verified - [OK]");
+            _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) Inbound firewall verified - [OK]");
         }
         else
         {
-            _vm.Debug.LogSystem("[System] Firewall rule for Port 162 (Trap) is NOT found - [FAIL]");
+            _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) Inbound firewall NOT found - [FAIL]");
         }
     }
 
@@ -265,18 +290,18 @@ public partial class MainWindow : Window
         System.Diagnostics.Debug.WriteLine("[MainWindow] InitializeTrapListener() called");
         try
         {
-            System.Diagnostics.Debug.WriteLine("[MainWindow] Attempting to start Trap Listener on port 162...");
+            System.Diagnostics.Debug.WriteLine("[MainWindow] Attempting to bind Trap Listener on port 162 (Inbound)...");
             _trapListener.Start(162); // 여기서 드디어 162 포트 'Bind'가 일어남
             _vm.IsTrapListening = true;
             
             // 포트 162 Listening 다시 체크 (리스너 시작 후 실제 바인딩 확인)
             if (PortChecker.IsPortListening(162))
             {
-                _vm.Debug.LogSystem("[System] Port 162 (Trap) is now successfully BOUND and listening - [OK]");
+                _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) Inbound successfully BOUND - [OK]");
             }
             else
             {
-                _vm.Debug.LogSystem("[System] Port 162 (Trap) failed to bind - [FAIL] Check if port is already in use");
+                _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) Inbound bind FAILED - [FAIL]");
             }
 
             // 실제 바인딩된 포트 정보 확인

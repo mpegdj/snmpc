@@ -59,7 +59,7 @@ public class LogSaveService : INotifyPropertyChanged
     /// <summary>
     /// 로그 항목 저장
     /// </summary>
-    public void SaveLogEntry(EventLogEntry entry)
+    public void SaveLogEntry(SnmpEventLog entry)
     {
         if (!IsEnabled) return;
 

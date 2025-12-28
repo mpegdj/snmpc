@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using SnmpNms.UI.ViewModels;
 using SnmpNms.UI.Views.EventLog;
+using SnmpNms.UI.Models;
 
 namespace SnmpNms.UI.Views;
 
@@ -150,9 +151,9 @@ public partial class BottomPanel : UserControl
             var sb = new System.Text.StringBuilder();
             foreach (var item in dgLog.Items)
             {
-                if (item is SnmpNms.UI.Models.EventLogEntry entry)
+                if (item is SnmpNms.UI.Models.SnmpEventLog evLogEntry)
                 {
-                    sb.AppendLine($"{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{entry.Severity}] {entry.Device} {entry.Message}");
+                    sb.AppendLine($"{evLogEntry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{evLogEntry.Severity}] {evLogEntry.Device} {evLogEntry.Message}");
                 }
             }
             var text = sb.ToString();
@@ -180,6 +181,15 @@ public partial class BottomPanel : UserControl
         }
     }
     
+    private void BtnLogSave_Click(object sender, RoutedEventArgs e)
+    {
+        // LogViewModel은 Events의 래퍼이므로 MainViewModel에서 처리하도록 위임하거나
+        // 직접 다이얼로그 처리를 할 수 있습니다. 
+        // 여기서는 MainViewModel을 찾아 호출하는 방식을 유도하거나 ViewModel에 메서드 노출 필요.
+        // 현재 구조상 _logViewModel만 있으므로, _logViewModel에 SaveToFile을 추가하는 것이 정석입니다.
+        _logViewModel?.SaveToFile();
+    }
+    
     private void BtnComClear_Click(object sender, RoutedEventArgs e)
     {
         _comViewModel?.Clear();
@@ -195,6 +205,16 @@ public partial class BottomPanel : UserControl
                 Clipboard.SetText(text);
             }
         }
+    }
+
+    private void BtnComSave_Click(object sender, RoutedEventArgs e)
+    {
+        _comViewModel?.SaveToFile();
+    }
+
+    private void BtnDebugSave_Click(object sender, RoutedEventArgs e)
+    {
+        _debugViewModel?.SaveToFile();
     }
 
     public void ToggleVisibility()

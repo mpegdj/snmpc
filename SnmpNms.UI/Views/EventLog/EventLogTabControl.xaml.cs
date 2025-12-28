@@ -32,28 +32,6 @@ public partial class EventLogTabControl : UserControl
             {
                 Tag = mainVm;
                 
-                // 저장 설정 바인딩
-                if (txtLogMaxLines != null)
-                {
-                    var maxLinesBinding = new Binding("LogSaveService.MaxLinesInMemory")
-                    {
-                        Source = mainVm,
-                        Mode = BindingMode.TwoWay,
-                        UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-                    };
-                    txtLogMaxLines.SetBinding(TextBox.TextProperty, maxLinesBinding);
-                }
-                
-                if (chkLogSave != null)
-                {
-                    var saveBinding = new Binding("LogSaveService.IsEnabled")
-                    {
-                        Source = mainVm,
-                        Mode = BindingMode.TwoWay
-                    };
-                    chkLogSave.SetBinding(CheckBox.IsCheckedProperty, saveBinding);
-                }
-                
                 // PropertyChanged 이벤트 구독하여 IsPollingRunning 변경 감지
                 mainVm.PropertyChanged += MainViewModel_PropertyChanged;
                 // 초기 상태 설정
@@ -149,6 +127,22 @@ public partial class EventLogTabControl : UserControl
             {
                 dataGridLog.ScrollIntoView(e.Row.Item);
             }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+    }
+
+    private void BtnEventClear_Click(object sender, RoutedEventArgs e)
+    {
+        if (Tag is ViewModels.MainViewModel mainVm)
+        {
+            mainVm.ClearEvents();
+        }
+    }
+
+    private void BtnEventSave_Click(object sender, RoutedEventArgs e)
+    {
+        if (Tag is ViewModels.MainViewModel mainVm)
+        {
+            mainVm.SaveEvents();
         }
     }
 }

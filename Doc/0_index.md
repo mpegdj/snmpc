@@ -147,7 +147,8 @@ Send Trap 버튼 클릭
 - **[2_6_function.md](2_6_function.md)**: 기능 구현
   - 기능별 구현 가이드
 
-- **[27.admin_and_port_settings.md](27.admin_and_port_settings.md)**: v1.5 통합 패치 가이드 (관리자 권한, 방화벽, 크래시 수정)
+- [27.admin_and_port_settings.md](file:///d:/git/snmpc/Doc/27.admin_and_port_settings.md): 관리자 권한 및 포트 설정 (v1.5 통합 패치)
+- [28.log_management_enhancements.md](file:///d:/git/snmpc/Doc/28.log_management_enhancements.md): 로그 관리 기능 강화 및 UI 통합 (v1.6)
 
 ### 레퍼런스
 

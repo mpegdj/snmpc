@@ -11,11 +11,11 @@ namespace SnmpNms.UI.ViewModels;
 /// </summary>
 public class LogViewModel : INotifyPropertyChanged
 {
-    private readonly ObservableCollection<EventLogEntry> _sourceEvents;
+    private readonly ObservableCollection<SnmpEventLog> _sourceEvents;
     
-    public ObservableCollection<EventLogEntry> LogEntries { get; } = new();
+    public ObservableCollection<SnmpEventLog> LogEntries { get; } = new();
     
-    public LogViewModel(ObservableCollection<EventLogEntry> sourceEvents)
+    public LogViewModel(ObservableCollection<SnmpEventLog> sourceEvents)
     {
         _sourceEvents = sourceEvents;
         _sourceEvents.CollectionChanged += SourceEvents_CollectionChanged;
@@ -49,23 +49,9 @@ public class LogViewModel : INotifyPropertyChanged
     /// <summary>
     /// trap 또는 polling 로그인지 확인
     /// </summary>
-    private bool IsTrapOrPollingLog(EventLogEntry entry)
+    private bool IsTrapOrPollingLog(SnmpEventLog entry)
     {
-        if (entry == null || string.IsNullOrEmpty(entry.Message))
-            return false;
-        
-        var message = entry.Message;
-        
-        // Trap 로그: [Trap] 또는 [Trap Test]로 시작
-        if (message.StartsWith("[Trap", StringComparison.OrdinalIgnoreCase))
-            return true;
-        
-        // Polling 로그: [Polling] 또는 Polling 관련 메시지
-        if (message.Contains("Polling", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("Poll", StringComparison.OrdinalIgnoreCase))
-            return true;
-        
-        return false;
+        return SnmpEventLog.IsTrafficLog(entry.Message);
     }
     
     /// <summary>
@@ -77,6 +63,32 @@ public class LogViewModel : INotifyPropertyChanged
         {
             LogEntries.Clear();
         });
+    }
+
+    public void SaveToFile()
+    {
+        var sfd = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "Text Files (*.txt)|*.txt",
+            FileName = $"TrafficLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+        };
+
+        if (sfd.ShowDialog() == true)
+        {
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var entry in LogEntries)
+                {
+                    sb.AppendLine($"{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{entry.Severity}] {entry.Device} {entry.Message}");
+                }
+                System.IO.File.WriteAllText(sfd.FileName, sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to save log: {ex.Message}");
+            }
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

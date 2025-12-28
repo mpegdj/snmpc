@@ -61,6 +61,8 @@
                                 ToolTip="Clear log"/>
                         <Button Content="Copy" Click="BtnLogCopy_Click" Padding="8,2" Margin="0,0,4,0"
                                 ToolTip="Copy to clipboard"/>
+                        <Button Content="Save" Click="BtnLogSave_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Save log to file"/>
                         <CheckBox x:Name="chkLogAutoScroll" Content="Auto-scroll" IsChecked="True" 
                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
@@ -104,6 +106,8 @@
                                 ToolTip="Clear debug log"/>
                         <Button Content="Copy" Click="BtnDebugCopy_Click" Padding="8,2" Margin="0,0,4,0"
                                 ToolTip="Copy to clipboard"/>
+                        <Button Content="Save" Click="BtnDebugSave_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Save debug log to file"/>
                         <CheckBox x:Name="chkDebugAutoScroll" Content="Auto-scroll" IsChecked="True" 
                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
@@ -145,6 +149,8 @@
                                 ToolTip="Clear com log"/>
                         <Button Content="Copy" Click="BtnComCopy_Click" Padding="8,2" Margin="0,0,4,0"
                                 ToolTip="Copy to clipboard"/>
+                        <Button Content="Save" Click="BtnComSave_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Save com log to file"/>
                         <CheckBox x:Name="chkComAutoScroll" Content="Auto-scroll" IsChecked="True" 
                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>

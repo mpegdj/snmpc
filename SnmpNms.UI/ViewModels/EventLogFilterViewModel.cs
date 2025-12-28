@@ -24,13 +24,13 @@ public enum EventSeverityFilter
 
 public class EventLogFilterViewModel : INotifyPropertyChanged
 {
-    private readonly ObservableCollection<EventLogEntry> _events;
+    private readonly ObservableCollection<SnmpEventLog> _events;
     private readonly Func<UiSnmpTarget?> _getSelectedDevice;
     private readonly Func<MapNode?> _getSelectedMapNode;
 
     public string Name { get; }
     public ICollectionView View { get; }
-    public ObservableCollection<EventLogEntry> Events => _events;
+    public ObservableCollection<SnmpEventLog> Events => _events;
 
     private string _filterInfo = "Polling ALL";
     public string FilterInfo
@@ -139,7 +139,7 @@ public class EventLogFilterViewModel : INotifyPropertyChanged
 
     public EventLogFilterViewModel(
         string name,
-        ObservableCollection<EventLogEntry> events,
+        ObservableCollection<SnmpEventLog> events,
         Func<UiSnmpTarget?> getSelectedDevice,
         INotifyPropertyChanged selectedDeviceNotifier,
         Func<MapNode?>? getSelectedMapNode = null,
@@ -194,7 +194,10 @@ public class EventLogFilterViewModel : INotifyPropertyChanged
 
     private bool FilterPredicate(object obj)
     {
-        if (obj is not EventLogEntry e) return false;
+        if (obj is not SnmpEventLog e) return false;
+
+        // 순수하게 트래픽(Trap, Polling) 로그만 표시
+        if (!SnmpEventLog.IsTrafficLog(e.Message)) return false;
 
         // MapNode 선택에 따른 필터링
         var selectedMapNode = _getSelectedMapNode();

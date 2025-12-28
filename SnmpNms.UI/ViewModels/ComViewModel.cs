@@ -172,6 +172,27 @@ public class ComViewModel : INotifyPropertyChanged
         return sb.ToString();
     }
 
+    public void SaveToFile()
+    {
+        var sfd = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "Text Files (*.txt)|*.txt",
+            FileName = $"ComLog_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+        };
+
+        if (sfd.ShowDialog() == true)
+        {
+            try
+            {
+                System.IO.File.WriteAllText(sfd.FileName, ExportToText());
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to save log: {ex.Message}");
+            }
+        }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

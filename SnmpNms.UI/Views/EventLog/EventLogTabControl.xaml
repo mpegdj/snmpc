@@ -62,12 +62,18 @@
                               FontStyle="Italic"/>
                 </StackPanel>
                 
-                <!-- 저장 설정 (우측) -->
+                <!-- 필터링 정보 (우측 상단 툴바처럼 사용) -->
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Lines:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="11"/>
-                    <TextBox x:Name="txtLogMaxLines" Width="60" Height="20" FontSize="11" 
-                             VerticalContentAlignment="Center" Padding="2,0"/>
-                    <CheckBox x:Name="chkLogSave" Content="Save" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                    <Separator Margin="8,2" Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}"/>
+                    
+                    <Button x:Name="btnEventClear" Click="BtnEventClear_Click" Width="26" Height="26" Padding="4"
+                            ToolTip="Clear all events" Background="Transparent" BorderThickness="0">
+                        <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#444444"/>
+                    </Button>
+                    <Button x:Name="btnEventSave" Click="BtnEventSave_Click" Width="26" Height="26" Padding="4"
+                            ToolTip="Save log to file" Background="Transparent" BorderThickness="0">
+                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#444444"/>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
