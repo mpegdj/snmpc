@@ -8,7 +8,9 @@ namespace SnmpNms.UI.Views;
 
 public partial class BottomPanel : UserControl
 {
-    private OutputViewModel? _outputViewModel;
+    private DebugViewModel? _debugViewModel;
+    private ComViewModel? _comViewModel;
+    private LogViewModel? _logViewModel;
     
     public BottomPanel()
     {
@@ -16,69 +18,72 @@ public partial class BottomPanel : UserControl
     }
     
     /// <summary>
-    /// OutputViewModel 설정
-    /// </summary>
-    public void SetOutputViewModel(OutputViewModel outputViewModel)
-    {
-        _outputViewModel = outputViewModel;
-        
-        // Output ListView에 바인딩
-        lvOutput.ItemsSource = outputViewModel.TrafficLogs;
-        
-        // 자동 스크롤 설정
-        outputViewModel.TrafficLogs.CollectionChanged += TrafficLogs_CollectionChanged;
-    }
-    
-    /// <summary>
-    /// MainViewModel 설정 (Tag로 전달하여 바인딩)
+    /// MainViewModel 설정
     /// </summary>
     public void SetMainViewModel(MainViewModel viewModel)
     {
-        // EventLogTabControl에 Tag 설정
-        if (eventLogContent != null)
+        // Log ViewModel 설정
+        _logViewModel = viewModel.Log;
+        if (logContent != null)
         {
-            eventLogContent.Tag = viewModel;
+            logContent.DataContext = viewModel.Log;
+            viewModel.Log.LogEntries.CollectionChanged += LogEntries_CollectionChanged;
         }
         
-        // Output Content에 Tag 설정 및 바인딩
-        if (outputContent != null)
+        // Debug ViewModel 설정
+        _debugViewModel = viewModel.Debug;
+        if (debugContent != null)
         {
-            outputContent.Tag = viewModel;
-            
-            // Output 저장 설정 바인딩
-            if (txtOutputMaxLines != null)
-            {
-                var maxLinesBinding = new System.Windows.Data.Binding("OutputSaveService.MaxLinesInMemory")
-                {
-                    Source = viewModel,
-                    Mode = System.Windows.Data.BindingMode.TwoWay,
-                    UpdateSourceTrigger = System.Windows.Data.UpdateSourceTrigger.PropertyChanged
-                };
-                txtOutputMaxLines.SetBinding(TextBox.TextProperty, maxLinesBinding);
-            }
-            
-            if (chkOutputSave != null)
-            {
-                var saveBinding = new System.Windows.Data.Binding("OutputSaveService.IsEnabled")
-                {
-                    Source = viewModel,
-                    Mode = System.Windows.Data.BindingMode.TwoWay
-                };
-                chkOutputSave.SetBinding(CheckBox.IsCheckedProperty, saveBinding);
-            }
+            debugContent.DataContext = viewModel.Debug;
+            viewModel.Debug.DebugLogs.CollectionChanged += DebugLogs_CollectionChanged;
+        }
+        
+        // Com ViewModel 설정
+        _comViewModel = viewModel.Com;
+        if (comContent != null)
+        {
+            comContent.DataContext = viewModel.Com;
+            viewModel.Com.ComLogs.CollectionChanged += ComLogs_CollectionChanged;
         }
     }
     
-    private void TrafficLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void LogEntries_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (chkAutoScroll?.IsChecked == true && e.Action == NotifyCollectionChangedAction.Add)
+        if (chkLogAutoScroll?.IsChecked == true && e.Action == NotifyCollectionChangedAction.Add)
         {
-            // 자동 스크롤
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (lvOutput != null && lvOutput.Items.Count > 0)
+                if (dgLog != null && dgLog.Items.Count > 0)
                 {
-                    lvOutput.ScrollIntoView(lvOutput.Items[lvOutput.Items.Count - 1]);
+                    dgLog.ScrollIntoView(dgLog.Items[dgLog.Items.Count - 1], null);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+    }
+    
+    private void DebugLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (chkDebugAutoScroll?.IsChecked == true && e.Action == NotifyCollectionChangedAction.Add)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (lvDebug != null && lvDebug.Items.Count > 0)
+                {
+                    lvDebug.ScrollIntoView(lvDebug.Items[lvDebug.Items.Count - 1]);
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+    }
+    
+    private void ComLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (chkComAutoScroll?.IsChecked == true && e.Action == NotifyCollectionChangedAction.Add)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (lvCom != null && lvCom.Items.Count > 0)
+                {
+                    lvCom.ScrollIntoView(lvCom.Items[lvCom.Items.Count - 1]);
                 }
             }), System.Windows.Threading.DispatcherPriority.Background);
         }
@@ -91,26 +96,26 @@ public partial class BottomPanel : UserControl
     
     private void UpdateTabVisibility()
     {
-        if (eventLogContent == null || outputContent == null || terminalContent == null)
+        if (logContent == null || debugContent == null || comContent == null)
             return;
             
         // 모든 탭 숨기기
-        eventLogContent.Visibility = Visibility.Collapsed;
-        outputContent.Visibility = Visibility.Collapsed;
-        terminalContent.Visibility = Visibility.Collapsed;
+        logContent.Visibility = Visibility.Collapsed;
+        debugContent.Visibility = Visibility.Collapsed;
+        comContent.Visibility = Visibility.Collapsed;
         
         // 선택된 탭만 표시
-        if (rbEventLog?.IsChecked == true)
+        if (rbLog?.IsChecked == true)
         {
-            eventLogContent.Visibility = Visibility.Visible;
+            logContent.Visibility = Visibility.Visible;
         }
-        else if (rbOutput?.IsChecked == true)
+        else if (rbDebug?.IsChecked == true)
         {
-            outputContent.Visibility = Visibility.Visible;
+            debugContent.Visibility = Visibility.Visible;
         }
-        else if (rbTerminal?.IsChecked == true)
+        else if (rbCom?.IsChecked == true)
         {
-            terminalContent.Visibility = Visibility.Visible;
+            comContent.Visibility = Visibility.Visible;
         }
     }
 
@@ -133,16 +138,58 @@ public partial class BottomPanel : UserControl
         }
     }
     
-    private void BtnOutputClear_Click(object sender, RoutedEventArgs e)
+    private void BtnLogClear_Click(object sender, RoutedEventArgs e)
     {
-        _outputViewModel?.Clear();
+        _logViewModel?.Clear();
     }
     
-    private void BtnOutputCopy_Click(object sender, RoutedEventArgs e)
+    private void BtnLogCopy_Click(object sender, RoutedEventArgs e)
     {
-        if (_outputViewModel != null)
+        if (_logViewModel != null && dgLog != null)
         {
-            var text = _outputViewModel.ExportToText();
+            var sb = new System.Text.StringBuilder();
+            foreach (var item in dgLog.Items)
+            {
+                if (item is SnmpNms.UI.Models.EventLogEntry entry)
+                {
+                    sb.AppendLine($"{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{entry.Severity}] {entry.Device} {entry.Message}");
+                }
+            }
+            var text = sb.ToString();
+            if (!string.IsNullOrEmpty(text))
+            {
+                Clipboard.SetText(text);
+            }
+        }
+    }
+    
+    private void BtnDebugClear_Click(object sender, RoutedEventArgs e)
+    {
+        _debugViewModel?.Clear();
+    }
+    
+    private void BtnDebugCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (_debugViewModel != null)
+        {
+            var text = _debugViewModel.ExportToText();
+            if (!string.IsNullOrEmpty(text))
+            {
+                Clipboard.SetText(text);
+            }
+        }
+    }
+    
+    private void BtnComClear_Click(object sender, RoutedEventArgs e)
+    {
+        _comViewModel?.Clear();
+    }
+    
+    private void BtnComCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (_comViewModel != null)
+        {
+            var text = _comViewModel.ExportToText();
             if (!string.IsNullOrEmpty(text))
             {
                 Clipboard.SetText(text);

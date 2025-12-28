@@ -12,6 +12,7 @@ public class TrapEvent
     public string? SpecificTrapType { get; }
     public List<SnmpVariable> Variables { get; }
     public string? ErrorMessage { get; }
+    public byte[]? RawData { get; } // Raw 바이트 데이터
 
     public TrapEvent(
         string sourceIpAddress,
@@ -22,7 +23,8 @@ public class TrapEvent
         string? genericTrapType = null,
         string? specificTrapType = null,
         List<SnmpVariable>? variables = null,
-        string? errorMessage = null)
+        string? errorMessage = null,
+        byte[]? rawData = null)
     {
         Timestamp = DateTime.Now;
         SourceIpAddress = sourceIpAddress;
@@ -34,6 +36,7 @@ public class TrapEvent
         SpecificTrapType = specificTrapType;
         Variables = variables ?? new List<SnmpVariable>();
         ErrorMessage = errorMessage;
+        RawData = rawData;
     }
 }
 

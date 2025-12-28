@@ -33,10 +33,27 @@ public class TrapListener : ITrapListener
         try
         {
             _udpClient = new UdpClient(port);
+            
+            // 실제로 바인딩된 포트 확인
+            var localEndPoint = _udpClient.Client.LocalEndPoint as IPEndPoint;
+            if (localEndPoint != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrapListener] Started listening on port {localEndPoint.Port} (requested: {port})");
+                if (localEndPoint.Port != port)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TrapListener] WARNING: Port mismatch! Requested {port} but bound to {localEndPoint.Port}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[TrapListener] Started listening on port {port} (endpoint info unavailable)");
+            }
+            
             _listeningTask = Task.Run(() => ListenAsync(_cancellationTokenSource.Token), _cancellationTokenSource.Token);
         }
         catch (SocketException ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[TrapListener] Failed to start on port {port}: {ex.Message} (ErrorCode: {ex.SocketErrorCode})");
             throw new InvalidOperationException($"Failed to start Trap Listener on port {port}: {ex.Message}", ex);
         }
     }
@@ -124,16 +141,20 @@ public class TrapListener : ITrapListener
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine($"[TrapListener] Waiting for trap on port {_port}...");
                 var result = await _udpClient.ReceiveAsync(cancellationToken);
+                System.Diagnostics.Debug.WriteLine($"[TrapListener] Received UDP packet: {result.Buffer.Length} bytes from {result.RemoteEndPoint}");
                 ProcessTrap(result.Buffer, result.RemoteEndPoint);
             }
             catch (OperationCanceledException)
             {
+                System.Diagnostics.Debug.WriteLine("[TrapListener] Listening cancelled");
                 break;
             }
             catch (Exception ex)
             {
                 // 에러 발생 시 이벤트 발생
+                System.Diagnostics.Debug.WriteLine($"[TrapListener] Error: {ex.Message}");
                 OnTrapReceived?.Invoke(this, new TrapEvent(
                     "0.0.0.0",
                     0,
@@ -147,6 +168,9 @@ public class TrapListener : ITrapListener
     {
         try
         {
+            // 디버그: Trap 수신 확인
+            System.Diagnostics.Debug.WriteLine($"[TrapListener] ProcessTrap: Received {buffer.Length} bytes from {remoteEndPoint.Address}:{remoteEndPoint.Port}");
+            
             var messages = MessageFactory.ParseMessages(buffer, 0, buffer.Length, null!);
             if (messages == null || messages.Count == 0)
             {
@@ -234,7 +258,9 @@ public class TrapListener : ITrapListener
                 enterpriseOid,
                 genericTrapType,
                 specificTrapType,
-                variables);
+                variables,
+                null,
+                buffer); // Raw 바이트 데이터 포함
 
             OnTrapReceived?.Invoke(this, trapEvent);
         }

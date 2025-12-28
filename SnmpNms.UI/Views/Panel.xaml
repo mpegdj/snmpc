@@ -25,15 +25,15 @@
                 
                 <!-- Tab Headers -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <RadioButton x:Name="rbEventLog" Content="Event Log" 
+                    <RadioButton x:Name="rbLog" Content="Log" 
                                  Style="{StaticResource PanelTabRadioStyle}"
                                  IsChecked="True" Checked="TabRadio_Checked"/>
-                    <RadioButton x:Name="rbOutput" Content="Output" 
+                    <RadioButton x:Name="rbDebug" Content="Debug" 
                                  Style="{StaticResource PanelTabRadioStyle}"
                                  Checked="TabRadio_Checked"/>
-                    <RadioButton x:Name="rbTerminal" Content="Terminal" 
+                    <RadioButton x:Name="rbCom" Content="Com" 
                                  Style="{StaticResource PanelTabRadioStyle}"
-                                 IsEnabled="False"/>
+                                 Checked="TabRadio_Checked"/>
                 </StackPanel>
                 
                 <!-- Toggle Button -->
@@ -52,41 +52,66 @@
         
         <!-- Panel Content -->
         <Grid Grid.Row="1" Background="{StaticResource VSCodePanelBackground}">
-            <!-- Event Log Content -->
-            <eventLog:EventLogTabControl x:Name="eventLogContent" 
-                                         DataContext="{Binding CurrentLog}"
-                                         Visibility="Visible"/>
-            
-            <!-- Output Content -->
-            <DockPanel x:Name="outputContent" Visibility="Collapsed" DataContext="{Binding Output}">
+            <!-- Log Content (trap과 polling만) -->
+            <DockPanel x:Name="logContent" Visibility="Visible" DataContext="{Binding Log}">
                 <!-- 툴바 -->
                 <Grid DockPanel.Dock="Top" Margin="4,2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <!-- 좌측 버튼들 -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal">
-                        <Button Content="Clear" Click="BtnOutputClear_Click" Padding="8,2" Margin="0,0,4,0"
-                                ToolTip="Clear output log"/>
-                        <Button Content="Copy" Click="BtnOutputCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Clear" Click="BtnLogClear_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Clear log"/>
+                        <Button Content="Copy" Click="BtnLogCopy_Click" Padding="8,2" Margin="0,0,4,0"
                                 ToolTip="Copy to clipboard"/>
-                        <CheckBox x:Name="chkAutoScroll" Content="Auto-scroll" IsChecked="True" 
+                        <CheckBox x:Name="chkLogAutoScroll" Content="Auto-scroll" IsChecked="True" 
                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    </StackPanel>
-                    
-                    <!-- 우측 저장 설정 -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Lines:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="11"/>
-                        <TextBox x:Name="txtOutputMaxLines" Width="60" Height="20" FontSize="11" 
-                                 VerticalContentAlignment="Center" Padding="2,0"/>
-                        <CheckBox x:Name="chkOutputSave" Content="Save" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11"/>
                     </StackPanel>
                 </Grid>
                 
                 <!-- 로그 리스트 -->
-                <ListView x:Name="lvOutput" 
+                <DataGrid x:Name="dgLog" 
+                          ItemsSource="{Binding LogEntries}"
+                          AutoGenerateColumns="False"
+                          Background="{StaticResource VSCodeEditorBackground}"
+                          Foreground="{StaticResource VSCodeForeground}"
+                          BorderThickness="0"
+                          FontFamily="Consolas"
+                          FontSize="11"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="None"
+                          RowBackground="Transparent"
+                          AlternatingRowBackground="Transparent"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="False"
+                          CanUserResizeRows="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat='HH:mm:ss.fff'}" Width="100"/>
+                        <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="70"/>
+                        <DataGridTextColumn Header="Device" Binding="{Binding Device}" Width="120"/>
+                        <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+            
+            <!-- Debug Content (앱 동작 및 명령어 실행) -->
+            <DockPanel x:Name="debugContent" Visibility="Collapsed" DataContext="{Binding Debug}">
+                <!-- 툴바 -->
+                <Grid DockPanel.Dock="Top" Margin="4,2">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Clear" Click="BtnDebugClear_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Clear debug log"/>
+                        <Button Content="Copy" Click="BtnDebugCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Copy to clipboard"/>
+                        <CheckBox x:Name="chkDebugAutoScroll" Content="Auto-scroll" IsChecked="True" 
+                                  VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </Grid>
+                
+                <!-- 로그 리스트 -->
+                <ListView x:Name="lvDebug" 
+                          ItemsSource="{Binding DebugLogs}"
                           Background="{StaticResource VSCodeEditorBackground}"
                           Foreground="{StaticResource VSCodeForeground}"
                           BorderThickness="0"
@@ -111,12 +136,58 @@
                 </ListView>
             </DockPanel>
             
-            <!-- Terminal Content (Coming soon) -->
-            <TextBlock x:Name="terminalContent" 
-                       Text="Terminal (Coming soon)" 
-                       Foreground="{StaticResource VSCodeSecondaryForeground}"
-                       Margin="12"
-                       Visibility="Collapsed"/>
+            <!-- Com Content (통신 hex와 text) -->
+            <DockPanel x:Name="comContent" Visibility="Collapsed" DataContext="{Binding Com}">
+                <!-- 툴바 -->
+                <Grid DockPanel.Dock="Top" Margin="4,2">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Clear" Click="BtnComClear_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Clear com log"/>
+                        <Button Content="Copy" Click="BtnComCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Copy to clipboard"/>
+                        <CheckBox x:Name="chkComAutoScroll" Content="Auto-scroll" IsChecked="True" 
+                                  VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </Grid>
+                
+                <!-- 로그 리스트 (hex와 text 표시) -->
+                <ListView x:Name="lvCom" 
+                          ItemsSource="{Binding ComLogs}"
+                          Background="{StaticResource VSCodeEditorBackground}"
+                          Foreground="{StaticResource VSCodeForeground}"
+                          BorderThickness="0"
+                          FontFamily="Consolas"
+                          FontSize="11"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Vertical" Margin="0,2">
+                                <TextBlock>
+                                    <Run Text="{Binding TimestampString, StringFormat='[{0}]'}"/>
+                                    <Run Text="{Binding Direction}"/>
+                                    <Run Text="{Binding Target}"/>
+                                </TextBlock>
+                                <TextBlock Text="{Binding HexString}" 
+                                           Foreground="#4EC9B0"
+                                           Margin="20,0,0,0"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding TextString}" 
+                                           Foreground="#CE9178"
+                                           Margin="20,0,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="Padding" Value="2,4"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+            </DockPanel>
         </Grid>
     </Grid>
 </UserControl>

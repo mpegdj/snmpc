@@ -59,8 +59,17 @@ public class MainViewModel : INotifyPropertyChanged
     public EventLogFilterViewModel Custom7Log { get; }
     public EventLogFilterViewModel Custom8Log { get; }
     
-    // Output (Traffic Log)
+    // Output (Traffic Log) - Debug용으로 사용
     public OutputViewModel Output { get; } = new();
+    
+    // Debug (앱 동작 및 명령어 실행)
+    public DebugViewModel Debug { get; } = new();
+    
+    // Com (통신 hex와 text)
+    public ComViewModel Com { get; } = new();
+    
+    // Log (trap과 polling만)
+    public LogViewModel Log { get; }
     
     // Log Save Services
     public LogSaveService LogSaveService { get; } = new();
@@ -117,6 +126,9 @@ public class MainViewModel : INotifyPropertyChanged
         Custom6Log = new EventLogFilterViewModel("Custom 6", Events, () => SelectedDevice, this);
         Custom7Log = new EventLogFilterViewModel("Custom 7", Events, () => SelectedDevice, this);
         Custom8Log = new EventLogFilterViewModel("Custom 8", Events, () => SelectedDevice, this);
+        
+        // Log (trap과 polling만)
+        Log = new LogViewModel(Events);
     }
 
     public void AddEvent(EventSeverity severity, string? device, string message)
@@ -138,9 +150,20 @@ public class MainViewModel : INotifyPropertyChanged
         
         // 기본 탭은 마지막에 추가된 이벤트가 보이도록 Current만 Refresh
         CurrentLog.Refresh();
+        
+        // System 메시지는 Debug에도 기록
+        if (message.StartsWith("[System]", StringComparison.OrdinalIgnoreCase))
+        {
+            Debug.LogSystem(message);
+        }
     }
 
-    public void AddSystemInfo(string message) => AddEvent(EventSeverity.Info, null, message);
+    public void AddSystemInfo(string message)
+    {
+        AddEvent(EventSeverity.Info, null, message);
+        // Debug에도 기록
+        Debug.LogSystem(message);
+    }
 
     public void ClearEvents() => Events.Clear();
 

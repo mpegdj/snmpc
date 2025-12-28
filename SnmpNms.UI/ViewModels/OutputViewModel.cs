@@ -19,10 +19,29 @@ public class TrafficLogEntry
     public string Oid { get; set; } = "";
     public string Details { get; set; } = "";
     public bool IsError { get; set; }
+    public byte[]? RawData { get; set; } // Raw 바이트 데이터
     
     public string TimestampString => Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
     
-    public string FormattedLine => $"[{TimestampString}] {Direction} {Protocol} {Operation} {Target} {Oid} {Details}";
+    public string FormattedLine
+    {
+        get
+        {
+            if (RawData != null && RawData.Length > 0)
+            {
+                // Raw 데이터를 hex 문자열로 변환
+                var hex = BitConverter.ToString(RawData).Replace("-", " ");
+                // 너무 길면 잘라서 표시
+                if (hex.Length > 200)
+                {
+                    hex = hex.Substring(0, 200) + "...";
+                }
+                return $"[{TimestampString}] {Direction} {hex}";
+            }
+            // Raw 데이터가 없으면 기존 형식 유지
+            return $"[{TimestampString}] {Direction} {Protocol} {Operation} {Target} {Oid} {Details}";
+        }
+    }
 }
 
 /// <summary>
@@ -71,28 +90,28 @@ public class OutputViewModel : INotifyPropertyChanged
     /// <summary>
     /// 송신 로그 추가
     /// </summary>
-    public void LogSend(string protocol, string operation, string target, string oid, string details = "")
+    public void LogSend(string protocol, string operation, string target, string oid, string details = "", byte[]? rawData = null)
     {
-        AddLog(">>>", protocol, operation, target, oid, details, false);
+        AddLog("[out]", protocol, operation, target, oid, details, false, rawData);
     }
     
     /// <summary>
     /// 수신 로그 추가
     /// </summary>
-    public void LogReceive(string protocol, string operation, string target, string oid, string details = "")
+    public void LogReceive(string protocol, string operation, string target, string oid, string details = "", byte[]? rawData = null)
     {
-        AddLog("<<<", protocol, operation, target, oid, details, false);
+        AddLog("[in]", protocol, operation, target, oid, details, false, rawData);
     }
     
     /// <summary>
     /// 에러 로그 추가
     /// </summary>
-    public void LogError(string protocol, string operation, string target, string oid, string errorMessage)
+    public void LogError(string protocol, string operation, string target, string oid, string errorMessage, byte[]? rawData = null)
     {
-        AddLog("!!!", protocol, operation, target, oid, $"ERROR: {errorMessage}", true);
+        AddLog("[err]", protocol, operation, target, oid, $"ERROR: {errorMessage}", true, rawData);
     }
     
-    private void AddLog(string direction, string protocol, string operation, string target, string oid, string details, bool isError)
+    private void AddLog(string direction, string protocol, string operation, string target, string oid, string details, bool isError, byte[]? rawData = null)
     {
         var entry = new TrafficLogEntry
         {
@@ -103,7 +122,8 @@ public class OutputViewModel : INotifyPropertyChanged
             Target = target,
             Oid = oid,
             Details = details,
-            IsError = isError
+            IsError = isError,
+            RawData = rawData
         };
         
         // 파일 저장

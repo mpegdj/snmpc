@@ -16,6 +16,7 @@ using SnmpNms.Infrastructure;
 using SnmpNms.UI.Models;
 using SnmpNms.UI.Services;
 using SnmpNms.UI.ViewModels;
+using PortChecker = SnmpNms.UI.Services.PortChecker;
 using SnmpNms.UI.Views.Dialogs;
 using SnmpNms.UI.Views;
 using SnmpNms.UI.Views.EventLog;
@@ -67,6 +68,9 @@ public partial class MainWindow : Window
         // Trap 이벤트 연결
         _trapListener.OnTrapReceived += TrapListener_OnTrapReceived;
 
+        // 포트 161, 162 체크 및 권한 요청
+        CheckPortsOnStartup();
+
         // Trap Listener 시작
         InitializeTrapListener();
 
@@ -115,12 +119,11 @@ public partial class MainWindow : Window
             _sidebarMapView.DataContext = _vm;
         }
 
-        // BottomPanel에 Event Log DataContext 설정 (여러 탭이 각각 바인딩됨)
+        // BottomPanel에 DataContext 설정
         bottomPanel.DataContext = _vm;
-        bottomPanel.SetOutputViewModel(_vm.Output);
         bottomPanel.SetMainViewModel(_vm);
         
-        // OutputViewModel에 저장 서비스 연결
+        // OutputViewModel에 저장 서비스 연결 (Debug용)
         _vm.Output.SetSaveService(_vm.OutputSaveService);
 
         // Sidebar (Activity Bar 포함) 이벤트 연결
@@ -210,18 +213,72 @@ public partial class MainWindow : Window
         // Community 선택 변경 시 특별한 처리 없음
     }
 
+    /// <summary>
+    /// 앱 시작 시 포트 161, 162 체크 및 권한 요청
+    /// </summary>
+    private void CheckPortsOnStartup()
+    {
+        var result = PortChecker.CheckPortsAndRequestPermission();
+        
+        if (result.RequestedRestart)
+        {
+            // 재시작 요청됨 - 앱 종료
+            return;
+        }
+        
+        // 포트 상태 로그 기록
+        if (result.IsAdmin)
+        {
+            _vm.Debug.LogSystem("[System] Running with administrator privileges");
+        }
+        else
+        {
+            _vm.Debug.LogSystem("[System] Running without administrator privileges");
+        }
+        
+        if (result.Port161Listening)
+        {
+            _vm.Debug.LogSystem("[System] Port 161 (SNMP) is listening");
+        }
+        else
+        {
+            _vm.Debug.LogSystem("[System] Port 161 (SNMP) is not listening - may require administrator privileges");
+        }
+        
+        if (result.Port162Listening)
+        {
+            _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) is listening");
+        }
+        else
+        {
+            _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) is not listening - may require administrator privileges");
+        }
+    }
+
     private void InitializeTrapListener()
     {
+        System.Diagnostics.Debug.WriteLine("[MainWindow] InitializeTrapListener() called");
         try
         {
+            System.Diagnostics.Debug.WriteLine("[MainWindow] Attempting to start Trap Listener on port 162...");
             _trapListener.Start(162);
             _vm.IsTrapListening = true;
-            _vm.AddEvent(EventSeverity.Info, null, "[System] Trap Listener started on port 162");
+            
+            // 실제 바인딩된 포트 정보 확인
+            var (ip, port) = _trapListener.GetListenerInfo();
+            var message = $"[System] Trap Listener started on {ip}:{port}";
+            _vm.AddEvent(EventSeverity.Info, null, message);
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Trap Listener initialized: {ip}:{port}, IsListening={_trapListener.IsListening}");
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Event Log message: {message}");
         }
         catch (Exception ex)
         {
             _vm.IsTrapListening = false;
-            _vm.AddEvent(EventSeverity.Error, null, $"[System] Failed to start Trap Listener: {ex.Message}");
+            var errorMessage = $"[System] Failed to start Trap Listener: {ex.Message}";
+            _vm.AddEvent(EventSeverity.Error, null, errorMessage);
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Trap Listener initialization failed: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Stack trace: {ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Event Log error message: {errorMessage}");
         }
     }
 
@@ -230,7 +287,56 @@ public partial class MainWindow : Window
         if (e.ErrorMessage != null)
         {
             _vm.AddEvent(EventSeverity.Error, e.SourceIpAddress, $"[Trap] {e.ErrorMessage}");
+            // Output에 에러 로그 기록
+            // Debug에 에러 로그 기록
+            _vm.Debug.LogError("TRAP", $"Receive error from {e.SourceIpAddress}:{e.SourcePort}: {e.ErrorMessage}");
             return;
+        }
+
+        // Trap OID 결정 (SNMPv2c는 두 번째 variable의 값이 snmpTrapOID, SNMPv1은 EnterpriseOid)
+        string trapOid = "";
+        if (e.Variables.Count > 1)
+        {
+            // SNMPv2c: 두 번째 variable이 snmpTrapOID (OID는 1.3.6.1.6.3.1.1.4.1.0, 값이 실제 Trap OID)
+            if (e.Variables[1].Oid == "1.3.6.1.6.3.1.1.4.1.0")
+            {
+                trapOid = e.Variables[1].Value?.ToString() ?? "";
+            }
+        }
+        
+        // SNMPv1이거나 snmpTrapOID를 찾지 못한 경우
+        if (string.IsNullOrEmpty(trapOid))
+        {
+            if (!string.IsNullOrEmpty(e.EnterpriseOid))
+            {
+                trapOid = e.EnterpriseOid;
+            }
+            else if (e.Variables.Count > 0)
+            {
+                trapOid = e.Variables[0].Oid;
+            }
+        }
+
+        // Trap 정보 요약
+        var trapDetails = new List<string>();
+        if (!string.IsNullOrEmpty(e.EnterpriseOid))
+        {
+            trapDetails.Add($"Enterprise={e.EnterpriseOid}");
+        }
+        if (!string.IsNullOrEmpty(e.GenericTrapType))
+        {
+            trapDetails.Add($"Generic={e.GenericTrapType}");
+        }
+        if (e.Variables.Count > 0)
+        {
+            trapDetails.Add($"Variables={e.Variables.Count}");
+        }
+        var details = string.Join(", ", trapDetails);
+
+        // Com에 Trap 수신 로그 기록 (raw 데이터 포함)
+        if (e.RawData != null && e.RawData.Length > 0)
+        {
+            _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}");
         }
 
         var trapInfo = $"Trap from {e.SourceIpAddress}:{e.SourcePort}";
@@ -1093,9 +1199,6 @@ public partial class MainWindow : Window
 
             _vm.AddEvent(EventSeverity.Info, $"{targetIp}:{port}", $"[Trap Test] Sending SNMPv2c Trap to {targetIp}:{port}...");
 
-            // Output에 Trap 전송 로그 기록
-            _vm.Output.LogSend("TRAP", "SEND", $"{targetIp}:{port}", trapOid, $"Community={community}, Variables=2");
-
             // SNMPv2c Trap 전송
             var variables = new List<Variable>
             {
@@ -1103,6 +1206,25 @@ public partial class MainWindow : Window
                 new Variable(trapObjectId, new OctetString($"Test Trap from {DateTime.Now:yyyy-MM-dd HH:mm:ss}"))
             };
 
+            // 디버그: Trap 전송 확인
+            System.Diagnostics.Debug.WriteLine($"[TrapTest] Sending Trap to {targetIp}:{port}, OID: {trapOid}");
+            
+            // Trap 메시지 생성하여 raw 데이터 추출 시도
+            var trapMessage = new TrapV2Message(
+                0,
+                VersionCode.V2,
+                community,
+                trapObjectId,
+                0,
+                variables);
+            
+            // Raw 바이트 추출
+            var rawBytes = trapMessage.ToBytes();
+            if (rawBytes != null && rawBytes.Length > 0)
+            {
+                _vm.Com.LogSend(rawBytes, $"{targetIp}:{port}");
+            }
+            
             Messenger.SendTrapV2(
                 0,
                 VersionCode.V2,
@@ -1112,8 +1234,8 @@ public partial class MainWindow : Window
                 0,
                 variables);
 
-            // Output에 Trap 전송 성공 로그 기록
-            _vm.Output.LogReceive("TRAP", "SEND", $"{targetIp}:{port}", trapOid, "Trap sent successfully");
+            // 디버그: Trap 전송 완료 확인
+            System.Diagnostics.Debug.WriteLine($"[TrapTest] Trap sent successfully to {targetIp}:{port}");
             _vm.AddEvent(EventSeverity.Info, $"{targetIp}:{port}", $"[Trap Test] Trap sent successfully! OID: {trapOid}");
         }
         catch (Exception ex)
@@ -1124,7 +1246,8 @@ public partial class MainWindow : Window
             
             if (!string.IsNullOrEmpty(targetIp) && !string.IsNullOrEmpty(trapOid))
             {
-                _vm.Output.LogError("TRAP", "SEND", $"{targetIp}:{port}", trapOid, ex.Message);
+                // Debug에 에러 로그 기록
+                _vm.Debug.LogError("TRAP", $"Send error to {targetIp}:{port}: {ex.Message}");
             }
             
             _vm.AddEvent(EventSeverity.Error, null, $"[Trap Test] Error: {ex.Message}");
