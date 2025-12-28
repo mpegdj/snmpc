@@ -618,6 +618,24 @@ public partial class MainWindow : Window
                     _vm.Output.LogReceive("SNMP", "GET", $"{target.IpAddress}:{target.Port}", v.Oid, $"{v.TypeCode}: {v.Value}");
                 }
                 
+                // 첫 번째 변수의 값을 Value 필드에 자동 채우기
+                if (result.Variables.Count > 0 && txtSetValue != null && cmbSetType != null)
+                {
+                    var firstVar = result.Variables[0];
+                    txtSetValue.Text = firstVar.Value?.ToString() ?? "";
+                    
+                    // 타입에 맞는 ComboBox 항목 선택
+                    var typeName = GetSnmpTypeName(firstVar.TypeCode);
+                    for (int i = 0; i < cmbSetType.Items.Count; i++)
+                    {
+                        if (cmbSetType.Items[i] is ComboBoxItem item && item.Content?.ToString() == typeName)
+                        {
+                            cmbSetType.SelectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine($"Success! (Time: {result.ResponseTime}ms)");
                 foreach (var v in result.Variables)
@@ -708,6 +726,24 @@ public partial class MainWindow : Window
                 foreach (var v in result.Variables)
                 {
                     _vm.Output.LogReceive("SNMP", "GET-NEXT", $"{target.IpAddress}:{target.Port}", v.Oid, $"{v.TypeCode}: {v.Value}");
+                }
+                
+                // 첫 번째 변수의 값을 Value 필드에 자동 채우기
+                if (result.Variables.Count > 0 && txtSetValue != null && cmbSetType != null)
+                {
+                    var firstVar = result.Variables[0];
+                    txtSetValue.Text = firstVar.Value?.ToString() ?? "";
+                    
+                    // 타입에 맞는 ComboBox 항목 선택
+                    var typeName = GetSnmpTypeName(firstVar.TypeCode);
+                    for (int i = 0; i < cmbSetType.Items.Count; i++)
+                    {
+                        if (cmbSetType.Items[i] is ComboBoxItem item && item.Content?.ToString() == typeName)
+                        {
+                            cmbSetType.SelectedIndex = i;
+                            break;
+                        }
+                    }
                 }
                 
                 var sb = new System.Text.StringBuilder();
@@ -2662,5 +2698,23 @@ public partial class MainWindow : Window
             _vm.AddEvent(EventSeverity.Error, null, $"[Search] Error selecting MIB node: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"SearchView_MibNodeSelected error: {ex}");
         }
+    }
+    
+    private string GetSnmpTypeName(string typeCode)
+    {
+        // TypeCode 문자열을 ComboBox 항목 이름으로 변환
+        // 예: "Integer32" -> "INTEGER", "OctetString" -> "OCTETSTRING"
+        return typeCode.ToUpper() switch
+        {
+            "INTEGER32" or "INTEGER" => "INTEGER",
+            "OCTETSTRING" or "OCTET STRING" => "OCTETSTRING",
+            "IPADDRESS" or "IP ADDRESS" => "IPADDRESS",
+            "COUNTER32" or "COUNTER" => "COUNTER32",
+            "COUNTER64" => "COUNTER64",
+            "GAUGE32" or "GAUGE" => "GAUGE32",
+            "TIMETICKS" or "TIME TICKS" => "TIMETICKS",
+            "OBJECTIDENTIFIER" or "OBJECT IDENTIFIER" or "OID" => "OBJECTIDENTIFIER",
+            _ => "OCTETSTRING" // 기본값
+        };
     }
 }

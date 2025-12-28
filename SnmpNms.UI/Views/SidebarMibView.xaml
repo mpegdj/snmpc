@@ -8,6 +8,9 @@
              d:DesignHeight="600" d:DesignWidth="280"
              Background="{StaticResource VSCodeSidebarBackground}">
     <UserControl.Resources>
+        <!-- MIB 트리 들여쓰기: 6px -->
+        <Thickness x:Key="VSCodeTreeIndent">6,0,0,0</Thickness>
+        
         <!-- 검색 패널용 아이콘 버튼 스타일 -->
         <Style x:Key="SearchIconButton" TargetType="Button">
             <Setter Property="Width" Value="20"/>
