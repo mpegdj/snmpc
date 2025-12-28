@@ -6,6 +6,7 @@ using Lextm.SharpSnmpLib.Messaging;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using VersionCode = Lextm.SharpSnmpLib.VersionCode;
+using Lextm.SharpSnmpLib.Security;
 
 namespace SnmpNms.Infrastructure;
 
@@ -171,7 +172,7 @@ public class TrapListener : ITrapListener
             // 디버그: Trap 수신 확인
             System.Diagnostics.Debug.WriteLine($"[TrapListener] ProcessTrap: Received {buffer.Length} bytes from {remoteEndPoint.Address}:{remoteEndPoint.Port}");
             
-            var messages = MessageFactory.ParseMessages(buffer, 0, buffer.Length, null!);
+            var messages = MessageFactory.ParseMessages(buffer, 0, buffer.Length, new UserRegistry());
             if (messages == null || messages.Count == 0)
             {
                 throw new InvalidOperationException("No message parsed from trap data");

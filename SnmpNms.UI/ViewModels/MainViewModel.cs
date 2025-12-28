@@ -134,24 +134,28 @@ public class MainViewModel : INotifyPropertyChanged
     public void AddEvent(EventSeverity severity, string? device, string message)
     {
         var entry = new EventLogEntry(DateTime.Now, severity, device, message);
-        Events.Add(entry);
         
-        // 메모리 제한 적용
-        if (Events.Count > LogSaveService.MaxLinesInMemory)
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
         {
-            Events.RemoveAt(0);
-        }
+            Events.Add(entry);
+            
+            // 메모리 제한 적용
+            if (Events.Count > LogSaveService.MaxLinesInMemory)
+            {
+                Events.RemoveAt(0);
+            }
+            
+            // 기본 탭은 마지막에 추가된 이벤트가 보이도록 Current만 Refresh
+            CurrentLog.Refresh();
+        });
         
-        // 파일 저장
+        // 파일 저장 (백그라운드에서 수행해도 무관하나 entry는 불변이므로 그대로 전달)
         if (LogSaveService.IsEnabled)
         {
             LogSaveService.SaveLogEntry(entry);
         }
         
-        // 기본 탭은 마지막에 추가된 이벤트가 보이도록 Current만 Refresh
-        CurrentLog.Refresh();
-        
-        // System 메시지는 Debug에도 기록
+        // System 메시지는 Debug에도 기록 (DebugViewModel 내부에 Dispatcher 처리 있음)
         if (message.StartsWith("[System]", StringComparison.OrdinalIgnoreCase))
         {
             Debug.LogSystem(message);

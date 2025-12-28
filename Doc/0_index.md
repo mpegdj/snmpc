@@ -147,6 +147,8 @@ Send Trap 버튼 클릭
 - **[2_6_function.md](2_6_function.md)**: 기능 구현
   - 기능별 구현 가이드
 
+- **[27.admin_and_port_settings.md](27.admin_and_port_settings.md)**: v1.5 통합 패치 가이드 (관리자 권한, 방화벽, 크래시 수정)
+
 ### 레퍼런스
 
 - **[intro_snmpc.pdf](intro_snmpc.pdf)**: SNMPc UI 레퍼런스 (PDF)
@@ -158,26 +160,26 @@ Send Trap 버튼 클릭
 
 ### 개발 환경 설정
 
-1. **필수 요구사항**
-   - .NET 9 SDK
-   - Visual Studio 2022 또는 VS Code
-   - Windows (WPF 지원)
+1.  **필수 요구사항**
+    - .NET 9 SDK
+    - Visual Studio 2022 또는 VS Code
+    - Windows (WPF 지원)
 
-2. **프로젝트 클론**
-   ```powershell
-   git clone <repository-url>
-   cd snmpc
-   ```
+2.  **프로젝트 클론**
+    ```powershell
+    git clone <repository-url>
+    cd snmpc
+    ```
 
-3. **빌드**
-   ```powershell
-   dotnet build SnmpNms.sln
-   ```
+3.  **빌드**
+    ```powershell
+    dotnet build SnmpNms.sln
+    ```
 
-4. **실행**
-   ```powershell
-   dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
-   ```
+4.  **실행**
+    ```powershell
+    dotnet run --project SnmpNms.UI/SnmpNms.UI.csproj
+    ```
 
 ### 프로젝트 구조
 
@@ -248,36 +250,36 @@ dotnet build SnmpNms.UI
 
 ### 1. SNMP 테스트
 
-1. **SNMP Test 탭** 선택
-2. IP 주소 입력 (예: `192.168.1.1`)
-3. Community 입력 (예: `public`)
-4. OID 입력 (예: `1.3.6.1.2.1.1.1.0` 또는 `sysDescr`)
-5. **Get** 버튼 클릭
-6. 결과 확인
+1.  **SNMP Test 탭** 선택
+2.  IP 주소 입력 (예: `192.168.1.1`)
+3.  Community 입력 (예: `public`)
+4.  OID 입력 (예: `1.3.6.1.2.1.1.1.0` 또는 `sysDescr`)
+5.  **Get** 버튼 클릭
+6.  결과 확인
 
 ### 2. Discovery 실행
 
-1. **Find Map Objects** 버튼 클릭 (왼쪽 위 툴바)
-2. **Seeds 탭**에서 네트워크 범위 추가
-3. **Comm 탭**에서 Community String 추가
-4. **Filters 탭**에서 필터 설정 (선택사항)
-5. **Restart** 버튼 클릭
-6. 발견된 디바이스 선택 후 **OK** 클릭
+1.  **Find Map Objects** 버튼 클릭 (왼쪽 위 툴바)
+2.  **Seeds 탭**에서 네트워크 범위 추가
+3.  **Comm 탭**에서 Community String 추가
+4.  **Filters 탭**에서 필터 설정 (선택사항)
+5.  **Restart** 버튼 클릭
+6.  발견된 디바이스 선택 후 **OK** 클릭
 
 ### 3. 디바이스 속성 편집
 
-1. Map에서 디바이스 **우클릭** → **Properties**
-   - 또는 툴바의 **Edit Object Properties** 버튼 클릭
-2. **Attributes 탭**에서 Polling Protocol 변경
-3. **Access 탭**에서 SNMP 설정 변경
-4. **OK** 클릭
+1.  Map에서 디바이스 **우클릭** → **Properties**
+    - 또는 툴바의 **Edit Object Properties** 버튼 클릭
+2.  **Attributes 탭**에서 Polling Protocol 변경
+3.  **Access 탭**에서 SNMP 설정 변경
+4.  **OK** 클릭
 
 ### 4. Auto Polling 시작
 
-1. **SNMP Test 탭** 선택
-2. IP 및 Community 입력
-3. **Auto Poll** 체크박스 선택
-4. 상태 업데이트 확인 (상단 상태 표시)
+1.  **SNMP Test 탭** 선택
+2.  IP 및 Community 입력
+3.  **Auto Poll** 체크박스 선택
+4.  상태 업데이트 확인 (상단 상태 표시)
 
 ---
 
@@ -312,9 +314,9 @@ dotnet build SnmpNms.UI
 
 ### 핵심 원칙
 
-1. **의존성 역전 원칙 (DIP)**: UI는 인터페이스만 참조
-2. **단일 책임 원칙 (SRP)**: 각 레이어는 명확한 책임
-3. **개방-폐쇄 원칙 (OCP)**: 확장에 열려있고 수정에 닫혀있음
+1.  **의존성 역전 원칙 (DIP)**: UI는 인터페이스만 참조
+2.  **단일 책임 원칙 (SRP)**: 각 레이어는 명확한 책임
+3.  **개방-폐쇄 원칙 (OCP)**: 확장에 열려있고 수정에 닫혀있음
 
 ---
 
@@ -322,18 +324,18 @@ dotnet build SnmpNms.UI
 
 ### 새 기능 추가
 
-1. **Core에 인터페이스 정의** (필요시)
-2. **Infrastructure에 구현** (필요시)
-3. **UI에서 사용**
-4. **문서 업데이트**
+1.  **Core에 인터페이스 정의** (필요시)
+2.  **Infrastructure에 구현** (필요시)
+3.  **UI에서 사용**
+4.  **문서 업데이트**
 
 ### 버그 수정
 
-1. **이슈 확인** (Event Log 또는 crash.log)
-2. **원인 분석**
-3. **수정**
-4. **테스트**
-5. **문서 업데이트** (필요시)
+1.  **이슈 확인** (Event Log 또는 crash.log)
+2.  **원인 분석**
+3.  **수정**
+4.  **테스트**
+5.  **문서 업데이트** (필요시)
 
 ### 문서 업데이트
 
@@ -389,6 +391,13 @@ dotnet build SnmpNms.UI
 - Discovery 후 기기를 CIDR 기반 서브넷에 자동 배치
 - Seed 정보를 기반으로 적절한 서브넷 찾기/생성
 - 서브넷 이름 형식: `네트워크주소/CIDR` (예: `192.168.0.0/24`)
+
+### v1.5 (관리자 권한, 방화벽 및 크래시 수정)
+- `Environment.ProcessPath`를 사용하여 관리자 권한 재시작 경로 문제 해결
+- Com 탭 `XamlParseException` 및 사이드바 검색 `NullReferenceException` 해결
+- 윈도우 방화벽 규칙(UDP 161, 162) 자동 등록 및 검증 기능 추가
+- Com 로그 UI를 Wireshark 스타일(한 줄 요약)로 개선
+- 모든 v1.5 변경 사항을 `27.admin_and_port_settings.md`로 통합 정리
 
 ---
 

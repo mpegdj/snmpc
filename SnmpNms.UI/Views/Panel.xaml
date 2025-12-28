@@ -150,35 +150,38 @@
                     </StackPanel>
                 </Grid>
                 
-                <!-- 로그 리스트 (hex와 text 표시) -->
+                <!-- 로그 리스트 (Wireshark 스타일: 한 줄씩 표시) -->
                 <ListView x:Name="lvCom" 
                           ItemsSource="{Binding ComLogs}"
-                          Background="{StaticResource VSCodeEditorBackground}"
-                          Foreground="{StaticResource VSCodeForeground}"
+                          Background="White"
+                          Foreground="Black"
                           BorderThickness="0"
                           FontFamily="Consolas"
                           FontSize="11"
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Vertical" Margin="0,2">
-                                <TextBlock>
-                                    <Run Text="{Binding TimestampString, StringFormat='[{0}]'}"/>
-                                    <Run Text="{Binding Direction}"/>
-                                    <Run Text="{Binding Target}"/>
-                                </TextBlock>
-                                <TextBlock Text="{Binding HexString}" 
-                                           Foreground="#4EC9B0"
-                                           Margin="20,0,0,0"
-                                           TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding TextString}" 
-                                           Foreground="#CE9178"
-                                           Margin="20,0,0,0"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Time" Width="120">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding TimestampString, Mode=OneWay}" Foreground="#444444"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Dir" Width="40" DisplayMemberBinding="{Binding Direction}"/>
+                            <GridViewColumn Header="Target" Width="120" DisplayMemberBinding="{Binding Target}"/>
+                            <GridViewColumn Header="Data (Hex/Text Summary)" Width="600">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Summary}" Foreground="Black"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                        </GridView>
+                    </ListView.View>
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="Padding" Value="2,4"/>

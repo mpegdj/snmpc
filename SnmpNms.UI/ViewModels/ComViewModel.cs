@@ -17,6 +17,18 @@ public class ComLogEntry
     
     public string TimestampString => Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff");
     
+    public string Summary
+    {
+        get
+        {
+            if (RawData == null || RawData.Length == 0) return "Empty Packet";
+            // 한 줄 요약: 방향, 대상, 데이터 길이, 그리고 데이터의 앞부분 일부
+            var text = TextString;
+            var preview = text.Length > 50 ? text.Substring(0, 50) + "..." : text;
+            return $"{Direction} {Target} - {RawData.Length} bytes: {preview}";
+        }
+    }
+    
     public string HexString
     {
         get

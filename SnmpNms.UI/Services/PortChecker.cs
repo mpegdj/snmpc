@@ -85,7 +85,12 @@ public static class PortChecker
     {
         try
         {
-            var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exePath))
+            {
+                exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            }
+            
             var startInfo = new ProcessStartInfo
             {
                 UseShellExecute = true,
@@ -108,42 +113,120 @@ public static class PortChecker
     }
     
     /// <summary>
-    /// 포트 161과 162 상태 확인 및 권한 요청
+    /// 포트 161과 162 상태 확인 및 설정 필요 여부 판단
     /// </summary>
-    public static PortCheckResult CheckPortsAndRequestPermission()
+    public static PortCheckResult CheckPortsAndSetup()
     {
         var result = new PortCheckResult();
-        
-        // 포트 161 체크 (SNMP 클라이언트 - 일반적으로 서버 측에서 LISTEN)
-        result.Port161Listening = IsPortListening(161, ProtocolType.Udp);
-        
-        // 포트 162 체크 (Trap Listener - LISTEN 상태여야 함)
-        result.Port162Listening = IsPortListening(162, ProtocolType.Udp);
-        
         result.IsAdmin = IsRunningAsAdministrator();
         
-        // 포트 161 또는 162가 LISTEN 상태가 아니고 관리자 권한이 없으면 권한 요청
-        if ((!result.Port161Listening || !result.Port162Listening) && !result.IsAdmin)
+        // 1. 방화벽 규칙 확인 (162번 위주)
+        result.Firewall161Registered = VerifyFirewallRule(161);
+        result.Firewall162Registered = VerifyFirewallRule(162);
+        
+        // 2. 포트 상태 체크
+        result.Port161Listening = IsPortListening(161, ProtocolType.Udp);
+        result.Port162Listening = IsPortListening(162, ProtocolType.Udp);
+        
+        // 3. 관리자 권한이 필요한지 결정
+        // 162번 방화벽 규칙이 없고 아직 관리자가 아니라면 권한 요청이 필요함
+        if (!result.Firewall162Registered && !result.IsAdmin)
         {
-            var ports = new List<string>();
-            if (!result.Port161Listening) ports.Add("161 (SNMP)");
-            if (!result.Port162Listening) ports.Add("162 (SNMP Trap)");
-            
-            var response = MessageBox.Show(
-                $"포트 {string.Join(", ", ports)}를 열려면 관리자 권한이 필요합니다.\n\n" +
-                "관리자 권한으로 재시작하시겠습니까?",
-                "관리자 권한 필요",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-            
-            if (response == MessageBoxResult.Yes)
-            {
-                RestartAsAdministrator();
-                result.RequestedRestart = true;
-            }
+            result.RequestedRestart = true;
+        }
+        else if (result.IsAdmin)
+        {
+            // 이미 관리자라면 누락된 규칙 자동 등록 시도
+            EnsureFirewallRules();
+            // 등록 후 다시 확인
+            result.Firewall161Registered = VerifyFirewallRule(161);
+            result.Firewall162Registered = VerifyFirewallRule(162);
         }
         
         return result;
+    }
+
+    /// <summary>
+    /// SNMP 및 Trap 포트를 윈도우 방화벽에 허용 규칙으로 추가
+    /// </summary>
+    public static void EnsureFirewallRules()
+    {
+        try
+        {
+            // netsh를 사용하여 방화벽 규칙 추가 (이미 있으면 무시되거나 업데이트됨)
+            // SNMP (UDP 161)
+            RunNetshCommand("advfirewall firewall add rule name=\"SnmpNms - SNMP (UDP 161)\" dir=in action=allow protocol=UDP localport=161 profile=any");
+            // Trap (UDP 162)
+            RunNetshCommand("advfirewall firewall add rule name=\"SnmpNms - SNMP Trap (UDP 162)\" dir=in action=allow protocol=UDP localport=162 profile=any");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"방화벽 규칙 추가 중 오류 발생: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 특정 포트에 대한 방화벽 규칙이 존재하는지 확인
+    /// </summary>
+    public static bool VerifyFirewallRule(int port)
+    {
+        try
+        {
+            var ruleName = port == 161 ? "SnmpNms - SNMP (UDP 161)" : "SnmpNms - SNMP Trap (UDP 162)";
+            
+            // netsh advfirewall firewall show rule 은 규칙이 없을 때 "no rules match" 등을 출력하며
+            // ExitCode가 1이 되는 경우가 많습니다. 0인 경우라도 "찾을 수 없습니다" 등의 문자열을 체크하는 것이 안전합니다.
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "netsh.exe",
+                Arguments = $"advfirewall firewall show rule name=\"{ruleName}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            
+            using var process = Process.Start(startInfo);
+            if (process == null) return false;
+            
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            
+            // 출력 결과에 규칙 이름과 포트 번호가 포함되어 있다면 등록된 것으로 간주
+            return output.Contains(ruleName) && output.Contains(port.ToString());
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static void RunNetshCommand(string arguments)
+    {
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "netsh",
+                Arguments = arguments,
+                UseShellExecute = true,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            
+            // 이미 관리자 권한인 경우 Verb = "runas" 없이 실행 (깜빡임 방지 및 명확성)
+            if (!IsRunningAsAdministrator())
+            {
+                startInfo.Verb = "runas";
+            }
+            
+            using var process = Process.Start(startInfo);
+            process?.WaitForExit();
+        }
+        catch
+        {
+            // 로그 기록 또는 무시
+        }
     }
 }
 
@@ -154,6 +237,8 @@ public class PortCheckResult
 {
     public bool Port161Listening { get; set; }
     public bool Port162Listening { get; set; }
+    public bool Firewall161Registered { get; set; }
+    public bool Firewall162Registered { get; set; }
     public bool IsAdmin { get; set; }
     public bool RequestedRestart { get; set; }
 }

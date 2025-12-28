@@ -218,40 +218,45 @@ public partial class MainWindow : Window
     /// </summary>
     private void CheckPortsOnStartup()
     {
-        var result = PortChecker.CheckPortsAndRequestPermission();
+        var result = PortChecker.CheckPortsAndSetup();
         
         if (result.RequestedRestart)
         {
-            // 재시작 요청됨 - 앱 종료
-            return;
+            // 관리자 권한으로 재시작을 위해 현재 인스턴스 종료
+            _vm.Debug.LogSystem("[System] Trap (UDP 162) inbound firewall rule is missing.");
+            _vm.Debug.LogSystem("[System] Requesting administrator privileges to register firewall rules...");
+            
+            // 사용자에게 알림 후 재시작
+            var dialogResult = MessageBox.Show(
+                "SNMP Trap 수신을 위해 방화벽 규칙 등록이 필요합니다.\n관리자 권한으로 재시작하시겠습니까?",
+                "권한 필요",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Information);
+
+            if (dialogResult == MessageBoxResult.Yes)
+            {
+                PortChecker.RestartAsAdministrator();
+                return;
+            }
+            else
+            {
+                _vm.Debug.LogSystem("[System] User declined administrator privileges. Trap reception may be blocked by firewall.");
+            }
         }
+
+        // 2. 포트 및 방화벽 상태 로그 출력
         
-        // 포트 상태 로그 기록
-        if (result.IsAdmin)
+        // 161 (Outbound) - 항상 긍정적 메시지 (Binding이 필요 없으므로)
+        _vm.Debug.LogSystem("[System] Port 161 (SNMP Polling) is ready for Outbound - [OK]");
+        
+        // 162 (Inbound) 방화벽 상태
+        if (result.Firewall162Registered)
         {
-            _vm.Debug.LogSystem("[System] Running with administrator privileges");
+            _vm.Debug.LogSystem("[System] Firewall rule for Port 162 (Trap) is verified - [OK]");
         }
         else
         {
-            _vm.Debug.LogSystem("[System] Running without administrator privileges");
-        }
-        
-        if (result.Port161Listening)
-        {
-            _vm.Debug.LogSystem("[System] Port 161 (SNMP) is listening");
-        }
-        else
-        {
-            _vm.Debug.LogSystem("[System] Port 161 (SNMP) is not listening - may require administrator privileges");
-        }
-        
-        if (result.Port162Listening)
-        {
-            _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) is listening");
-        }
-        else
-        {
-            _vm.Debug.LogSystem("[System] Port 162 (SNMP Trap) is not listening - may require administrator privileges");
+            _vm.Debug.LogSystem("[System] Firewall rule for Port 162 (Trap) is NOT found - [FAIL]");
         }
     }
 
@@ -261,9 +266,19 @@ public partial class MainWindow : Window
         try
         {
             System.Diagnostics.Debug.WriteLine("[MainWindow] Attempting to start Trap Listener on port 162...");
-            _trapListener.Start(162);
+            _trapListener.Start(162); // 여기서 드디어 162 포트 'Bind'가 일어남
             _vm.IsTrapListening = true;
             
+            // 포트 162 Listening 다시 체크 (리스너 시작 후 실제 바인딩 확인)
+            if (PortChecker.IsPortListening(162))
+            {
+                _vm.Debug.LogSystem("[System] Port 162 (Trap) is now successfully BOUND and listening - [OK]");
+            }
+            else
+            {
+                _vm.Debug.LogSystem("[System] Port 162 (Trap) failed to bind - [FAIL] Check if port is already in use");
+            }
+
             // 실제 바인딩된 포트 정보 확인
             var (ip, port) = _trapListener.GetListenerInfo();
             var message = $"[System] Trap Listener started on {ip}:{port}";

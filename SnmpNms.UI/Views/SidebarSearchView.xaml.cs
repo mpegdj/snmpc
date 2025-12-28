@@ -304,11 +304,11 @@ public partial class SidebarSearchView : UserControl
         // 초기화 전에는 무시
         if (!_isInitialized) return;
         
-        // UI 요소들이 null인지 확인
-        if (SearchSummaryText == null || MapResultsExpander == null || 
+        // UI 요소들이 null인지 확인 (강화된 체크)
+        if (SearchTextBox == null || SearchSummaryText == null || MapResultsExpander == null || 
             MibResultsExpander == null || NoResultsText == null) return;
         
-        var query = SearchTextBox?.Text?.Trim() ?? "";
+        var query = SearchTextBox.Text?.Trim() ?? "";
         var totalResults = _mapResults.Count + _mibResults.Count;
 
         // 검색 요약 텍스트 업데이트
