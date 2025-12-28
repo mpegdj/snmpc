@@ -44,6 +44,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _walkCancellationTokenSource;
     private string? _currentFilePath;
     private bool _isModified;
+    private AppPreferences _preferences;
 
     public MainWindow()
     {
@@ -97,6 +98,19 @@ public partial class MainWindow : Window
         InitializeDebugRedirector();
         
         _vm.Debug.LogSystem("[System] SNMPc initialized. External console removed.");
+
+        // Preferences 로드
+        _preferences = PreferencesService.Load();
+        ApplyPreferences();
+        
+        // 마지막 맵 파일 자동 로드
+        if (_preferences.AutoLoadLastMap && !string.IsNullOrEmpty(_preferences.LastMapFilePath))
+        {
+            if (File.Exists(_preferences.LastMapFilePath))
+            {
+                LoadMapFile(_preferences.LastMapFilePath);
+            }
+        }
     }
 
     private void InitializeDebugRedirector()
@@ -2639,6 +2653,10 @@ public partial class MainWindow : Window
             UpdateTitle();
 
             _vm.AddSystemInfo($"[File] Loaded: {Path.GetFileName(dlg.FileName)}");
+            
+            // Update preferences
+            _preferences.LastMapFilePath = dlg.FileName;
+            PreferencesService.Save(_preferences);
         }
         catch (Exception ex)
         {
@@ -2683,6 +2701,10 @@ public partial class MainWindow : Window
             UpdateTitle();
 
             _vm.AddSystemInfo($"[File] Saved: {Path.GetFileName(filePath)}");
+
+            // Update preferences
+            _preferences.LastMapFilePath = filePath;
+            PreferencesService.Save(_preferences);
         }
         catch (Exception ex)
         {
@@ -2952,5 +2974,51 @@ public partial class MainWindow : Window
             "OBJECTIDENTIFIER" or "OBJECT IDENTIFIER" or "OID" => "OBJECTIDENTIFIER",
             _ => "OCTETSTRING" // 기본값
         };
+    }
+
+    private void ApplyPreferences()
+    {
+        // Apply preferences to UI and services
+        if (cmbCommunity != null && !string.IsNullOrEmpty(_preferences.DefaultCommunity))
+        {
+            cmbCommunity.Text = _preferences.DefaultCommunity;
+        }
+
+        // Apply log settings
+        if (_preferences.EnableLogSave)
+        {
+            _vm.LogSaveService.IsEnabled = true;
+        }
+    }
+
+    private void MenuPreferences_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new PreferencesDialog(_preferences);
+        if (dialog.ShowDialog() == true)
+        {
+            _preferences = dialog.Preferences;
+            PreferencesService.Save(_preferences);
+            ApplyPreferences();
+            _vm.AddSystemInfo("[System] Preferences saved successfully.");
+        }
+    }
+
+    private void LoadMapFile(string filePath)
+    {
+        try
+        {
+            var mapData = _mapDataService.LoadFromFile(filePath);
+            if (mapData != null)
+            {
+                _vm.RootSubnet = mapData;
+                _currentFilePath = filePath;
+                _isModified = false;
+                _vm.AddSystemInfo($"[System] Map loaded from {filePath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.AddEvent(EventSeverity.Error, null, $"[System] Failed to load map: {ex.Message}");
+        }
     }
 }

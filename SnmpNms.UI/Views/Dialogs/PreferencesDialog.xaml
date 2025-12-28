@@ -1,0 +1,79 @@
+<Window x:Class="SnmpNms.UI.Views.Dialogs.PreferencesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Preferences" Height="500" Width="600"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F5F5">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Application Preferences" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- General Settings -->
+                <TextBlock Text="General" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <Border Background="White" Padding="15" Margin="0,0,0,20" CornerRadius="4">
+                    <StackPanel>
+                        <CheckBox x:Name="chkAutoLoadMap" Content="Auto-load last map file on startup" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="chkAutoStartPolling" Content="Auto-start polling on startup" Margin="0,0,0,10"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- SNMP Settings -->
+                <TextBlock Text="SNMP Defaults" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <Border Background="White" Padding="15" Margin="0,0,0,20" CornerRadius="4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Default Community:" VerticalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBox x:Name="txtDefaultCommunity" Grid.Column="1" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Default Timeout (ms):" Grid.Row="1" VerticalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBox x:Name="txtDefaultTimeout" Grid.Row="1" Grid.Column="1" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Polling Interval (sec):" Grid.Row="2" VerticalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBox x:Name="txtPollingInterval" Grid.Row="2" Grid.Column="1" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="Trap Listener Port:" Grid.Row="3" VerticalAlignment="Center"/>
+                        <TextBox x:Name="txtTrapPort" Grid.Row="3" Grid.Column="1"/>
+                    </Grid>
+                </Border>
+
+                <!-- Logging Settings -->
+                <TextBlock Text="Logging" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                <Border Background="White" Padding="15" CornerRadius="4">
+                    <StackPanel>
+                        <CheckBox x:Name="chkEnableLogSave" Content="Enable log file saving" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Max log lines in memory:" VerticalAlignment="Center"/>
+                            <TextBox x:Name="txtMaxLogLines" Grid.Column="1"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="OK" Width="80" Height="30" Margin="0,0,10,0" Click="BtnOk_Click" IsDefault="True"/>
+            <Button Content="Cancel" Width="80" Height="30" Click="BtnCancel_Click" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

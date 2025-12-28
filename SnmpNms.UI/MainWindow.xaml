@@ -58,6 +58,9 @@
                     <Separator/>
                     <MenuItem Header="E_xit" Click="MenuExit_Click"/>
                 </MenuItem>
+                <MenuItem Header="_Edit">
+                    <MenuItem Header="Preferences..." Click="MenuPreferences_Click"/>
+                </MenuItem>
                 <MenuItem Header="_View">
                     <MenuItem Header="Refresh" Click="MenuRefresh_Click"/>
                 </MenuItem>

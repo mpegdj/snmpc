@@ -10,8 +10,27 @@ public class MainViewModel : INotifyPropertyChanged
 {
     // Map Selection Tree roots (SNMPc: Root Subnet)
     public ObservableCollection<MapNode> MapRoots { get; } = new();
-    public MapNode RootSubnet { get; }
-    public MapNode DefaultSubnet { get; }
+    
+    private MapNode _rootSubnet;
+    public MapNode RootSubnet 
+    { 
+        get => _rootSubnet;
+        set
+        {
+            if (_rootSubnet == value) return;
+            _rootSubnet = value;
+            OnPropertyChanged();
+            
+            // Root가 바뀌면 MapRoots 컬렉션 동기화
+            MapRoots.Clear();
+            if (_rootSubnet != null)
+            {
+                MapRoots.Add(_rootSubnet);
+            }
+        }
+    }
+
+    public MapNode DefaultSubnet { get; set; }
 
     // Map Selection multi-select (SNMPc: ctrl/shift)
     public ObservableCollection<MapNode> SelectedMapNodes { get; } = new();
@@ -135,9 +154,6 @@ public class MainViewModel : INotifyPropertyChanged
         RootSubnet = new MapNode(MapNodeType.RootSubnet, "Root Subnet");
         DefaultSubnet = new MapNode(MapNodeType.Subnet, "Default");
         RootSubnet.AddChild(DefaultSubnet);
-        MapRoots.Add(RootSubnet);
-
-        // UX: 첫 실행 시 트리가 접혀있으면 "Device가 안 보인다"로 느껴져서 기본 확장
         RootSubnet.IsExpanded = true;
         DefaultSubnet.IsExpanded = true;
 
