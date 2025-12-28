@@ -94,6 +94,11 @@
                         <TextBlock Text="{Binding DisplayName}"
                                    Foreground="{StaticResource VSCodeForeground}"
                                    MouseLeftButtonDown="MapNodeText_MouseLeftButtonDown"/>
+                        <TextBlock Text="{Binding Target.LastMessage}"
+                                   Foreground="#CCCCCC" 
+                                   Margin="8,0,0,0"
+                                   FontSize="11"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.Resources>

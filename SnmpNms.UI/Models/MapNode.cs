@@ -194,9 +194,11 @@ public class MapNode : INotifyPropertyChanged
             return;
         }
 
-        // highest priority among descendants
+        // highest priority among descendants (Down > Warning > Notice > Unknown > Up)
         var statuses = Children.Select(c => c.EffectiveStatus).ToList();
         if (statuses.Any(s => s == DeviceStatus.Down)) EffectiveStatus = DeviceStatus.Down;
+        else if (statuses.Any(s => s == DeviceStatus.Warning)) EffectiveStatus = DeviceStatus.Warning;
+        else if (statuses.Any(s => s == DeviceStatus.Notice)) EffectiveStatus = DeviceStatus.Notice;
         else if (statuses.Any(s => s == DeviceStatus.Unknown)) EffectiveStatus = DeviceStatus.Unknown;
         else EffectiveStatus = DeviceStatus.Up;
     }

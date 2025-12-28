@@ -13,15 +13,19 @@ namespace SnmpNms.UI.Converters;
 public class DeviceStatusToLightBackgroundConverter : IValueConverter
 {
     // 밝은 테마에 어울리는 색상
-    private static readonly SolidColorBrush UpBrush = new(Color.FromRgb(0xD4, 0xED, 0xDA));      // 밝은 녹색
-    private static readonly SolidColorBrush DownBrush = new(Color.FromRgb(0xF8, 0xD7, 0xDA));    // 밝은 빨강
-    private static readonly SolidColorBrush UnknownBrush = Brushes.Transparent;                   // 투명 (폴링 전 - 장비 행용)
-    private static readonly SolidColorBrush HeaderUnknownBrush = new(Color.FromRgb(0xF5, 0xF5, 0xF5)); // 밝은 회색 (폴링 전 - 헤더용)
+    private static readonly SolidColorBrush UpBrush = new(Colors.LightGreen);    // 밝은 초록
+    private static readonly SolidColorBrush DownBrush = new(Colors.Red);         // 완전 빨강
+    private static readonly SolidColorBrush WarningBrush = new(Colors.Orange);   // 주황 (Warning)
+    private static readonly SolidColorBrush NoticeBrush = new(Colors.Yellow);    // 노랑 (Notice)
+    private static readonly SolidColorBrush UnknownBrush = Brushes.Transparent;                   
+    private static readonly SolidColorBrush HeaderUnknownBrush = new(Color.FromRgb(0xF5, 0xF5, 0xF5)); 
 
     static DeviceStatusToLightBackgroundConverter()
     {
         UpBrush.Freeze();
         DownBrush.Freeze();
+        WarningBrush.Freeze();
+        NoticeBrush.Freeze();
         HeaderUnknownBrush.Freeze();
     }
 
@@ -29,13 +33,14 @@ public class DeviceStatusToLightBackgroundConverter : IValueConverter
     {
         if (value is not DeviceStatus status) return UnknownBrush;
         
-        // parameter가 "Header"이면 Unknown 상태에서 밝은 회색 반환
         var isHeader = parameter is string str && str.Equals("Header", StringComparison.OrdinalIgnoreCase);
 
         return status switch
         {
             DeviceStatus.Up => UpBrush,
             DeviceStatus.Down => DownBrush,
+            DeviceStatus.Warning => WarningBrush,
+            DeviceStatus.Notice => NoticeBrush,
             DeviceStatus.Unknown => isHeader ? HeaderUnknownBrush : UnknownBrush,
             _ => isHeader ? HeaderUnknownBrush : UnknownBrush
         };

@@ -13,8 +13,9 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
         get => _ipAddress;
         set
         {
-            if (_ipAddress == value) return;
-            _ipAddress = value;
+            var newVal = value?.Trim() ?? "";
+            if (_ipAddress == newVal) return;
+            _ipAddress = newVal;
             OnPropertyChanged();
             OnPropertyChanged(nameof(EndpointKey));
             OnPropertyChanged(nameof(DisplayName));
@@ -104,6 +105,18 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
         {
             if (_status == value) return;
             _status = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _lastMessage = "";
+    public string LastMessage
+    {
+        get => _lastMessage;
+        set
+        {
+            if (_lastMessage == value) return;
+            _lastMessage = value;
             OnPropertyChanged();
         }
     }

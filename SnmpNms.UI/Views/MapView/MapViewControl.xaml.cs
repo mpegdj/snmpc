@@ -240,7 +240,7 @@ public partial class MapViewControl : UserControl
     {
         var box = new Border
         {
-            MinWidth = 150,
+            Width = 150, // 처음 사이즈로 고정 (150)
             BorderBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(4),
@@ -252,7 +252,7 @@ public partial class MapViewControl : UserControl
         var mainStack = new StackPanel();
         box.Child = mainStack;
 
-        // 헤더 (Site 이름 + 톱니바퀴) - 하얀색 테마 + 집계 상태 표시
+        // 헤더 (Site 이름 + 톱니바퀴)
         var header = new Border
         {
             Padding = new Thickness(8, 6, 8, 6),
@@ -261,7 +261,7 @@ public partial class MapViewControl : UserControl
             BorderThickness = new Thickness(0, 0, 0, 1)
         };
         
-        // 헤더 배경색 바인딩 (Site 집계 상태) - 폴링 전에는 밝은 회색, 폴링 후에는 상태 색상
+        // 헤더 배경색 바인딩
         header.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(MapNode.EffectiveStatus))
         {
             Source = subnet,
@@ -303,7 +303,7 @@ public partial class MapViewControl : UserControl
         header.Child = headerPanel;
         mainStack.Children.Add(header);
 
-        // 장비 목록 - 하얀색 배경
+        // 장비 목록
         var deviceList = new ItemsControl
         {
             Background = Brushes.White,
@@ -355,7 +355,7 @@ public partial class MapViewControl : UserControl
         };
         mainStack.Children.Add(addDeviceRow);
 
-        // 드래그 이벤트
+        // 드래그 이벤트 (헤더)
         header.MouseLeftButtonDown += (_, args) =>
         {
             _draggingBox = box;
@@ -424,18 +424,40 @@ public partial class MapViewControl : UserControl
         borderFactory.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)));
         borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(0, 0, 0, 1));
         
-        // 배경색 바인딩 (장비 상태) - 폴링 시작 전에는 투명, 시작 후에는 상태 색상
+        // 배경색 바인딩 (장비 상태)
         borderFactory.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(MapNode.EffectiveStatus))
         {
             Converter = _statusBgConverter
         });
 
+        // DockPanel 사용 (텍스트 오버플로우 방지)
+        var dockFactory = new FrameworkElementFactory(typeof(DockPanel));
+
+        // Device Name (왼쪽 고정, 공간 부족시 우선순위 확인 필요하지만 DockPanel은 순서대로 배치됨)
+        // 이름을 확실히 보여주기 위해 먼저 배치하지 않고, 메시지를 Right로 보내거나 하는 방법도 있지만,
+        // 보통은 이름이 중요하므로 Left.
         var textFactory = new FrameworkElementFactory(typeof(TextBlock));
         textFactory.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33)));
-        textFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+        textFactory.SetValue(TextBlock.FontWeightProperty, FontWeights.Bold);
         textFactory.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(MapNode.DisplayName)));
+        textFactory.SetValue(DockPanel.DockProperty, Dock.Left); // Attached Property 설정 수정
+        dockFactory.AppendChild(textFactory);
+
+        // Status Message (LastMessage) - MaxWidth 제거, 알아서 잘리도록 함
+        var msgFactory = new FrameworkElementFactory(typeof(TextBlock));
+        msgFactory.SetValue(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)));
+        msgFactory.SetValue(TextBlock.FontSizeProperty, 11.0);
+        msgFactory.SetValue(TextBlock.MarginProperty, new Thickness(6, 0, 0, 0));
+        msgFactory.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+        msgFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+        msgFactory.SetValue(TextBlock.ToolTipProperty, new System.Windows.Data.Binding("Target.LastMessage"));
         
-        borderFactory.AppendChild(textFactory);
+        // MapNode.Target.LastMessage 바인딩
+        msgFactory.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("Target.LastMessage"));
+        
+        dockFactory.AppendChild(msgFactory);
+
+        borderFactory.AppendChild(dockFactory);
         template.VisualTree = borderFactory;
         
         return template;
