@@ -1093,6 +1093,9 @@ public partial class MainWindow : Window
 
             _vm.AddEvent(EventSeverity.Info, $"{targetIp}:{port}", $"[Trap Test] Sending SNMPv2c Trap to {targetIp}:{port}...");
 
+            // Output에 Trap 전송 로그 기록
+            _vm.Output.LogSend("TRAP", "SEND", $"{targetIp}:{port}", trapOid, $"Community={community}, Variables=2");
+
             // SNMPv2c Trap 전송
             var variables = new List<Variable>
             {
@@ -1109,10 +1112,21 @@ public partial class MainWindow : Window
                 0,
                 variables);
 
+            // Output에 Trap 전송 성공 로그 기록
+            _vm.Output.LogReceive("TRAP", "SEND", $"{targetIp}:{port}", trapOid, "Trap sent successfully");
             _vm.AddEvent(EventSeverity.Info, $"{targetIp}:{port}", $"[Trap Test] Trap sent successfully! OID: {trapOid}");
         }
         catch (Exception ex)
         {
+            var targetIp = txtTrapTarget?.Text?.Trim() ?? "";
+            var trapOid = txtTrapOid?.Text?.Trim() ?? "";
+            var port = txtTrapPort?.Text?.Trim() ?? "162";
+            
+            if (!string.IsNullOrEmpty(targetIp) && !string.IsNullOrEmpty(trapOid))
+            {
+                _vm.Output.LogError("TRAP", "SEND", $"{targetIp}:{port}", trapOid, ex.Message);
+            }
+            
             _vm.AddEvent(EventSeverity.Error, null, $"[Trap Test] Error: {ex.Message}");
         }
     }

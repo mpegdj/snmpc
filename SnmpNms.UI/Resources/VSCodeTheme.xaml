@@ -225,7 +225,7 @@
                         <!-- Children -->
                         <ItemsPresenter x:Name="ItemsHost"
                                         Grid.Row="1" Grid.Column="1"
-                                        Margin="4,0,0,0"
+                                        Margin="{StaticResource VSCodeTreeIndent}"
                                         Visibility="Collapsed"/>
                     </Grid>
 
