@@ -380,14 +380,16 @@ public partial class MainWindow : Window
                 int trapIdx = trapName.IndexOf("Trap", StringComparison.OrdinalIgnoreCase);
                 deviceDisplayName = trapIdx > 0 ? trapName.Substring(0, trapIdx) : trapName;
             }
-            else
-            {
-                deviceDisplayName = trapName;
-            }
+        }
+        
+        // 3. 여전히 이름이 없으면 IP 주소 사용
+        if (string.IsNullOrWhiteSpace(deviceDisplayName))
+        {
+            deviceDisplayName = e.SourceIpAddress;
         }
 
-        // 결과 프리픽스 결정 (예: [mve5000], [Trap] 제거)
-        var prefix = $"[{deviceDisplayName}]";
+        // 결과 프리픽스 결정 (사용자 요청: [T:장비명], Alias 최우선)
+        var prefix = $"[T:{deviceDisplayName}]";
 
         // 이벤트 로그용 병합 텍스트 생성
         var values = e.Variables.Select(v => v.Value?.ToString() ?? "null");
@@ -620,7 +622,19 @@ public partial class MainWindow : Window
             else
             {
                 SetDeviceStatus($"{e.Target.IpAddress}:{e.Target.Port}", DeviceStatus.Down);
-                _vm.AddEvent(EventSeverity.Error, $"{e.Target.IpAddress}:{e.Target.Port}", $"[Poll] Down: {e.Message}");
+                
+                // [P:장비명] 프리픽스 적용 (Alias 최우선)
+                var uiTarget = e.Target as UiSnmpTarget;
+                var deviceName = "";
+                
+                if (uiTarget != null)
+                {
+                    deviceName = !string.IsNullOrWhiteSpace(uiTarget.Alias) ? uiTarget.Alias : uiTarget.Device;
+                }
+                
+                if (string.IsNullOrWhiteSpace(deviceName)) deviceName = e.Target.IpAddress;
+                
+                _vm.AddEvent(EventSeverity.Error, $"{e.Target.IpAddress}:{e.Target.Port}", $"[P:{deviceName}]: Down: {e.Message}");
             }
         });
     }

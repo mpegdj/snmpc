@@ -34,15 +34,11 @@ public class SnmpEventLog
     {
         if (string.IsNullOrEmpty(message)) return false;
         
-        // 들여쓰기된 줄도 포함하기 위해 TrimStart() 후 체크
         string trimmed = message.TrimStart();
 
-        // [Trap]으로 시작하거나 (Trap)
-        if (trimmed.StartsWith("[Trap", StringComparison.OrdinalIgnoreCase)) return true;
-        
-        // Polling 관련 단어 포함 시 (Polling)
-        if (trimmed.Contains("Polling", StringComparison.OrdinalIgnoreCase) || 
-            trimmed.Contains("Poll ", StringComparison.OrdinalIgnoreCase)) return true;
+        // [T: (Trap) 또는 [P: (Polling) 으로 시작하는지 확인
+        if (trimmed.StartsWith("[T:", StringComparison.OrdinalIgnoreCase)) return true;
+        if (trimmed.StartsWith("[P:", StringComparison.OrdinalIgnoreCase)) return true;
 
         return false;
     }
