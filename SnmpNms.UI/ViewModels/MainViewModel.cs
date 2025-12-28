@@ -103,6 +103,21 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    private bool _port161Pulse;
+    public bool Port161Pulse { get => _port161Pulse; set { _port161Pulse = value; OnPropertyChanged(); } }
+
+    private bool _port162Pulse;
+    public bool Port162Pulse { get => _port162Pulse; set { _port162Pulse = value; OnPropertyChanged(); } }
+
+    private bool _trapPulse;
+    public bool TrapPulse { get => _trapPulse; set { _trapPulse = value; OnPropertyChanged(); } }
+
+    private bool _errorPulse;
+    public bool ErrorPulse { get => _errorPulse; set { _errorPulse = value; OnPropertyChanged(); } }
+
+    private bool _warningPulse;
+    public bool WarningPulse { get => _warningPulse; set { _warningPulse = value; OnPropertyChanged(); } }
+
     public MainViewModel()
     {
         RootSubnet = new MapNode(MapNodeType.RootSubnet, "Root Subnet");
@@ -140,6 +155,13 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
+        // Pulse Triggers
+        if (severity == EventSeverity.Error) TriggerErrorPulse();
+        else if (severity == EventSeverity.Warning) TriggerWarningPulse();
+
+        if (message.Contains("[T:", StringComparison.OrdinalIgnoreCase)) TriggerTrapPulse();
+        else if (message.Contains("[P:", StringComparison.OrdinalIgnoreCase)) TriggerPort161Pulse();
+
         var entry = new SnmpEventLog(DateTime.Now, severity, device, message);
         
         System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -162,6 +184,12 @@ public class MainViewModel : INotifyPropertyChanged
             LogSaveService.SaveLogEntry(entry);
         }
     }
+
+    private void TriggerPort161Pulse() { Port161Pulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => Port161Pulse = false); }
+    public void TriggerPort162Pulse() { Port162Pulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => Port162Pulse = false); }
+    private void TriggerTrapPulse() { TrapPulse = true; System.Threading.Tasks.Task.Delay(500).ContinueWith(_ => TrapPulse = false); }
+    private void TriggerErrorPulse() { ErrorPulse = true; System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => ErrorPulse = false); }
+    private void TriggerWarningPulse() { WarningPulse = true; System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => WarningPulse = false); }
 
     public void AddSystemInfo(string message)
     {

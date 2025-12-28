@@ -91,7 +91,18 @@
                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74D;"/>
                 </Button>
                 <Separator/>
-                <Button Style="{StaticResource IconButton}" ToolTip="Start Poll" Click="StartPoll_Click">
+                <Button ToolTip="Start Poll" Click="StartPoll_Click">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPollingRunning}" Value="True">
+                                    <Setter Property="Background" Value="#007ACC"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderBrush" Value="#007ACC"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE768;"/>
                 </Button>
                 <Button Style="{StaticResource IconButton}" ToolTip="Stop Poll" Click="StopPoll_Click">
