@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:eventLog="clr-namespace:SnmpNms.UI.Views.EventLog"
+             xmlns:conv="clr-namespace:SnmpNms.UI.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="220" d:DesignWidth="800"
              MinHeight="120"
@@ -23,6 +24,7 @@
                 Style="{StaticResource PanelHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
@@ -39,9 +41,20 @@
                                  Style="{StaticResource PanelTabRadioStyle}"
                                  Checked="TabRadio_Checked"/>
                 </StackPanel>
+
+                <!-- Status Info Area -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
+                    <TextBlock Text="Status:" FontWeight="Bold" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding IsPollingRunning, Converter={StaticResource PollingStatusConverter}}" 
+                               Margin="10,0,0,0" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding IsTrapListening, Converter={StaticResource TrapStatusConverter}}" 
+                               Margin="15,0,0,0" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
+                    <TextBlock Text="Polling ALL" 
+                               FontStyle="Italic" Margin="15,0,0,0" Foreground="{StaticResource VSCodeForeground}" VerticalAlignment="Center"/>
+                </StackPanel>
                 
                 <!-- Toggle Button -->
-                <Button Grid.Column="1"
+                <Button Grid.Column="2"
                        x:Name="btnToggle"
                        Style="{StaticResource PanelToggleButtonStyle}"
                        Click="BtnToggle_Click"
