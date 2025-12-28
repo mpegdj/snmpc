@@ -837,7 +837,12 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
             }
             else
             {
-                var message = $"Failed to retrieve Trap Destination.\n\nError: {result.ErrorMessage}\n\nNote: This device may not support the standard SNMP Trap OID (1.3.6.1.6.3.18.1.3.0), or the OID may not be configured.";
+                var errorMsg = result.ErrorMessage ?? "Unknown error";
+                var hint = errorMsg.Contains("timed out", StringComparison.OrdinalIgnoreCase)
+                    ? "\n\nPossible causes:\n• Device does not support SNMP GET for this OID\n• Read Community is incorrect\n• Firewall is blocking the request"
+                    : "\n\nNote: This device may not support the standard SNMP Trap OID (1.3.6.1.6.3.18.1.3.0), or the OID may not be configured.";
+                
+                var message = $"Failed to retrieve Trap Destination.\n\nError: {errorMsg}{hint}";
                 if (txtTrapInfo != null)
                 {
                     txtTrapInfo.Text = message + $"\n\nAttempted at: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
@@ -908,7 +913,12 @@ public partial class MapObjectPropertiesDialog : Window, INotifyPropertyChanged
             }
             else
             {
-                MessageBox.Show($"Failed to configure Trap Destination.\n\nError: {result.ErrorMessage}\n\nNote: This device may not support the standard SNMP Trap OID, or Write Community may be incorrect.", 
+                var errorMsg = result.ErrorMessage ?? "Unknown error";
+                var hint = errorMsg.Contains("timed out", StringComparison.OrdinalIgnoreCase) 
+                    ? "\n\nPossible causes:\n• Device does not support SNMP SET\n• Write Community is incorrect\n• Firewall is blocking the request"
+                    : "\n\nNote: This device may not support the standard SNMP Trap OID (1.3.6.1.6.3.18.1.3.0), or Write Community may be incorrect.";
+                
+                MessageBox.Show($"Failed to configure Trap Destination.\n\nError: {errorMsg}{hint}", 
                     "Configuration Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }

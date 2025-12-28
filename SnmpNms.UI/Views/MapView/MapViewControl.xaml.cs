@@ -252,15 +252,22 @@ public partial class MapViewControl : UserControl
         var mainStack = new StackPanel();
         box.Child = mainStack;
 
-        // 헤더 (Site 이름 + 톱니바퀴) - 하얀색 테마
+        // 헤더 (Site 이름 + 톱니바퀴) - 하얀색 테마 + 집계 상태 표시
         var header = new Border
         {
             Padding = new Thickness(8, 6, 8, 6),
             CornerRadius = new CornerRadius(4, 4, 0, 0),
-            Background = new SolidColorBrush(Color.FromRgb(0xF5, 0xF5, 0xF5)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)),
             BorderThickness = new Thickness(0, 0, 0, 1)
         };
+        
+        // 헤더 배경색 바인딩 (Site 집계 상태) - 폴링 전에는 밝은 회색, 폴링 후에는 상태 색상
+        header.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(MapNode.EffectiveStatus))
+        {
+            Source = subnet,
+            Converter = _statusBgConverter,
+            ConverterParameter = "Header"
+        });
 
         var headerPanel = new DockPanel { LastChildFill = true };
         
