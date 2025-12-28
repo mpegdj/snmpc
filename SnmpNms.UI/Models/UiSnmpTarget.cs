@@ -72,6 +72,18 @@ public class UiSnmpTarget : ISnmpTarget, INotifyPropertyChanged
         }
     }
 
+    private string _sysObjectId = "";
+    public string SysObjectId
+    {
+        get => _sysObjectId;
+        set
+        {
+            if (_sysObjectId == value) return;
+            _sysObjectId = value ?? "";
+            OnPropertyChanged();
+        }
+    }
+
     public string Community { get; set; } = "public";
     public SnmpVersion Version { get; set; } = SnmpVersion.V2c;
     public int Timeout { get; set; } = 3000;

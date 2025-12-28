@@ -5,29 +5,31 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         MinHeight="400" MinWidth="650">
-    <Grid Margin="12">
+    <Grid Margin="12,4,12,6">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>     <!-- Discovery Progress and Discovered Devices -->
+            <RowDefinition Height="Auto"/>   <!-- Options and Buttons -->
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>  <!-- Discovery Progress: 좁은 폭 -->
+            <ColumnDefinition Width="*"/>     <!-- Discovered Devices: 넓은 폭 -->
+        </Grid.ColumnDefinitions>
         
-        <!-- Progress Log -->
-        <GroupBox Grid.Row="0" Header="Discovery Progress" Margin="0,0,0,12">
+        <!-- Progress Log: 왼쪽, 좁은 폭 -->
+        <GroupBox Grid.Row="0" Grid.Column="0" Header="Discovery Progress" Margin="0,0,8,0" Padding="0" Width="280">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,8,8,4">
                     <TextBlock Name="txtStatus" Text="Starting discovery..." FontWeight="Bold" Margin="0,0,8,0"/>
                     <TextBlock Name="txtProgress" Text="0 devices found" Foreground="Blue"/>
                 </StackPanel>
-                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                    <TextBlock Name="txtLog" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Margin="8"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="0,0,0,0" Padding="0" VerticalContentAlignment="Top">
+                    <TextBlock Name="txtLog" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" Margin="8,0,8,0" VerticalAlignment="Top"/>
                 </ScrollViewer>
             </DockPanel>
         </GroupBox>
         
-        <!-- Discovered Devices List -->
-        <GroupBox Grid.Row="1" Header="Discovered Devices" Margin="0,0,0,12">
+        <!-- Discovered Devices List: 오른쪽, 넓은 폭 -->
+        <GroupBox Grid.Row="0" Grid.Column="1" Header="Discovered Devices" Margin="0,0,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
@@ -45,8 +47,7 @@
                           SelectionUnit="FullRow"
                           GridLinesVisibility="All"
                           AlternatingRowBackground="#F5F5F5"
-                          HeadersVisibility="Column"
-                          MaxHeight="150">
+                          HeadersVisibility="Column">
                     <DataGrid.Columns>
                         <DataGridCheckBoxColumn Header="Add" Binding="{Binding IsSelected}" Width="50"/>
                         <DataGridTextColumn Header="IP Address" Binding="{Binding IpAddress}" Width="120" IsReadOnly="True"/>
@@ -59,70 +60,65 @@
                 </DataGrid>
                 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Right">
-                    <Button Content="All" Width="60" Margin="0,0,4,0" Click="BtnAllToggle_Click"/>
-                    <Button Content="SNMP" Width="70" Margin="0,0,4,0" Click="BtnSnmpToggle_Click"/>
-                    <Button Content="Ping" Width="70" Margin="0,0,4,0" Click="BtnPingToggle_Click"/>
+                    <Button Content="All" Width="50" Margin="0,0,4,0" Click="BtnAllToggle_Click"/>
+                    <Button Content="SNMP" Width="50" Margin="0,0,4,0" Click="BtnSnmpToggle_Click"/>
+                    <Button Content="Ping" Width="50" Margin="0,0,4,0" Click="BtnPingToggle_Click"/>
                     <Button Content="V1" Width="50" Margin="0,0,4,0" Click="BtnV1Toggle_Click"/>
-                    <Button Content="V2" Width="50" Margin="0,0,8,0" Click="BtnV2Toggle_Click"/>
-                    <TextBlock Text="Maker:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <Button Content="V2" Width="50" Margin="0,0,4,0" Click="BtnV2Toggle_Click"/>
                     <ComboBox Name="cmbMakerFilter" 
                               Width="120" 
-                              Margin="0,0,8,0"
+                              Margin="0,0,4,0"
                               SelectionChanged="CmbMakerFilter_SelectionChanged">
-                        <ComboBoxItem Content="None" IsSelected="True"/>
+                        <ComboBoxItem Content="Maker" IsSelected="True"/>
                     </ComboBox>
-                    <TextBlock Text="Device:" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <ComboBox Name="cmbDeviceFilter" 
                               Width="150"
+                              Margin="0,0,0,0"
                               SelectionChanged="CmbDeviceFilter_SelectionChanged">
-                        <ComboBoxItem Content="None" IsSelected="True"/>
+                        <ComboBoxItem Content="Device" IsSelected="True"/>
                     </ComboBox>
                 </StackPanel>
             </Grid>
         </GroupBox>
         
-        <!-- Subnet Groups -->
-        <GroupBox Grid.Row="2" Header="Subnets" Margin="0,0,0,12" MaxHeight="120">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding SubnetGroups}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <CheckBox IsChecked="{Binding IsSelected}" Margin="4,2">
-                                <CheckBox.Content>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding SubnetName}" FontWeight="Bold" Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding Devices.Count, StringFormat='({0} devices)'}" 
-                                                   Foreground="Gray" FontStyle="Italic"/>
-                                    </StackPanel>
-                                </CheckBox.Content>
-                            </CheckBox>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </GroupBox>
-        
-        <!-- Options -->
-        <StackPanel Grid.Row="3" Margin="0,0,0,8">
-            <CheckBox Name="chkAddWithoutSubnet" 
-                      Content="Add devices without subnet (directly under Default)"
-                      Margin="0,0,0,4"
-                      IsChecked="{Binding AddDevicesWithoutSubnet}"/>
-            <CheckBox Name="chkConfigureTrap" 
-                      Content="Configure Trap Destination for selected devices"
-                      Margin="0,0,0,4"
-                      IsChecked="{Binding ConfigureTrapDestination}"/>
-            <CheckBox Name="chkStandardNtt" 
-                      Content="Standard NTT (MVE5000/MVD5000 Trap)"
-                      IsChecked="{Binding ConfigureStandardNttTrap}"/>
-        </StackPanel>
-
-        <!-- Buttons -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,0">
-            <Button Content="Stop" Width="75" Height="28" Margin="0,0,8,0" Click="BtnStop_Click" Name="btnStop"/>
-            <Button Content="OK" Width="75" Height="28" Margin="0,0,8,0" IsDefault="True" Click="BtnOk_Click" Name="btnOk" IsEnabled="False"/>
-            <Button Content="Cancel" Width="75" Height="28" IsCancel="True" Name="btnCancel"/>
-        </StackPanel>
+        <!-- Options and Buttons -->
+        <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Options: 첫 번째 줄 (2개 체크박스) -->
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Bottom">
+                <CheckBox Name="chkAddWithoutSubnet" 
+                          Content="Add devices without subnet (directly under Default)"
+                          Margin="0,0,16,0"
+                          IsChecked="{Binding AddDevicesWithoutSubnet}"/>
+                <CheckBox Name="chkConfigureTrap" 
+                          Content="Configure Trap Destination for selected devices"
+                          Margin="0,0,0,0"
+                          IsChecked="{Binding ConfigureTrapDestination}"/>
+            </StackPanel>
+            
+            <!-- Options: 두 번째 줄 (1개 체크박스) -->
+            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,0" VerticalAlignment="Bottom">
+                <CheckBox Name="chkStandardNtt" 
+                          Content="Standard NTT (MVE5000/MVD5000 Trap)"
+                          Margin="0,0,0,0"
+                          IsChecked="{Binding ConfigureStandardNttTrap}"/>
+            </StackPanel>
+            
+            <!-- Buttons -->
+            <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16,0,0,0">
+                <Button Content="Stop" Width="75" Height="28" Margin="0,0,8,0" Click="BtnStop_Click" Name="btnStop"/>
+                <Button Content="OK" Width="75" Height="28" Margin="0,0,8,0" IsDefault="True" Click="BtnOk_Click" Name="btnOk" IsEnabled="False"/>
+                <Button Content="Cancel" Width="75" Height="28" Margin="0,0,0,0" IsCancel="True" Name="btnCancel"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>
 

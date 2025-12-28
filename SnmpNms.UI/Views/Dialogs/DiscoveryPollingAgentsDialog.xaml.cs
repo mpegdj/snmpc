@@ -282,16 +282,8 @@ public partial class DiscoveryPollingAgentsDialog : Window
                     await ConfigureTrapForDevicesAsync(selectedDevices, trapIp, trapPort);
                 }
                 
-                // 선택된 서브넷 그룹 확인
-                var selectedSubnets = progressDialog.SubnetGroups
-                    .Where(sg => sg.IsSelected)
-                    .Select(sg => sg.SubnetName)
-                    .ToHashSet();
-                
-                // 선택된 서브넷에 속한 디바이스만 필터링
-                var devicesToAdd = selectedDevices
-                    .Where(d => selectedSubnets.Contains(d.SubnetName) || selectedSubnets.Count == 0)
-                    .ToList();
+                // Subnet 체크박스 기능 제거: 모든 선택된 디바이스 추가
+                var devicesToAdd = selectedDevices.ToList();
                 
                 foreach (var device in devicesToAdd)
                 {
@@ -311,7 +303,8 @@ public partial class DiscoveryPollingAgentsDialog : Window
                         PollingProtocol = PollingProtocol.SNMP, // Discovery로 찾은 디바이스는 기본적으로 SNMP
                         Device = deviceName,
                         Alias = deviceName,
-                        Maker = device.Maker
+                        Maker = device.Maker,
+                        SysObjectId = device.SysObjectId ?? ""
                     };
 
                     // 서브넷 없이 추가 옵션 확인
@@ -333,7 +326,7 @@ public partial class DiscoveryPollingAgentsDialog : Window
                 }
 
                 var trapInfo = configureTrap ? " (Trap configured)" : "";
-                var subnetInfo = selectedSubnets.Count > 0 ? $" from {selectedSubnets.Count} subnet(s)" : "";
+                var subnetInfo = "";
                 MessageBox.Show($"Added {devicesToAdd.Count} device(s){subnetInfo} to map{trapInfo}.", "Discovery Complete", 
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
