@@ -21,6 +21,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <TextBlock Grid.Column="0" Text="Status:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,8,0"/>
@@ -59,6 +60,14 @@
                               VerticalAlignment="Center"
                               Foreground="{StaticResource VSCodeForeground}"
                               FontStyle="Italic"/>
+                </StackPanel>
+                
+                <!-- 저장 설정 (우측) -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Lines:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="11"/>
+                    <TextBox x:Name="txtLogMaxLines" Width="60" Height="20" FontSize="11" 
+                             VerticalContentAlignment="Center" Padding="2,0"/>
+                    <CheckBox x:Name="chkLogSave" Content="Save" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11"/>
                 </StackPanel>
             </Grid>
         </Border>

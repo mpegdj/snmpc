@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using SnmpNms.UI.Models;
+using SnmpNms.UI.Services;
 
 namespace SnmpNms.UI.ViewModels;
 
@@ -60,6 +61,10 @@ public class MainViewModel : INotifyPropertyChanged
     
     // Output (Traffic Log)
     public OutputViewModel Output { get; } = new();
+    
+    // Log Save Services
+    public LogSaveService LogSaveService { get; } = new();
+    public OutputSaveService OutputSaveService { get; } = new();
 
     private bool _isPollingRunning;
     public bool IsPollingRunning
@@ -116,7 +121,21 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void AddEvent(EventSeverity severity, string? device, string message)
     {
-        Events.Add(new EventLogEntry(DateTime.Now, severity, device, message));
+        var entry = new EventLogEntry(DateTime.Now, severity, device, message);
+        Events.Add(entry);
+        
+        // 메모리 제한 적용
+        if (Events.Count > LogSaveService.MaxLinesInMemory)
+        {
+            Events.RemoveAt(0);
+        }
+        
+        // 파일 저장
+        if (LogSaveService.IsEnabled)
+        {
+            LogSaveService.SaveLogEntry(entry);
+        }
+        
         // 기본 탭은 마지막에 추가된 이벤트가 보이도록 Current만 Refresh
         CurrentLog.Refresh();
     }

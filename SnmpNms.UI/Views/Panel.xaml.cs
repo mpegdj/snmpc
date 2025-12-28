@@ -29,6 +29,46 @@ public partial class BottomPanel : UserControl
         outputViewModel.TrafficLogs.CollectionChanged += TrafficLogs_CollectionChanged;
     }
     
+    /// <summary>
+    /// MainViewModel 설정 (Tag로 전달하여 바인딩)
+    /// </summary>
+    public void SetMainViewModel(MainViewModel viewModel)
+    {
+        // EventLogTabControl에 Tag 설정
+        if (eventLogContent != null)
+        {
+            eventLogContent.Tag = viewModel;
+        }
+        
+        // Output Content에 Tag 설정 및 바인딩
+        if (outputContent != null)
+        {
+            outputContent.Tag = viewModel;
+            
+            // Output 저장 설정 바인딩
+            if (txtOutputMaxLines != null)
+            {
+                var maxLinesBinding = new System.Windows.Data.Binding("OutputSaveService.MaxLinesInMemory")
+                {
+                    Source = viewModel,
+                    Mode = System.Windows.Data.BindingMode.TwoWay,
+                    UpdateSourceTrigger = System.Windows.Data.UpdateSourceTrigger.PropertyChanged
+                };
+                txtOutputMaxLines.SetBinding(TextBox.TextProperty, maxLinesBinding);
+            }
+            
+            if (chkOutputSave != null)
+            {
+                var saveBinding = new System.Windows.Data.Binding("OutputSaveService.IsEnabled")
+                {
+                    Source = viewModel,
+                    Mode = System.Windows.Data.BindingMode.TwoWay
+                };
+                chkOutputSave.SetBinding(CheckBox.IsCheckedProperty, saveBinding);
+            }
+        }
+    }
+    
     private void TrafficLogs_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (chkAutoScroll?.IsChecked == true && e.Action == NotifyCollectionChangedAction.Add)

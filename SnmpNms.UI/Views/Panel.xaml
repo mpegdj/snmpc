@@ -58,16 +58,32 @@
                                          Visibility="Visible"/>
             
             <!-- Output Content -->
-            <DockPanel x:Name="outputContent" Visibility="Collapsed">
+            <DockPanel x:Name="outputContent" Visibility="Collapsed" DataContext="{Binding Output}">
                 <!-- 툴바 -->
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,2">
-                    <Button Content="Clear" Click="BtnOutputClear_Click" Padding="8,2" Margin="0,0,4,0"
-                            ToolTip="Clear output log"/>
-                    <Button Content="Copy" Click="BtnOutputCopy_Click" Padding="8,2" Margin="0,0,4,0"
-                            ToolTip="Copy to clipboard"/>
-                    <CheckBox x:Name="chkAutoScroll" Content="Auto-scroll" IsChecked="True" 
-                              VerticalAlignment="Center" Margin="8,0,0,0"/>
-                </StackPanel>
+                <Grid DockPanel.Dock="Top" Margin="4,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- 좌측 버튼들 -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Button Content="Clear" Click="BtnOutputClear_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Clear output log"/>
+                        <Button Content="Copy" Click="BtnOutputCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                                ToolTip="Copy to clipboard"/>
+                        <CheckBox x:Name="chkAutoScroll" Content="Auto-scroll" IsChecked="True" 
+                                  VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- 우측 저장 설정 -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Lines:" VerticalAlignment="Center" Margin="0,0,4,0" FontSize="11"/>
+                        <TextBox x:Name="txtOutputMaxLines" Width="60" Height="20" FontSize="11" 
+                                 VerticalContentAlignment="Center" Padding="2,0"/>
+                        <CheckBox x:Name="chkOutputSave" Content="Save" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
                 
                 <!-- 로그 리스트 -->
                 <ListView x:Name="lvOutput" 

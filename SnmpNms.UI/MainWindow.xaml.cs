@@ -118,6 +118,10 @@ public partial class MainWindow : Window
         // BottomPanel에 Event Log DataContext 설정 (여러 탭이 각각 바인딩됨)
         bottomPanel.DataContext = _vm;
         bottomPanel.SetOutputViewModel(_vm.Output);
+        bottomPanel.SetMainViewModel(_vm);
+        
+        // OutputViewModel에 저장 서비스 연결
+        _vm.Output.SetSaveService(_vm.OutputSaveService);
 
         // Sidebar (Activity Bar 포함) 이벤트 연결
         sidebar.ViewChanged += ActivityBar_ViewChanged;
@@ -2348,6 +2352,10 @@ public partial class MainWindow : Window
             _vm.IsPollingRunning = false;
             _vm.AddEvent(EventSeverity.Info, null, "[System] Auto Polling Stopped");
         }
+        
+        // 저장 서비스 파일 닫기
+        _vm.LogSaveService.CloseCurrentFile();
+        _vm.OutputSaveService.CloseCurrentFile();
         
         base.OnClosed(e);
     }

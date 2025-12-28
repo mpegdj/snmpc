@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text;
+using SnmpNms.UI.Services;
 
 namespace SnmpNms.UI.ViewModels;
 
@@ -32,6 +33,16 @@ public class OutputViewModel : INotifyPropertyChanged
     private const int MaxLogEntries = 1000;
     
     public ObservableCollection<TrafficLogEntry> TrafficLogs { get; } = new();
+    
+    private OutputSaveService? _saveService;
+    
+    /// <summary>
+    /// 저장 서비스 설정
+    /// </summary>
+    public void SetSaveService(OutputSaveService saveService)
+    {
+        _saveService = saveService;
+    }
     
     private bool _autoScroll = true;
     public bool AutoScroll
@@ -95,13 +106,20 @@ public class OutputViewModel : INotifyPropertyChanged
             IsError = isError
         };
         
+        // 파일 저장
+        if (_saveService?.IsEnabled == true)
+        {
+            _saveService.SaveTrafficEntry(entry);
+        }
+        
         // UI 스레드에서 실행
         System.Windows.Application.Current?.Dispatcher.Invoke(() =>
         {
             TrafficLogs.Add(entry);
             
-            // 최대 개수 초과 시 오래된 항목 제거
-            while (TrafficLogs.Count > MaxLogEntries)
+            // 최대 개수 초과 시 오래된 항목 제거 (저장 서비스의 MaxLinesInMemory 사용)
+            var maxLines = _saveService?.MaxLinesInMemory ?? MaxLogEntries;
+            while (TrafficLogs.Count > maxLines)
             {
                 TrafficLogs.RemoveAt(0);
             }
