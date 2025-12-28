@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:SnmpNms.UI.Views"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="280"
-             Width="280"
+             HorizontalAlignment="Stretch"
              Background="{StaticResource VSCodeSidebarBackground}">
     <Grid>
         <Grid.RowDefinitions>
