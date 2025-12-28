@@ -129,6 +129,85 @@ public partial class MainWindow : Window
         // MapViewControl에 서비스 주입
         mapViewControl.SnmpClient = _snmpClient;
         mapViewControl.TrapListener = _trapListener;
+        
+        // SNMP Test 탭 ComboBox 초기화
+        InitializeSnmpTestComboBoxes();
+        
+        // DeviceNodes 변경 시 ComboBox 업데이트
+        _vm.DeviceNodes.CollectionChanged += (s, e) => UpdateSnmpTestComboBoxes();
+    }
+    
+    private void InitializeSnmpTestComboBoxes()
+    {
+        if (cmbIp == null || cmbCommunity == null) return;
+        
+        UpdateSnmpTestComboBoxes();
+        
+        // 기본값 설정
+        if (cmbIp.Items.Count == 0)
+        {
+            cmbIp.Text = "127.0.0.1";
+        }
+        if (cmbCommunity.Items.Count == 0)
+        {
+            cmbCommunity.Text = "public";
+        }
+    }
+    
+    private void UpdateSnmpTestComboBoxes()
+    {
+        if (cmbIp == null || cmbCommunity == null) return;
+        
+        // IP Address ComboBox 업데이트
+        var ipList = _vm.DeviceNodes
+            .Where(n => n.Target != null)
+            .Select(n => n.Target!.IpAddress)
+            .Distinct()
+            .OrderBy(ip => ip)
+            .ToList();
+        
+        cmbIp.Items.Clear();
+        foreach (var ip in ipList)
+        {
+            cmbIp.Items.Add(ip);
+        }
+        
+        // Community ComboBox 업데이트
+        var communityList = _vm.DeviceNodes
+            .Where(n => n.Target != null)
+            .Select(n => n.Target!.Community)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+        
+        cmbCommunity.Items.Clear();
+        foreach (var community in communityList)
+        {
+            cmbCommunity.Items.Add(community);
+        }
+    }
+    
+    private void CmbIp_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (cmbIp == null || cmbCommunity == null) return;
+        
+        // 선택된 항목이 있으면 SelectedItem 사용, 없으면 Text 사용 (수동 입력)
+        var selectedIp = cmbIp.SelectedItem?.ToString() ?? cmbIp.Text;
+        if (string.IsNullOrEmpty(selectedIp)) return;
+        
+        // 선택된 IP에 해당하는 device 찾기
+        var device = _vm.DeviceNodes
+            .FirstOrDefault(n => n.Target != null && n.Target.IpAddress == selectedIp)?.Target;
+        
+        if (device != null && cmbCommunity.Text != device.Community)
+        {
+            cmbCommunity.Text = device.Community;
+        }
+    }
+    
+    private void CmbCommunity_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Community 선택 변경 시 특별한 처리 없음
     }
 
     private void InitializeTrapListener()
@@ -262,10 +341,11 @@ public partial class MainWindow : Window
         // 기본값: 현재 선택된 장비/입력값 기반
         if (type == MapObjectType.Device)
         {
-            dlg.Alias = string.IsNullOrWhiteSpace(txtIp.Text) ? "" : txtIp.Text.Trim();
+            var ip = cmbIp?.Text?.Trim() ?? "";
+            dlg.Alias = string.IsNullOrWhiteSpace(ip) ? "" : ip;
             dlg.Device = "";
-            dlg.Address = string.IsNullOrWhiteSpace(txtIp.Text) ? "" : $"{txtIp.Text.Trim()}:161";
-            dlg.ReadCommunity = (txtCommunity.Text ?? "public").Trim();
+            dlg.Address = string.IsNullOrWhiteSpace(ip) ? "" : $"{ip}:161";
+            dlg.ReadCommunity = (cmbCommunity?.Text ?? "public").Trim();
         }
         else if (type == MapObjectType.Subnet)
         {
@@ -452,8 +532,8 @@ public partial class MainWindow : Window
 
     private UiSnmpTarget BuildTargetFromInputs(bool minimal = false)
     {
-        var ip = txtIp.Text?.Trim() ?? "";
-        var community = txtCommunity.Text?.Trim() ?? "public";
+        var ip = cmbIp?.Text?.Trim() ?? "";
+        var community = cmbCommunity?.Text?.Trim() ?? "public";
 
         return new UiSnmpTarget
         {
@@ -497,15 +577,16 @@ public partial class MainWindow : Window
 
     private async void BtnGet_Click(object sender, RoutedEventArgs e)
     {
-        _vm.AddEvent(EventSeverity.Info, $"{txtIp.Text}:161", $"Sending SNMP GET request to {txtIp.Text}...");
+        var ip = cmbIp?.Text?.Trim() ?? "";
+        _vm.AddEvent(EventSeverity.Info, $"{ip}:161", $"Sending SNMP GET request to {ip}...");
         btnGet.IsEnabled = false;
 
         try
         {
             var target = new UiSnmpTarget
             {
-                IpAddress = txtIp.Text,
-                Community = txtCommunity.Text,
+                IpAddress = cmbIp?.Text?.Trim() ?? "",
+                Community = cmbCommunity?.Text?.Trim() ?? "public",
                 Version = SnmpVersion.V2c,
                 Timeout = 3000
             };
@@ -565,11 +646,11 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             // Output 로그: 예외
-            _vm.Output.LogError("SNMP", "GET", $"{txtIp.Text}:161", txtOid.Text, ex.Message);
+            _vm.Output.LogError("SNMP", "GET", $"{ip}:161", txtOid.Text, ex.Message);
             
             var errorText = $"Error: {ex.Message}";
             txtSnmpResult.Text = errorText;
-            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", errorText);
+            _vm.AddEvent(EventSeverity.Error, $"{ip}:161", errorText);
         }
         finally
         {
@@ -579,16 +660,17 @@ public partial class MainWindow : Window
 
     private async void BtnGetNext_Click(object sender, RoutedEventArgs e)
     {
-        if (txtIp == null || txtCommunity == null || txtOid == null || txtSnmpResult == null)
+        if (cmbIp == null || cmbCommunity == null || txtOid == null || txtSnmpResult == null)
         {
             MessageBox.Show("UI 필드가 초기화되지 않았습니다.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
-        _vm.AddEvent(EventSeverity.Info, $"{txtIp.Text}:161", $"Sending SNMP GET-NEXT request to {txtIp.Text}...");
+        var ip = cmbIp?.Text?.Trim() ?? "";
+        _vm.AddEvent(EventSeverity.Info, $"{ip}:161", $"Sending SNMP GET-NEXT request to {ip}...");
         if (txtSnmpResult != null)
         {
-            txtSnmpResult.Text = $"Sending SNMP GET-NEXT request to {txtIp.Text}...";
+            txtSnmpResult.Text = $"Sending SNMP GET-NEXT request to {ip}...";
         }
         btnGetNext.IsEnabled = false;
 
@@ -596,8 +678,8 @@ public partial class MainWindow : Window
         {
             var target = new UiSnmpTarget
             {
-                IpAddress = txtIp.Text,
-                Community = txtCommunity.Text,
+                IpAddress = cmbIp?.Text?.Trim() ?? "",
+                Community = cmbCommunity?.Text?.Trim() ?? "public",
                 Version = SnmpVersion.V2c,
                 Timeout = 3000
             };
@@ -666,14 +748,14 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             // Output 로그: 예외
-            _vm.Output.LogError("SNMP", "GET-NEXT", $"{txtIp.Text}:161", txtOid.Text, ex.Message);
+            _vm.Output.LogError("SNMP", "GET-NEXT", $"{ip}:161", txtOid.Text, ex.Message);
             
             var errorText = $"Error: {ex.Message}";
             if (txtSnmpResult != null)
             {
                 txtSnmpResult.Text = errorText;
             }
-            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", errorText);
+            _vm.AddEvent(EventSeverity.Error, $"{ip}:161", errorText);
             System.Diagnostics.Debug.WriteLine($"BtnGetNext_Click Exception: {ex}");
         }
         finally
@@ -684,7 +766,7 @@ public partial class MainWindow : Window
 
     private async void BtnWalk_Click(object sender, RoutedEventArgs e)
     {
-        if (txtIp == null || txtCommunity == null || txtOid == null || txtSnmpResult == null)
+        if (cmbIp == null || cmbCommunity == null || txtOid == null || txtSnmpResult == null)
         {
             MessageBox.Show("UI 필드가 초기화되지 않았습니다.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
@@ -696,10 +778,11 @@ public partial class MainWindow : Window
         _walkCancellationTokenSource = new CancellationTokenSource();
         var token = _walkCancellationTokenSource.Token;
 
-        _vm.AddEvent(EventSeverity.Info, $"{txtIp.Text}:161", $"Sending SNMP WALK request to {txtIp.Text}...");
+        var ip = cmbIp?.Text?.Trim() ?? "";
+        _vm.AddEvent(EventSeverity.Info, $"{ip}:161", $"Sending SNMP WALK request to {ip}...");
         if (txtSnmpResult != null)
         {
-            txtSnmpResult.Text = $"Sending SNMP WALK request to {txtIp.Text}...";
+            txtSnmpResult.Text = $"Sending SNMP WALK request to {ip}...";
         }
         btnWalk.IsEnabled = false;
         btnStopWalk.IsEnabled = true;
@@ -709,8 +792,8 @@ public partial class MainWindow : Window
         {
             var target = new UiSnmpTarget
             {
-                IpAddress = txtIp.Text,
-                Community = txtCommunity.Text,
+                IpAddress = cmbIp?.Text?.Trim() ?? "",
+                Community = cmbCommunity?.Text?.Trim() ?? "public",
                 Version = SnmpVersion.V2c,
                 Timeout = 10000  // Walk는 여러 요청을 보내므로 Timeout을 늘림
             };
@@ -803,19 +886,19 @@ public partial class MainWindow : Window
             {
                 txtSnmpResult.Text = "Walk cancelled by user.";
             }
-            _vm.AddEvent(EventSeverity.Warning, $"{txtIp.Text}:161", "Walk cancelled by user");
+            _vm.AddEvent(EventSeverity.Warning, $"{ip}:161", "Walk cancelled by user");
         }
         catch (Exception ex)
         {
             // Output 로그: 예외
-            _vm.Output.LogError("SNMP", "WALK", $"{txtIp.Text}:161", txtOid.Text, ex.Message);
+            _vm.Output.LogError("SNMP", "WALK", $"{ip}:161", txtOid.Text, ex.Message);
             
             var errorText = $"Error: {ex.Message}";
             if (txtSnmpResult != null)
             {
                 txtSnmpResult.Text = errorText;
             }
-            _vm.AddEvent(EventSeverity.Error, $"{txtIp.Text}:161", errorText);
+            _vm.AddEvent(EventSeverity.Error, $"{ip}:161", errorText);
             System.Diagnostics.Debug.WriteLine($"BtnWalk_Click Exception: {ex}");
         }
         finally
@@ -834,6 +917,102 @@ public partial class MainWindow : Window
         if (txtSnmpResult != null)
         {
             txtSnmpResult.Text = "Stopping Walk...";
+        }
+    }
+
+    private async void BtnSet_Click(object sender, RoutedEventArgs e)
+    {
+        if (cmbIp == null || cmbCommunity == null || txtOid == null || txtSetValue == null || cmbSetType == null || txtSnmpResult == null)
+        {
+            MessageBox.Show("UI 필드가 초기화되지 않았습니다.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        var value = txtSetValue.Text?.Trim() ?? "";
+        var ip = cmbIp?.Text?.Trim() ?? "";
+        
+        if (string.IsNullOrEmpty(value))
+        {
+            _vm.AddEvent(EventSeverity.Warning, $"{ip}:161", "Please enter a value to set");
+            return;
+        }
+
+        _vm.AddEvent(EventSeverity.Info, $"{ip}:161", $"Sending SNMP SET request to {ip}...");
+        btnSet.IsEnabled = false;
+
+        try
+        {
+            var target = new UiSnmpTarget
+            {
+                IpAddress = cmbIp?.Text?.Trim() ?? "",
+                Community = cmbCommunity?.Text?.Trim() ?? "public",
+                Version = SnmpVersion.V2c,
+                Timeout = 3000
+            };
+
+            var oid = txtOid.Text;
+
+            // 이름으로 OID 검색 기능 추가
+            if (!string.IsNullOrEmpty(oid) && !oid.StartsWith(".") && !char.IsDigit(oid[0]))
+            {
+                var convertedOid = _mibService.GetOid(oid);
+                if (convertedOid != oid)
+                {
+                    _vm.AddSystemInfo($"[System] Converted '{oid}' to '{convertedOid}'");
+                    oid = convertedOid;
+                }
+            }
+
+            var type = (cmbSetType.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "OCTETSTRING";
+
+            // Output 로그: 송신
+            _vm.Output.LogSend("SNMP", "SET", $"{target.IpAddress}:{target.Port}", oid, $"Value={value}, Type={type}");
+
+            var result = await _snmpClient.SetAsync(target, oid, value, type);
+
+            if (result.IsSuccess)
+            {
+                // Output 로그: 수신
+                foreach (var v in result.Variables)
+                {
+                    _vm.Output.LogReceive("SNMP", "SET", $"{target.IpAddress}:{target.Port}", v.Oid, $"{v.TypeCode}: {v.Value}");
+                }
+
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine($"Set Success! (Time: {result.ResponseTime}ms)");
+                foreach (var v in result.Variables)
+                {
+                    // 결과 출력 시 OID -> 이름 변환 적용
+                    var name = _mibService.GetOidName(v.Oid);
+                    var displayName = name == v.Oid ? v.Oid : $"{name} ({v.Oid})";
+                    sb.AppendLine($"{displayName} = {v.TypeCode}: {v.Value}");
+                }
+                var resultText = sb.ToString().TrimEnd();
+                txtSnmpResult.Text = resultText;
+                _vm.AddEvent(EventSeverity.Info, $"{target.IpAddress}:{target.Port}", resultText);
+            }
+            else
+            {
+                // Output 로그: 에러
+                _vm.Output.LogError("SNMP", "SET", $"{target.IpAddress}:{target.Port}", oid, result.ErrorMessage ?? "Unknown error");
+
+                var errorText = $"Set Failed: {result.ErrorMessage}";
+                txtSnmpResult.Text = errorText;
+                _vm.AddEvent(EventSeverity.Error, $"{target.IpAddress}:{target.Port}", errorText);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Output 로그: 예외
+            _vm.Output.LogError("SNMP", "SET", $"{ip}:161", txtOid.Text, ex.Message);
+
+            var errorText = $"Error: {ex.Message}";
+            txtSnmpResult.Text = errorText;
+            _vm.AddEvent(EventSeverity.Error, $"{ip}:161", errorText);
+        }
+        finally
+        {
+            btnSet.IsEnabled = true;
         }
     }
 
@@ -873,7 +1052,7 @@ public partial class MainWindow : Window
             }
 
             var target = new IPEndPoint(IPAddress.Parse(targetIp), port);
-            var community = new OctetString(txtCommunity.Text.Trim());
+            var community = new OctetString((cmbCommunity?.Text ?? "public").Trim());
             var trapObjectId = new ObjectIdentifier(trapOid);
 
             _vm.AddEvent(EventSeverity.Info, $"{targetIp}:{port}", $"[Trap Test] Sending SNMPv2c Trap to {targetIp}:{port}...");
@@ -1275,24 +1454,24 @@ public partial class MainWindow : Window
                 // IP Address와 Community 필드 업데이트 (탭 전환과 관계없이 항상 업데이트)
                 Dispatcher.BeginInvoke(new System.Action(() =>
                 {
-                    if (txtIp != null)
+                    if (cmbIp != null)
                     {
-                        txtIp.Text = node.Target.IpAddress;
-                        System.Diagnostics.Debug.WriteLine($"[SelectNode] Set txtIp.Text to {node.Target.IpAddress}");
+                        cmbIp.Text = node.Target.IpAddress;
+                        System.Diagnostics.Debug.WriteLine($"[SelectNode] Set cmbIp.Text to {node.Target.IpAddress}");
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("[SelectNode] txtIp is null!");
+                        System.Diagnostics.Debug.WriteLine("[SelectNode] cmbIp is null!");
                     }
                     
-                    if (txtCommunity != null)
+                    if (cmbCommunity != null)
                     {
-                        txtCommunity.Text = node.Target.Community;
-                        System.Diagnostics.Debug.WriteLine($"[SelectNode] Set txtCommunity.Text to {node.Target.Community}");
+                        cmbCommunity.Text = node.Target.Community;
+                        System.Diagnostics.Debug.WriteLine($"[SelectNode] Set cmbCommunity.Text to {node.Target.Community}");
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("[SelectNode] txtCommunity is null!");
+                        System.Diagnostics.Debug.WriteLine("[SelectNode] cmbCommunity is null!");
                     }
                 }), System.Windows.Threading.DispatcherPriority.Loaded);
                 
@@ -1745,15 +1924,15 @@ public partial class MainWindow : Window
         {
             Dispatcher.BeginInvoke(new System.Action(() =>
             {
-                if (txtIp != null)
+                if (cmbIp != null)
                 {
-                    txtIp.Text = _vm.SelectedDevice.IpAddress;
-                    System.Diagnostics.Debug.WriteLine($"[TabMain_SelectionChanged] Set txtIp.Text to {_vm.SelectedDevice.IpAddress}");
+                    cmbIp.Text = _vm.SelectedDevice.IpAddress;
+                    System.Diagnostics.Debug.WriteLine($"[TabMain_SelectionChanged] Set cmbIp.Text to {_vm.SelectedDevice.IpAddress}");
                 }
-                if (txtCommunity != null)
+                if (cmbCommunity != null)
                 {
-                    txtCommunity.Text = _vm.SelectedDevice.Community;
-                    System.Diagnostics.Debug.WriteLine($"[TabMain_SelectionChanged] Set txtCommunity.Text to {_vm.SelectedDevice.Community}");
+                    cmbCommunity.Text = _vm.SelectedDevice.Community;
+                    System.Diagnostics.Debug.WriteLine($"[TabMain_SelectionChanged] Set cmbCommunity.Text to {_vm.SelectedDevice.Community}");
                 }
             }), System.Windows.Threading.DispatcherPriority.Loaded);
         }
