@@ -726,7 +726,8 @@ var comRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.3.{targetIdx}", w
 | 7 | `TrapConfigDialog.xaml` | 1. 기존 `Views/Dialogs`가 아닌 `Features/TrapManagement`에 위치시켰습니다.<br>2. `xmlns:local`을 사용하여 같은 폴더 내의 View를 참조하도록 수정했습니다.<br>3. 기능 관련 모든 파일을 한 곳에 모으는 Co-location 원칙을 적용했습니다. | ✅ 완료 |
 | 8 | `TrapConfigDialog.xaml.cs` | 1. Namespace를 `SnmpNms.UI.Features.TrapManagement`로 통일했습니다.<br>2. 생성자에서 `TrapManagementViewModel`을 주입받아 DataContext로 설정합니다.<br>3. 이 파일 생성으로 Trap 관리 기능의 모든 컴포넌트(View, ViewModel, Dialog) 복구가 완료됩니다. | ✅ 완료 |
 | 9 | `App.xaml` 수정 | 1. `InverseBooleanConverter`를 `Application.Resources`에 추가했습니다.<br>2. 이미 존재하는 `xmlns:converters`를 활용하여 한 줄만 추가하면 되었습니다.<br>3. 이제 런타임에 XAML에서 `StaticResource`로 이 컨버터를 찾을 수 있습니다. | ✅ 완료 |
-| 10 | 메뉴 연결 | 1. MainWindow의 상단 메뉴나 버튼에 Trap 관리 기능을 연결합니다.<br>2. 사용자가 클릭하면 `TrapConfigDialog`를 생성하고 띄웁니다.<br>3. 선택된 장비가 있다면 자동으로 그 장비를 선택한 상태로 엽니다. | ⏳ 대기 |
+| 10 | 메뉴 연결 | 1. MainWindow의 "Tools" 메뉴와 Code-behind 핸들러를 연결했습니다.<br>2. `TrapManagementViewModel`을 생성하고 다이얼로그를 띄우는 코드를 구현했습니다.<br>3. 이로써 사용자는 메뉴를 통해 복구된 기능을 실행할 수 있습니다. | ✅ 완료 |
+| 11 | 커밋 | 1. **(현재)** 모든 기능이 복구되었으므로 최종 빌드 및 실행 테스트를 수행합니다.<br>2. 문제가 없다면 이 상태를 커밋하여 복구 작업을 확정합니다.<br>3. 이후 사용자 피드백에 따른 개선(IP 수동 입력 등)을 진행합니다. | ⏳ 진행 중 |
 | 11 | 커밋 | 1. 모든 기능이 정상 동작하는지 빌드 및 실행 테스트를 합니다.<br>2. `Modified` 파일이 5개가 넘기 전에, 기능 단위로 묶어서 저장합니다.<br>3. 메시지는 `"feat: Trap Management 기능 복구 및 구조 개선"`으로 합니다. | ⏳ 대기 |
 
 

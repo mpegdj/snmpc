@@ -86,6 +86,7 @@
                 </MenuItem>
                 <MenuItem Header="_Tools">
                     <MenuItem Header="SNMP Test" Click="MenuSnmpTest_Click"/>
+                    <MenuItem Header="Trap Management" Click="TrapManagement_Click"/>
                 </MenuItem>
                 <MenuItem Header="_Help">
                     <MenuItem Header="About" Click="MenuAbout_Click"/>

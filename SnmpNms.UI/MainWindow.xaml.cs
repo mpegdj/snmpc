@@ -21,6 +21,7 @@ using SnmpNms.UI.Views.Dialogs;
 using SnmpNms.UI.Views;
 using SnmpNms.UI.Views.EventLog;
 using VersionCode = Lextm.SharpSnmpLib.VersionCode;
+using SnmpNms.UI.Features.TrapManagement;
 
 namespace SnmpNms.UI;
 
@@ -2888,5 +2889,12 @@ public partial class MainWindow : Window
         {
             _vm.AddEvent(EventSeverity.Error, null, $"[System] Failed to load map: {ex.Message}");
         }
+    }
+
+    private void TrapManagement_Click(object sender, RoutedEventArgs e)
+    {
+        var trapVm = new TrapManagementViewModel(_snmpClient, _vm);
+        var dialog = new TrapConfigDialog(trapVm) { Owner = this };
+        dialog.ShowDialog();
     }
 }
