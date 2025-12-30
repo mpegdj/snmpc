@@ -709,3 +709,24 @@ var comRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.3.{targetIdx}", w
 | 2 | 진행상태 표시 안됨 | StatusMessage 바인딩 디버깅 |
 | 3 | Trap IP 수동 지정 | TextBox 추가 + ViewModel 속성 추가 |
 
+---
+
+## 📝 복구 작업 진행 로그
+
+### 2025-12-31 03:18 - 작업 시작
+
+| 단계 | 파일/작업 | 상세 설명 (역할 및 목적) | 상태 |
+|------|-----------|--------------------------|------|
+| 1 | `Converters/` 폴더 확인 | 1. UI 바인딩에 사용할 변환기(Converter)들이 위치하는 공용 폴더입니다.<br>2. 이미 프로젝트에 존재하므로 별도로 생성할 필요가 없습니다.<br>3. `InverseBooleanConverter`가 이곳에 복사될 예정입니다. | ✅ 완료 |
+| 2 | `InverseBooleanConverter.cs` | 1. `IsBusy`가 true일 때 버튼을 사용 못하게(false) 만드는 변환기입니다.<br>2. 비동기 통신 중 사용자의 중복 클릭을 방지하는 안전장치 역할을 합니다.<br>3. 빌드 테스트를 통해 정상적으로 컴파일됨을 확인했습니다. | ✅ 완료 |
+| 3 | `Features/TrapManagement/` 폴더 | 1. `Views`가 아닌 `Features` 중심 구조의 시작입니다.<br>2. `SnmpNms.UI/Features/TrapManagement` 경로 생성 완료.<br>3. 앞으로 이 폴더에 View와 ViewModel이 함께 위치합니다. | ✅ 완료 |
+| 4 | `TrapManagementViewModel.cs` | 1. **(순서 변경)** View보다 먼저 ViewModel을 복구했습니다.<br>2. Namespace를 `SnmpNms.UI.Features.TrapManagement`로 변경하여 격리했습니다.<br>3. `MainViewModel` 의존성은 유지하되 `using` 문을 추가하여 해결했습니다. | ✅ 완료 |
+| 5 | `TrapManagementView.xaml` | 1. Trap 관리 기능의 메인 화면(UserControl)입니다.<br>2. 좌측에는 SNMP 장비 목록, 우측에는 Trap 수신처(Slot) 테이블을 표시합니다.<br>3. 사용자가 장비를 선택하고 등록 명령을 내리는 UI를 담당합니다. | ⏳ 대기 |
+| 6 | `TrapManagementView.xaml.cs` | 1. XAML의 Code-behind 파일로 간단한 이벤트 핸들러를 포함합니다.<br>2. Refresh 및 Register 버튼 클릭 시 ViewModel의 메서드를 호출합니다.<br>3. UI 로직과 비즈니스 로직을 연결하는 역할을 합니다. | ⏳ 대기 |
+| 7 | `TrapConfigDialog.xaml` | 1. `TrapManagementView`를 팝업 창 형태로 띄우기 위한 래퍼(Wrapper)입니다.<br>2. 메인 창 위에 모달(Modal) 형태로 떠서 작업을 집중하게 합니다.<br>3. 하단에 'Close' 버튼을 두어 창 닫기 기능을 제공합니다. | ⏳ 대기 |
+| 8 | `TrapConfigDialog.xaml.cs` | 1. 다이얼로그의 창 닫기 로직을 처리합니다.<br>2. ViewModel을 DataContext로 주입받는 생성자를 포함합니다.<br>3. 창이 닫힐 때 리소스를 정리합니다. | ⏳ 대기 |
+| 9 | `App.xaml` 수정 | 1. 프로젝트 전역에서 `InverseBooleanConverter`를 쓸 수 있게 등록합니다.<br>2. `<Application.Resources>` 섹션에 리소스 키를 추가합니다.<br>3. 이를 통해 모든 XAML에서 `StaticResource`로 접근 가능해집니다. | ⏳ 대기 |
+| 10 | 메뉴 연결 | 1. MainWindow의 상단 메뉴나 버튼에 Trap 관리 기능을 연결합니다.<br>2. 사용자가 클릭하면 `TrapConfigDialog`를 생성하고 띄웁니다.<br>3. 선택된 장비가 있다면 자동으로 그 장비를 선택한 상태로 엽니다. | ⏳ 대기 |
+| 11 | 커밋 | 1. 모든 기능이 정상 동작하는지 빌드 및 실행 테스트를 합니다.<br>2. `Modified` 파일이 5개가 넘기 전에, 기능 단위로 묶어서 저장합니다.<br>3. 메시지는 `"feat: Trap Management 기능 복구 및 구조 개선"`으로 합니다. | ⏳ 대기 |
+
+
