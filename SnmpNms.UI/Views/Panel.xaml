@@ -64,11 +64,11 @@
                 <!-- 툴바 -->
                 <Grid DockPanel.Dock="Top" Margin="4,2">
                     <StackPanel Orientation="Horizontal">
-                        <Button Content="Clear" Click="BtnLogClear_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Clear" Style="{StaticResource PanelButtonStyle}" Click="BtnLogClear_Click" 
                                 ToolTip="Clear log"/>
-                        <Button Content="Copy" Click="BtnLogCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Copy" Style="{StaticResource PanelButtonStyle}" Click="BtnLogCopy_Click" 
                                 ToolTip="Copy to clipboard"/>
-                        <Button Content="Save" Click="BtnLogSave_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Save" Style="{StaticResource PanelButtonStyle}" Click="BtnLogSave_Click" 
                                 ToolTip="Save log to file"/>
                         <CheckBox x:Name="chkLogAutoScroll" Content="Auto-scroll" IsChecked="True" 
                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -111,11 +111,11 @@
                 <!-- 툴바 -->
                 <Grid DockPanel.Dock="Top" Margin="4,2">
                     <StackPanel Orientation="Horizontal">
-                        <Button Content="Clear" Click="BtnDebugClear_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Clear" Style="{StaticResource PanelButtonStyle}" Click="BtnDebugClear_Click" 
                                 ToolTip="Clear debug log"/>
-                        <Button Content="Copy" Click="BtnDebugCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Copy" Style="{StaticResource PanelButtonStyle}" Click="BtnDebugCopy_Click" 
                                 ToolTip="Copy to clipboard"/>
-                        <Button Content="Save" Click="BtnDebugSave_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Save" Style="{StaticResource PanelButtonStyle}" Click="BtnDebugSave_Click" 
                                 ToolTip="Save debug log to file"/>
                         <CheckBox x:Name="chkDebugAutoScroll" Content="Auto-scroll" IsChecked="True" 
                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -154,11 +154,11 @@
                 <!-- 툴바 -->
                 <Grid DockPanel.Dock="Top" Margin="4,2">
                     <StackPanel Orientation="Horizontal">
-                        <Button Content="Clear" Click="BtnComClear_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Clear" Style="{StaticResource PanelButtonStyle}" Click="BtnComClear_Click" 
                                 ToolTip="Clear com log"/>
-                        <Button Content="Copy" Click="BtnComCopy_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Copy" Style="{StaticResource PanelButtonStyle}" Click="BtnComCopy_Click" 
                                 ToolTip="Copy to clipboard"/>
-                        <Button Content="Save" Click="BtnComSave_Click" Padding="8,2" Margin="0,0,4,0"
+                        <Button Content="Save" Style="{StaticResource PanelButtonStyle}" Click="BtnComSave_Click" 
                                 ToolTip="Save com log to file"/>
                         <CheckBox x:Name="chkComAutoScroll" Content="Auto-scroll" IsChecked="True" 
                                   VerticalAlignment="Center" Margin="8,0,0,0"/>

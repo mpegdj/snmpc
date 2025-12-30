@@ -21,7 +21,12 @@
             <Setter Property="Margin" Value="2,0"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3C3C3C"/>
+                    <Setter Property="Background" Value="#E5E5E5"/> <!-- 조금 밝은 회색으로 통일 -->
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{StaticResource VSCodeSelection}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource VSCodeAccent}"/>
+                    <Setter Property="BorderThickness" Value="1"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
