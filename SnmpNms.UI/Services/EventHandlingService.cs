@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 using System.Windows;
+using System.Windows.Threading;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
 using SnmpNms.UI.Models;
@@ -18,6 +20,17 @@ public class EventHandlingService
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
     private readonly Channel<TrapEvent> _trapChannel;
+
+    // UI Throttling
+    private readonly ConcurrentQueue<StatusUpdateAction> _uiUpdateQueue = new();
+    private readonly DispatcherTimer _uiThrottlingTimer;
+
+    private class StatusUpdateAction
+    {
+        public MapNode Node { get; set; } = null!;
+        public DeviceStatus Status { get; set; }
+        public string? Message { get; set; }
+    }
 
     public EventHandlingService(
         MainViewModel vm,
@@ -41,6 +54,14 @@ public class EventHandlingService
 
         // 백그라운드 소비자 시작
         _ = Task.Run(ProcessTrapQueueAsync);
+
+        // UI Throttling 타이머 설정 (150ms 주기)
+        _uiThrottlingTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(150)
+        };
+        _uiThrottlingTimer.Tick += (s, e) => FlushUpdatesToUi();
+        _uiThrottlingTimer.Start();
     }
 
     public void Subscribe()
@@ -61,15 +82,46 @@ public class EventHandlingService
 
     private void OnPollingResult(object? sender, PollingResult e)
     {
-        // IP 기반 고속 검색 (MainWindow.FindTargetByKey 대체 가능 여부 확인 필요)
+        // IP 기반 고속 검색 
         var deviceNode = _vm.FindDeviceByIp(e.Target.IpAddress);
         if (deviceNode?.Target == null) return;
 
-        Application.Current.Dispatcher.BeginInvoke(() =>
-        {
-            deviceNode.Target.Status = e.Status;
-            _vm.RootSubnet.RecomputeEffectiveStatus();
+        // 즉시 UI 스레드를 쓰지 않고 큐에 적재 (UI Throttling)
+        _uiUpdateQueue.Enqueue(new StatusUpdateAction 
+        { 
+            Node = deviceNode, 
+            Status = e.Status, 
+            Message = null // Polling 메시지는 LastMessage에 표시 안 함 (기존 정책 준수)
         });
+    }
+
+    private void FlushUpdatesToUi()
+    {
+        if (_uiUpdateQueue.IsEmpty) return;
+
+        bool statusChanged = false;
+        var processedNodes = new HashSet<MapNode>();
+
+        while (_uiUpdateQueue.TryDequeue(out var action))
+        {
+            if (action.Node.Target!.Status != action.Status)
+            {
+                action.Node.Target.Status = action.Status;
+                statusChanged = true;
+            }
+
+            if (action.Message != null)
+            {
+                action.Node.Target.LastMessage = action.Message;
+            }
+            
+            processedNodes.Add(action.Node);
+        }
+
+        if (statusChanged)
+        {
+            _vm.RootSubnet.RecomputeEffectiveStatus();
+        }
     }
 
     private void OnTrapReceived(object? sender, TrapEvent e)
@@ -170,20 +222,16 @@ public class EventHandlingService
                 _ => DeviceStatus.Up
             };
             
-            Application.Current.Dispatcher.Invoke(() =>
+            // UI Throttling 큐에 적재
+            var trapInfo = string.Join(" ", displayValues);
+            _uiUpdateQueue.Enqueue(new StatusUpdateAction
             {
-                var statusChanged = deviceNode.Target.Status != newStatus;
-                deviceNode.Target.Status = newStatus;
-
-                var trapInfo = string.Join(" ", displayValues); 
-                deviceNode.Target.LastMessage = $"[{severity}] {trapInfo}"; 
-                
-                if (statusChanged)
-                {
-                    _vm.RootSubnet.RecomputeEffectiveStatus();
-                }
-                _vm.TriggerPort162RxPulse();
+                Node = deviceNode,
+                Status = newStatus,
+                Message = $"[{severity}] {trapInfo}"
             });
+
+            _vm.TriggerPort162RxPulse();
         }
         else
         {
