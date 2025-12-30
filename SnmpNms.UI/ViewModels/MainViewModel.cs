@@ -158,6 +158,10 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _infoPulse;
     public bool InfoPulse { get => _infoPulse; set { _infoPulse = value; OnPropertyChanged(); } }
 
+    // Log Throttling
+    private readonly System.Collections.Concurrent.ConcurrentQueue<SnmpEventLog> _eventBuffer = new();
+    private readonly System.Windows.Threading.DispatcherTimer _logThrottleTimer;
+
     public MainViewModel()
     {
         RootSubnet = new MapNode(MapNodeType.RootSubnet, "Root Subnet");
@@ -181,6 +185,47 @@ public class MainViewModel : INotifyPropertyChanged
         
         // Log (trap과 polling만)
         Log = new LogViewModel(Events);
+
+        // 로그 Throttling 타이머 (200ms)
+        _logThrottleTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(200)
+        };
+        _logThrottleTimer.Tick += (s, e) => FlushEvents();
+        _logThrottleTimer.Start();
+    }
+
+    private void FlushEvents()
+    {
+        if (_eventBuffer.IsEmpty) return;
+
+        var tempEvents = new List<SnmpEventLog>();
+        while (_eventBuffer.TryDequeue(out var ev))
+        {
+            tempEvents.Add(ev);
+        }
+
+        if (tempEvents.Count == 0) return;
+
+        // UI 스레드에서 한꺼번에 추가
+        foreach (var ev in tempEvents)
+        {
+            Events.Add(ev);
+            
+            // 파일 저장 (버퍼링 없이 즉시 저장 선호 시 여기 유지, 아니면 이것도 모아서)
+            if (LogSaveService.IsEnabled)
+            {
+                LogSaveService.SaveLogEntry(ev);
+            }
+        }
+
+        // 메모리 제한 적용
+        while (Events.Count > LogSaveService.MaxLinesInMemory)
+        {
+            Events.RemoveAt(0);
+        }
+
+        CurrentLog.Refresh();
     }
 
     public void AddEvent(EventSeverity severity, string? device, string message)
@@ -199,26 +244,7 @@ public class MainViewModel : INotifyPropertyChanged
         else if (severity == EventSeverity.Info) TriggerInfoPulse();
 
         var entry = new SnmpEventLog(DateTime.Now, severity, device, message);
-        
-        System.Windows.Application.Current.Dispatcher.Invoke(() =>
-        {
-            Events.Add(entry);
-            
-            // 메모리 제한 적용
-            if (Events.Count > LogSaveService.MaxLinesInMemory)
-            {
-                Events.RemoveAt(0);
-            }
-            
-            // 필터링된 뷰 갱신
-            CurrentLog.Refresh();
-        });
-        
-        // 파일 저장
-        if (LogSaveService.IsEnabled)
-        {
-            LogSaveService.SaveLogEntry(entry);
-        }
+        _eventBuffer.Enqueue(entry);
     }
 
     public void TriggerPort161TxPulse() { Port161TxPulse = true; System.Threading.Tasks.Task.Delay(300).ContinueWith(_ => Port161TxPulse = false); }

@@ -86,13 +86,17 @@ public class EventHandlingService
         var deviceNode = _vm.FindDeviceByIp(e.Target.IpAddress);
         if (deviceNode?.Target == null) return;
 
-        // 즉시 UI 스레드를 쓰지 않고 큐에 적재 (UI Throttling)
         _uiUpdateQueue.Enqueue(new StatusUpdateAction 
         { 
             Node = deviceNode, 
             Status = e.Status, 
-            Message = null // Polling 메시지는 LastMessage에 표시 안 함 (기존 정책 준수)
+            Message = null 
         });
+
+        if (e.Status == DeviceStatus.Down)
+        {
+            _vm.AddEvent(EventSeverity.Error, e.Target.IpAddress, $"[P:{deviceNode.DisplayName}]: Down: {e.Message}");
+        }
     }
 
     private void FlushUpdatesToUi()
@@ -174,31 +178,21 @@ public class EventHandlingService
         var displayValues = new List<string>();
         var severity = EventSeverity.Info;
 
+        // 범용 파싱: 모든 변수를 루프 돌며 수집
         for (int i = 0; i < e.Variables.Count; i++)
         {
             var val = e.Variables[i].Value?.ToString() ?? "null";
-            
-            if (i == 2) // Level
-            {
-                var levelName = NttTrapMappers.GetLevelName(val);
-                displayValues.Add(levelName);
-                
-                severity = levelName.ToLower() switch
-                {
-                    "error" => EventSeverity.Error,
-                    "warning" => EventSeverity.Warning,
-                    "notice" => EventSeverity.Notice,
-                    _ => EventSeverity.Info
-                };
-            }
-            else if (i == 3) // Category
-            {
-                displayValues.Add(NttTrapMappers.GetCategoryName(val));
-            }
-            else
-            {
-                displayValues.Add(val);
-            }
+            var oid = e.Variables[i].Oid;
+
+            // 특정 벤더(NTT/Private) OID 패턴 매핑 (필요시 복구 가능하지만, 우선 범용성 우선)
+            // 여기서는 모든 정보를 수집
+            displayValues.Add(val);
+
+            // Severity 추론: 특정 키워드나 OID 패턴이 있다면 반영 (예시)
+            if (val.Contains("error", StringComparison.OrdinalIgnoreCase) || val.Contains("fail", StringComparison.OrdinalIgnoreCase))
+                severity = EventSeverity.Error;
+            else if (val.Contains("warning", StringComparison.OrdinalIgnoreCase))
+                severity = EventSeverity.Warning;
         }
 
         var mergedValues = string.Join(" / ", displayValues);
@@ -250,6 +244,6 @@ public class EventHandlingService
             _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}", trapOid, rawSummary);
         }
 
-        _vm.AddEvent(severity, deviceDisplayName, $"{trapName}{variablesSummary}");
+        _vm.AddEvent(severity, e.SourceIpAddress, $"[T:{deviceDisplayName}]: {trapName}{variablesSummary}");
     }
 }
