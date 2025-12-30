@@ -723,8 +723,8 @@ var comRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.3.{targetIdx}", w
 | 4 | `TrapManagementViewModel.cs` | 1. **(순서 변경)** View보다 먼저 ViewModel을 복구했습니다.<br>2. Namespace를 `SnmpNms.UI.Features.TrapManagement`로 변경하여 격리했습니다.<br>3. `MainViewModel` 의존성은 유지하되 `using` 문을 추가하여 해결했습니다. | ✅ 완료 |
 | 5 | `TrapManagementView.xaml` | 1. `x:Class`와 `xmlns`를 새로운 Namespace(`Features.TrapManagement`)로 수정하여 생성했습니다.<br>2. 디자인과 레이아웃은 기존 백업본과 동일하게 유지했습니다.<br>3. 아직 Code-behind(.cs) 파일이 없어 빌드는 불가능한 상태입니다. | ✅ 완료 |
 | 6 | `TrapManagementView.xaml.cs` | 1. Namespace를 `SnmpNms.UI.Features.TrapManagement`로 변경하여 생성했습니다.<br>2. ViewModel과 동일한 네임스페이스를 사용하여 별도의 `using` 없이 참조가 가능합니다.<br>3. 이 단계 완료 후 빌드를 수행하여 View와 ViewModel의 연결을 확인합니다. | ✅ 완료 |
-| 7 | `TrapConfigDialog.xaml` | 1. `TrapManagementView`를 팝업 창 형태로 띄우기 위한 래퍼(Wrapper)입니다.<br>2. 메인 창 위에 모달(Modal) 형태로 떠서 작업을 집중하게 합니다.<br>3. 하단에 'Close' 버튼을 두어 창 닫기 기능을 제공합니다. | ⏳ 대기 |
-| 8 | `TrapConfigDialog.xaml.cs` | 1. 다이얼로그의 창 닫기 로직을 처리합니다.<br>2. ViewModel을 DataContext로 주입받는 생성자를 포함합니다.<br>3. 창이 닫힐 때 리소스를 정리합니다. | ⏳ 대기 |
+| 7 | `TrapConfigDialog.xaml` | 1. 기존 `Views/Dialogs`가 아닌 `Features/TrapManagement`에 위치시켰습니다.<br>2. `xmlns:local`을 사용하여 같은 폴더 내의 View를 참조하도록 수정했습니다.<br>3. 기능 관련 모든 파일을 한 곳에 모으는 Co-location 원칙을 적용했습니다. | ✅ 완료 |
+| 8 | `TrapConfigDialog.xaml.cs` | 1. Namespace를 `SnmpNms.UI.Features.TrapManagement`로 통일했습니다.<br>2. 생성자에서 `TrapManagementViewModel`을 주입받아 DataContext로 설정합니다.<br>3. 이 파일 생성으로 Trap 관리 기능의 모든 컴포넌트(View, ViewModel, Dialog) 복구가 완료됩니다. | ✅ 완료 |
 | 9 | `App.xaml` 수정 | 1. 프로젝트 전역에서 `InverseBooleanConverter`를 쓸 수 있게 등록합니다.<br>2. `<Application.Resources>` 섹션에 리소스 키를 추가합니다.<br>3. 이를 통해 모든 XAML에서 `StaticResource`로 접근 가능해집니다. | ⏳ 대기 |
 | 10 | 메뉴 연결 | 1. MainWindow의 상단 메뉴나 버튼에 Trap 관리 기능을 연결합니다.<br>2. 사용자가 클릭하면 `TrapConfigDialog`를 생성하고 띄웁니다.<br>3. 선택된 장비가 있다면 자동으로 그 장비를 선택한 상태로 엽니다. | ⏳ 대기 |
 | 11 | 커밋 | 1. 모든 기능이 정상 동작하는지 빌드 및 실행 테스트를 합니다.<br>2. `Modified` 파일이 5개가 넘기 전에, 기능 단위로 묶어서 저장합니다.<br>3. 메시지는 `"feat: Trap Management 기능 복구 및 구조 개선"`으로 합니다. | ⏳ 대기 |

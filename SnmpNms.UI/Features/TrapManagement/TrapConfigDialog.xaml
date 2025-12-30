@@ -1,0 +1,19 @@
+<Window x:Class="SnmpNms.UI.Features.TrapManagement.TrapConfigDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:SnmpNms.UI.Features.TrapManagement"
+        Title="Trap Configuration for Discovered Devices" Height="500" Width="900"
+        WindowStartupLocation="CenterOwner">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <local:TrapManagementView Grid.Row="0" Margin="10"/>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+            <Button Content="Close" Width="100" Height="30" IsDefault="True" Click="BtnClose_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
