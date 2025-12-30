@@ -23,6 +23,7 @@
             <converters:BoolToBrushConverter x:Key="WarningPulseConverter" TrueBrush="Orange" FalseBrush="Gray"/>
             <converters:BoolToBrushConverter x:Key="InfoPulseConverter" TrueBrush="Cyan" FalseBrush="Gray"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
