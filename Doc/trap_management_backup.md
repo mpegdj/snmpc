@@ -733,6 +733,7 @@ var comRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.3.{targetIdx}", w
 모든 단계가 성공적으로 완료되었습니다.
 - **파일 위치**: `SnmpNms.UI/Features/TrapManagement/` 폴더에 기능 관련 파일이 모두 모였습니다.
 - **실행 방법**: 메뉴 **Tools > Trap Management**를 통해 접근 가능합니다.
-- **개선 사항**: `MainViewModel` 의존성이 남아있으나, 기능 동작에는 문제가 없습니다. 향후 이벤트 기반 등으로 느슨한 결합으로 개선할 수 있습니다.
+- **개선 사항**: `MainViewModel` 의존성 제거 및 이벤트 기반 결합 구현 필요.
+- **이슈 해결**: SNMP SET 작업(등록) 시 기본적으로 `private` 커뮤니티(Read-Write)를 사용하여 권한 오류(Timeout)를 방지하도록 수정했습니다.
 
 

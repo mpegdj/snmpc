@@ -215,18 +215,38 @@ public class TrapManagementViewModel : INotifyPropertyChanged
                 targetIdx = 1;
             }
 
+            // 쓰기 전용 타겟 생성 (타임아웃 5초)
+            var writeTarget = new UiSnmpTarget 
+            {
+                IpAddress = target.IpAddress,
+                Port = target.Port,
+                Version = target.Version,
+                Community = target.Community,
+                Timeout = 5000,
+                Retries = 1
+            };
+
             StatusMessage = $"[Progress 1/3] Setting Trap IP {nmsIp} to slot {targetIdx}...";
-            var ipRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.5.{targetIdx}", nmsIp, "IPADDRESS");
+            var ipRes = await _snmpClient.SetAsync(writeTarget, $"{nttBaseOid}.5.{targetIdx}", nmsIp, "IPADDRESS");
+            
+            // 실패 시 'private' 으로 재시도
+            if (!ipRes.IsSuccess) 
+            { 
+                 StatusMessage = $"[Retry] First attempt failed. Retrying with community 'private'...";
+                 writeTarget.Community = "private";
+                 ipRes = await _snmpClient.SetAsync(writeTarget, $"{nttBaseOid}.5.{targetIdx}", nmsIp, "IPADDRESS");
+            }
+
             if (!ipRes.IsSuccess) { StatusMessage = $"[Fail] IP Set failed: {ipRes.ErrorMessage}"; return; }
 
             StatusMessage = $"[Progress 2/3] Setting Community to 'public' for slot {targetIdx}...";
-            var comRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.3.{targetIdx}", "public", "OCTETSTRING");
+            var comRes = await _snmpClient.SetAsync(writeTarget, $"{nttBaseOid}.3.{targetIdx}", "public", "OCTETSTRING");
             if (!comRes.IsSuccess) { StatusMessage = $"[Fail] Community failed: {comRes.ErrorMessage}"; return; }
 
             StatusMessage = $"[Progress 3/3] Enabling trap slot {targetIdx}...";
             // NTT MVE5000 Enable OID: .2.x (0 = enabled)
             // Note: If this fails, the trap might still be sent if IP is set, but better to ensure.
-            var enRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.2.{targetIdx}", "0", "INTEGER");
+            var enRes = await _snmpClient.SetAsync(writeTarget, $"{nttBaseOid}.2.{targetIdx}", "0", "INTEGER");
             if (!enRes.IsSuccess) { StatusMessage = $"[Fail] Enable failed: {enRes.ErrorMessage}"; return; }
 
             StatusMessage = $"[Success] Registered {nmsIp} to Slot {targetIdx} successfully. Refreshing...";
