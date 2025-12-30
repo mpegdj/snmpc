@@ -123,22 +123,41 @@ public class TrapManagementViewModel : INotifyPropertyChanged
             // NTT MVE5000: 1.3.6.1.4.1.3930.36.5.2.11.1.5
             // NTT MVD5000: 1.3.6.1.4.1.3930.35.5.2.11.1.5
             // Determine base OID by checking SysObjectId or trying to guess
-            string nttBaseOid = "1.3.6.1.4.1.3930.36.5.2.11.1"; // Default MVE
+            string nttBaseOid = "1.3.6.1.4.1.3930.36.5.2.11.1"; 
             if (SelectedDevice.Target.SysObjectId.Contains(".35.")) 
                 nttBaseOid = "1.3.6.1.4.1.3930.35.5.2.11.1";
 
             var ipColumnOid = $"{nttBaseOid}.5"; 
             
-            var result = await _snmpClient.WalkAsync(target, ipColumnOid);
+            // 조회: 기본 커뮤니티(public) 사용, 타임아웃만 5초로 연장
+            var readTarget = new UiSnmpTarget 
+            {
+                IpAddress = target.IpAddress,
+                Port = target.Port,
+                Version = target.Version,
+                Community = target.Community,
+                Timeout = 5000, 
+                Retries = 1
+            };
+
+            var result = await _snmpClient.WalkAsync(readTarget, ipColumnOid);
+
+            // 1차 실패 또는 결과 없음 시 'private' 커뮤니티로 재시도 (View 권한 문제 가능성)
+            if (!result.IsSuccess || result.Variables.Count == 0)
+            {
+                StatusMessage = $"[Retry] 'public' result invalid. Retrying with 'private'...";
+                readTarget.Community = "private";
+                result = await _snmpClient.WalkAsync(readTarget, ipColumnOid);
+            }
 
             if (!result.IsSuccess)
             {
-                // Try MVD if MVE failed and we didn't explicitly know
+                // Try MVD if MVE failed
                 if (nttBaseOid.Contains(".36."))
                 {
                     nttBaseOid = "1.3.6.1.4.1.3930.35.5.2.11.1";
                     ipColumnOid = $"{nttBaseOid}.5";
-                    result = await _snmpClient.WalkAsync(target, ipColumnOid);
+                    result = await _snmpClient.WalkAsync(readTarget, ipColumnOid);
                 }
             }
 
