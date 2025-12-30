@@ -11,7 +11,7 @@ public class MainViewModel : INotifyPropertyChanged
     // Map Selection Tree roots (SNMPc: Root Subnet)
     public ObservableCollection<MapNode> MapRoots { get; } = new();
     
-    private MapNode _rootSubnet;
+    private MapNode _rootSubnet = null!;
     public MapNode RootSubnet 
     { 
         get => _rootSubnet;
@@ -37,6 +37,15 @@ public class MainViewModel : INotifyPropertyChanged
 
     // Debug/UX: Device tab list (all device nodes)
     public ObservableCollection<MapNode> DeviceNodes { get; } = new();
+
+    // Device Lookup (IP based) for fast access ($O(1)$)
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, MapNode> _deviceLookup = new();
+
+    public MapNode? FindDeviceByIp(string ip)
+    {
+        if (string.IsNullOrEmpty(ip)) return null;
+        return _deviceLookup.TryGetValue(ip, out var node) ? node : null;
+    }
 
     private MapNode? _selectedDeviceNode;
     public MapNode? SelectedDeviceNode
@@ -270,6 +279,13 @@ public class MainViewModel : INotifyPropertyChanged
         var node = new MapNode(MapNodeType.Device, target.DisplayName, target);
         subnet.AddChild(node);
         if (!DeviceNodes.Contains(node)) DeviceNodes.Add(node);
+        
+        // Lookup Dictionary 등록 (상태/알람 처리용)
+        if (!string.IsNullOrEmpty(target.IpAddress))
+        {
+            _deviceLookup[target.IpAddress] = node;
+        }
+
         return node;
     }
 
@@ -277,6 +293,10 @@ public class MainViewModel : INotifyPropertyChanged
     {
         if (node.NodeType != MapNodeType.Device) return;
         DeviceNodes.Remove(node);
+        if (node.Target?.IpAddress != null)
+        {
+            _deviceLookup.TryRemove(node.Target.IpAddress, out _);
+        }
         if (ReferenceEquals(SelectedDeviceNode, node)) SelectedDeviceNode = null;
     }
 

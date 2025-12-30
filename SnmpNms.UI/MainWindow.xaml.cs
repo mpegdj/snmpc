@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private readonly ITrapListener _trapListener;
     private readonly MainViewModel _vm;
     private readonly MapDataService _mapDataService;
+    private readonly EventHandlingService _eventHandlingService;
 
     private Point _dragStartPoint;
     private MapNode? _selectionAnchor;
@@ -59,16 +60,14 @@ public partial class MainWindow : Window
         _vm = new MainViewModel();
         DataContext = _vm;
 
-        // Polling 이벤트 연결
-        _pollingService.OnPollingResult += PollingService_OnPollingResult;
-
-        // Trap 이벤트 연결
-        _trapListener.OnTrapReceived += TrapListener_OnTrapReceived;
-        _trapListener.OnPacketReceived += (isValid) => Dispatcher.Invoke(() => _vm.TriggerPort162RxPulse());
-
-        // 소켓 레벨 161 활동 연결
-        _snmpClient.OnRequestSent += () => Dispatcher.Invoke(() => _vm.TriggerPort161TxPulse());
-        _snmpClient.OnResponseReceived += (isSuccess) => Dispatcher.Invoke(() => _vm.TriggerPort161RxPulse(isSuccess));
+        // 중앙 이벤트 처리 서비스 초기화
+        _eventHandlingService = new EventHandlingService(
+            _vm, 
+            _pollingService, 
+            _trapListener, 
+            _snmpClient, 
+            _mibService);
+        _eventHandlingService.Subscribe();
 
         // 포트 161, 162 체크 및 권한 요청
         CheckPortsOnStartup();
@@ -341,124 +340,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void TrapListener_OnTrapReceived(object? sender, TrapEvent e)
-    {
-        if (e.ErrorMessage != null)
-        {
-            _vm.AddEvent(EventSeverity.Error, e.SourceIpAddress, $"[Trap] {e.ErrorMessage}");
-            _vm.Debug.LogError("TRAP", $"Receive error from {e.SourceIpAddress}:{e.SourcePort}: {e.ErrorMessage}");
-            return;
-        }
-
-        // Trap OID 결정
-        string trapOid = "";
-        if (e.Variables.Count > 1 && e.Variables[1].Oid == "1.3.6.1.6.3.1.1.4.1.0")
-        {
-            trapOid = e.Variables[1].Value?.ToString() ?? "";
-        }
-        
-        if (string.IsNullOrEmpty(trapOid))
-        {
-            if (!string.IsNullOrEmpty(e.EnterpriseOid)) trapOid = e.EnterpriseOid;
-            else if (e.Variables.Count > 0) trapOid = e.Variables[0].Oid;
-        }
-
-        // Trap 이름 (MIB)
-        var trapName = string.IsNullOrEmpty(trapOid) ? "Unknown" : (_mibService?.GetOidName(trapOid) ?? trapOid);
-        
-        // 데이터 파싱 및 Severity 결정
-        var displayValues = new List<string>();
-        var severity = EventSeverity.Info;
-
-        for (int i = 0; i < e.Variables.Count; i++)
-        {
-            var val = e.Variables[i].Value?.ToString() ?? "null";
-            
-            if (i == 2) // Level
-            {
-                var levelName = NttTrapMappers.GetLevelName(val);
-                displayValues.Add(levelName);
-                
-                severity = levelName.ToLower() switch
-                {
-                    "error" => EventSeverity.Error,
-                    "warning" => EventSeverity.Warning,
-                    "notice" => EventSeverity.Notice,
-                    _ => EventSeverity.Info
-                };
-            }
-            else if (i == 3) // Category
-            {
-                displayValues.Add(NttTrapMappers.GetCategoryName(val));
-            }
-            else
-            {
-                displayValues.Add(val);
-            }
-        }
-
-        var mergedValues = string.Join(" / ", displayValues);
-        var variablesSummary = e.Variables.Count > 0 ? ": " + mergedValues : "";
-
-        // 디바이스 식별
-        string deviceDisplayName = "";
-        
-        // 1. 등록된 디바이스 노드 검색 및 상태 업데이트
-        var deviceNode = _vm.DeviceNodes.FirstOrDefault(n => n.Target?.IpAddress == e.SourceIpAddress);
-        if (deviceNode?.Target != null)
-        {
-            deviceDisplayName = !string.IsNullOrWhiteSpace(deviceNode.Target.Alias) 
-                ? deviceNode.Target.Alias 
-                : deviceNode.Target.Device;
-
-            // 상태 업데이트: Error -> Down, Warning -> Warning, Notice -> Notice, Info -> Up
-            DeviceStatus newStatus = severity switch
-            {
-                EventSeverity.Error => DeviceStatus.Down,
-                EventSeverity.Warning => DeviceStatus.Warning,
-                EventSeverity.Notice => DeviceStatus.Notice,
-                _ => DeviceStatus.Up
-            };
-            
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-            {
-                var statusChanged = deviceNode.Target.Status != newStatus;
-                deviceNode.Target.Status = newStatus;
-
-                // 메시지는 항상 업데이트 (마지막 메시지 표시 원칙)
-                var trapInfo = string.Join(" ", displayValues); 
-                deviceNode.Target.LastMessage = $"[{severity}] {trapInfo}"; 
-                
-                if (statusChanged)
-                {
-                    _vm.RootSubnet.RecomputeEffectiveStatus();
-                }
-                _vm.TriggerPort162RxPulse();
-            });
-        }
-        
-        // 2, 3. 이름 추론
-        if (string.IsNullOrWhiteSpace(deviceDisplayName))
-        {
-            if (trapName.StartsWith("mve", StringComparison.OrdinalIgnoreCase))
-            {
-                int trapIdx = trapName.IndexOf("Trap", StringComparison.OrdinalIgnoreCase);
-                deviceDisplayName = trapIdx > 0 ? trapName.Substring(0, trapIdx) : trapName;
-            }
-        }
-        if (string.IsNullOrWhiteSpace(deviceDisplayName)) deviceDisplayName = e.SourceIpAddress;
-
-        // Com Log
-        if (e.RawData != null && e.RawData.Length > 0)
-        {
-            var rawSummary = string.Join(" / ", e.Variables.Select(v => v.Value?.ToString() ?? "null"));
-            _vm.Com.LogReceive(e.RawData, $"{e.SourceIpAddress}:{e.SourcePort}", trapOid, rawSummary);
-        }
-
-        // Event Log
-        var prefix = $"[T:{deviceDisplayName}]";
-        _vm.AddEvent(severity, e.SourceIpAddress, $"{prefix}{variablesSummary}");
-    }
 
     private void ActivityBar_ViewChanged(object? sender, ActivityBarView view)
     {
@@ -662,41 +543,6 @@ public partial class MainWindow : Window
         return _vm.DefaultSubnet;
     }
 
-    private void PollingService_OnPollingResult(object? sender, PollingResult e)
-    {
-        // UI 스레드에서 업데이트
-        Dispatcher.Invoke(() =>
-        {
-            if (e.Status == DeviceStatus.Up)
-            {
-                SetDeviceStatus($"{e.Target.IpAddress}:{e.Target.Port}", DeviceStatus.Up);
-                // Polling 로그는 너무 많을 수 있으므로 상태 변경 시에만 찍거나, 별도 로그창 사용 권장
-                // 여기서는 간단하게 시간 갱신
-                // txtResult.AppendText($"[Poll] {e.Target.IpAddress} is Alive ({e.ResponseTime}ms)\n");
-            }
-            else
-            {
-                if (!SetDeviceStatus($"{e.Target.IpAddress}:{e.Target.Port}", DeviceStatus.Down))
-                {
-                    // 타겟을 맵에서 찾지 못한 경우 Debug 탭에만 기록 (EventLog 오염 방지)
-                    _vm.Debug.LogSystem($"[Warning] Map node not found for {e.Target.IpAddress}:{e.Target.Port} (Status Update Failed)");
-                }
-                
-                // [P:장비명] 프리픽스 적용 (Alias 최우선)
-                var uiTarget = e.Target as UiSnmpTarget;
-                var deviceName = "";
-                
-                if (uiTarget != null)
-                {
-                    deviceName = !string.IsNullOrWhiteSpace(uiTarget.Alias) ? uiTarget.Alias : uiTarget.Device;
-                }
-                
-                if (string.IsNullOrWhiteSpace(deviceName)) deviceName = e.Target.IpAddress;
-                
-                _vm.AddEvent(EventSeverity.Error, $"{e.Target.IpAddress}:{e.Target.Port}", $"[P:{deviceName}]: Down: {e.Message}");
-            }
-        });
-    }
 
     private bool SetDeviceStatus(string deviceKey, DeviceStatus status, string? message = null)
     {

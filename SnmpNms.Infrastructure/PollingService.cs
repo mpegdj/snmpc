@@ -65,11 +65,21 @@ public class PollingService : IPollingService
         }
     }
 
+    // 최대 병렬 폴링 수 설정 (하드웨어 사양에 따라 조절 가능)
+    private int _maxDegreeOfParallelism = 50;
+
     private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
     {
-        // Polling 주기마다 등록된 모든 타겟에 대해 비동기 요청
-        var tasks = _targets.Values.Select(PollTargetAsync);
-        await Task.WhenAll(tasks);
+        // Parallel.ForEachAsync를 사용하여 최대 병렬도를 유지하며 폴링 수행 (멀티코어 활용 최적화)
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = _maxDegreeOfParallelism
+        };
+
+        await Parallel.ForEachAsync(_targets.Values, options, async (target, ct) =>
+        {
+            await PollTargetAsync(target);
+        });
     }
 
     private async Task PollTargetAsync(ISnmpTarget target)
