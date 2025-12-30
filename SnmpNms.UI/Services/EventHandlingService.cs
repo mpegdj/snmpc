@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using System.Windows;
 using SnmpNms.Core.Interfaces;
 using SnmpNms.Core.Models;
@@ -16,6 +17,7 @@ public class EventHandlingService
     private readonly ITrapListener _trapListener;
     private readonly ISnmpClient _snmpClient;
     private readonly IMibService _mibService;
+    private readonly Channel<TrapEvent> _trapChannel;
 
     public EventHandlingService(
         MainViewModel vm,
@@ -29,6 +31,16 @@ public class EventHandlingService
         _trapListener = trapListener;
         _snmpClient = snmpClient;
         _mibService = mibService;
+
+        // 트랩 처리를 위한 채널 생성 (무제한 큐 또는 용량 제한 가능)
+        _trapChannel = Channel.CreateUnbounded<TrapEvent>(new UnboundedChannelOptions
+        {
+            SingleReader = true, // 단일 소비자 스레드 사용
+            SingleWriter = false
+        });
+
+        // 백그라운드 소비자 시작
+        _ = Task.Run(ProcessTrapQueueAsync);
     }
 
     public void Subscribe()
@@ -62,6 +74,34 @@ public class EventHandlingService
 
     private void OnTrapReceived(object? sender, TrapEvent e)
     {
+        // 수신 즉시 큐에 삽입하여 리스너가 블로킹되지 않도록 함 (Producer)
+        _trapChannel.Writer.TryWrite(e);
+    }
+
+    private async Task ProcessTrapQueueAsync()
+    {
+        // 큐에서 트랩을 꺼내 처리 (Consumer)
+        await foreach (var e in _trapChannel.Reader.ReadAllAsync())
+        {
+            try
+            {
+                HandleTrapInternal(e);
+            }
+            catch (Exception ex)
+            {
+                _vm.Debug.LogError("EventHandlingService", $"Error processing trap: {ex.Message}");
+            }
+        }
+    }
+
+    private void HandleTrapInternal(TrapEvent e)
+    {
+        if (e.ErrorMessage != null)
+        {
+            _vm.AddEvent(EventSeverity.Error, e.SourceIpAddress, $"[Trap] {e.ErrorMessage}");
+            return;
+        }
+
         // Trap OID 결정
         string trapOid = "";
         if (e.Variables.Count > 1 && e.Variables[1].Oid == "1.3.6.1.6.3.1.1.4.1.0")
