@@ -734,6 +734,12 @@ var comRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.3.{targetIdx}", w
 - **파일 위치**: `SnmpNms.UI/Features/TrapManagement/` 폴더에 기능 관련 파일이 모두 모였습니다.
 - **실행 방법**: 메뉴 **Tools > Trap Management**를 통해 접근 가능합니다.
 - **개선 사항**: `MainViewModel` 의존성 제거 및 이벤트 기반 결합 구현 필요.
-- **이슈 해결**: SNMP SET 작업(등록) 시 기본적으로 `private` 커뮤니티(Read-Write)를 사용하여 권한 오류(Timeout)를 방지하도록 수정했습니다.
+- **이슈 해결**: SNMP 조회 결과가 0건일 때 이를 에러로 오판하여 재시도하는 로직을 수정했습니다.
+- **남은 문제 (중요)**: **SNMP SET(등록)이 여전히 실패함.**
+    - **증상**: IP 등록 시 Timeout 또는 Failure 발생.
+    - **추정 원인 1 (권한)**: 장비의 Write Community가 `private`이 아니거나, 별도의 보안 설정(View, ACL)으로 인해 외부 SET이 차단됨.
+    - **추정 원인 2 (RowStatus)**: 빈 슬롯에 값을 쓸 때 단순 `Update`가 아닌 `RowStatus` 기반의 **Row Creation** 절차가 필요할 수 있음 (표준 SNMP 테이블 생성 방식).
+    - **추정 원인 3 (OID/Vendor)**: NTT 장비 특유의 설정 순서(Status 먼저 설정 등)나 숨겨진 제약 조건이 있을 수 있음.
+    - **향후 대책**: 정확한 MIB 매뉴얼 확보 후 `RowStatus` 구현 또는 올바른 Write Community 확인 필요.
 
 

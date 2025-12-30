@@ -142,10 +142,10 @@ public class TrapManagementViewModel : INotifyPropertyChanged
 
             var result = await _snmpClient.WalkAsync(readTarget, ipColumnOid);
 
-            // 1차 실패 또는 결과 없음 시 'private' 커뮤니티로 재시도 (View 권한 문제 가능성)
-            if (!result.IsSuccess || result.Variables.Count == 0)
+            // 1차 통신 자체가 실패했을 때만 'private' 커뮤니티로 재시도 (결과 0건은 정상이므로 제외)
+            if (!result.IsSuccess)
             {
-                StatusMessage = $"[Retry] 'public' result invalid. Retrying with 'private'...";
+                StatusMessage = $"[Retry] 'public' failed. Retrying with 'private'...";
                 readTarget.Community = "private";
                 result = await _snmpClient.WalkAsync(readTarget, ipColumnOid);
             }
@@ -268,8 +268,12 @@ public class TrapManagementViewModel : INotifyPropertyChanged
             var enRes = await _snmpClient.SetAsync(writeTarget, $"{nttBaseOid}.2.{targetIdx}", "0", "INTEGER");
             if (!enRes.IsSuccess) { StatusMessage = $"[Fail] Enable failed: {enRes.ErrorMessage}"; return; }
 
-            StatusMessage = $"[Success] Registered {nmsIp} to Slot {targetIdx} successfully. Refreshing...";
-            await Task.Delay(800); 
+            StatusMessage = $"[Success] Registered {nmsIp} to Slot {targetIdx} successfully. Refreshing table...";
+            
+            // 장비가 설정을 반영할 시간을 충분히 줌
+            await Task.Delay(1500); 
+            
+            // 테이블 갱신
             await RefreshTrapTableAsync();
         }
         catch (Exception ex)
