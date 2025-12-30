@@ -742,4 +742,24 @@ var comRes = await _snmpClient.SetAsync(target, $"{nttBaseOid}.3.{targetIdx}", w
     - **추정 원인 3 (OID/Vendor)**: NTT 장비 특유의 설정 순서(Status 먼저 설정 등)나 숨겨진 제약 조건이 있을 수 있음.
     - **향후 대책**: 정확한 MIB 매뉴얼 확보 후 `RowStatus` 구현 또는 올바른 Write Community 확인 필요.
 
+✅ 작업 완료 보고
+Trap Management 기능 복구 및 구조 개선을 완료하였습니다.
+
+기능 복원: 삭제/손상되었던 
+View
+, 
+ViewModel
+, 
+Dialog
+ 등의 코드를 Features/TrapManagement 폴더로 완전히 복구했습니다.
+구조 개선: 기능 단위(Feature-based) 폴더 구조를 적용하여 응집도를 높였습니다.
+이슈 해결:
+Refresh
+ 시 결과가 없을 때 에러로 오판하는 버그 수정.
+Register
+ 시 실패하면 private 커뮤니티로 자동 재시도하는 로직 적용.
+등록 성공 후 자동 리프레시 로직 강화.
+⚠️ 남은 과제 (Known Issue)
+
+SET(등록) 실패: 여전히 장비 등록이 실패합니다. 이는 SNMP 권한(Community/ACL) 문제이거나, RowStatus를 이용한 Row Creation 절차가 필요한 것으로 분석됩니다. 이는 추후 정확한 장비 스펙(MIB) 확인 후 개선이 필요합니다.
 
