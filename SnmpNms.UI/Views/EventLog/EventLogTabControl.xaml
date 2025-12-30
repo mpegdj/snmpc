@@ -14,8 +14,8 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Tool Bar Header (Only Filter Info and Tool Buttons) -->
-        <Border Grid.Row="0" Background="#F7F7F7" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1" Padding="8,4">
+        <!-- Tool Bar Header -->
+        <Border Grid.Row="0" Background="#F7F7F7" BorderBrush="{StaticResource VSCodeDivider}" BorderThickness="0,0,0,1" Padding="4,2">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -29,23 +29,16 @@
                     </TextBlock.RenderTransform>
                 </TextBlock>
 
-                <!-- 필터링 정보 (왼쪽) -->
-                <TextBlock Grid.Column="0" Text="{Binding FilterInfo}"
-                          VerticalAlignment="Center"
-                          Foreground="{StaticResource VSCodeForeground}"
-                          FontStyle="Italic"
-                          Margin="5,0"/>
-                
-                <!-- 도구 버튼 (오른쪽) -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button x:Name="btnEventClear" Click="BtnEventClear_Click" Width="26" Height="26" Padding="4"
-                            ToolTip="Clear all events" Background="Transparent" BorderThickness="0">
-                        <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#444444"/>
-                    </Button>
-                    <Button x:Name="btnEventSave" Click="BtnEventSave_Click" Width="26" Height="26" Padding="4"
-                            ToolTip="Save log to file" Background="Transparent" BorderThickness="0">
-                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#444444"/>
-                    </Button>
+                <!-- 툴바 (왼쪽) -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Content="Clear" Style="{StaticResource PanelButtonStyle}" Click="BtnEventClear_Click" 
+                            ToolTip="Clear all events"/>
+                    <Button Content="Copy" Style="{StaticResource PanelButtonStyle}" Click="BtnEventCopy_Click" 
+                            ToolTip="Copy to clipboard"/>
+                    <Button Content="Save" Style="{StaticResource PanelButtonStyle}" Click="BtnEventSave_Click" 
+                            ToolTip="Save log to file"/>
+                    <CheckBox x:Name="chkEventAutoScroll" Content="Auto-scroll" IsChecked="True" 
+                              VerticalAlignment="Center" Margin="8,0,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>

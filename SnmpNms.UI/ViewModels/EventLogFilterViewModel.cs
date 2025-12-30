@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Data;
@@ -290,6 +291,54 @@ public class EventLogFilterViewModel : INotifyPropertyChanged
     }
 
     public void Refresh() => View.Refresh();
+
+    public void Clear()
+    {
+        _events.Clear();
+    }
+
+    public void SaveToFile()
+    {
+        var sfd = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = "Text Files (*.txt)|*.txt",
+            FileName = $"EventLog_{Name}_{DateTime.Now:yyyyMMdd_HHmmss}.txt"
+        };
+
+        if (sfd.ShowDialog() == true)
+        {
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                foreach (var entry in View.Cast<SnmpEventLog>())
+                {
+                    sb.AppendLine($"{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{entry.Severity}] {entry.Device} {entry.Message}");
+                }
+                System.IO.File.WriteAllText(sfd.FileName, sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to save log: {ex.Message}");
+            }
+        }
+    }
+
+    public void CopyToClipboard()
+    {
+        try
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var entry in View.Cast<SnmpEventLog>())
+            {
+                sb.AppendLine($"{entry.Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{entry.Severity}] {entry.Device} {entry.Message}");
+            }
+            System.Windows.Clipboard.SetText(sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Failed to copy to clipboard: {ex.Message}");
+        }
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

@@ -99,8 +99,9 @@ public partial class EventLogTabControl : UserControl
 
     private void Events_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // 새 항목이 추가되면 자동으로 스크롤
-        if (e.Action == NotifyCollectionChangedAction.Add && 
+        // 새 항목이 추가되면 자동으로 스크롤 (Auto-scroll 체크된 경우만)
+        if (chkEventAutoScroll?.IsChecked == true && 
+            e.Action == NotifyCollectionChangedAction.Add && 
             dataGridLog.Items.Count > 0)
         {
             // UI 스레드에서 실행되도록 Dispatcher 사용
@@ -132,17 +133,25 @@ public partial class EventLogTabControl : UserControl
 
     private void BtnEventClear_Click(object sender, RoutedEventArgs e)
     {
-        if (Tag is ViewModels.MainViewModel mainVm)
+        if (DataContext is ViewModels.EventLogFilterViewModel vm)
         {
-            mainVm.ClearEvents();
+            vm.Clear();
         }
     }
 
     private void BtnEventSave_Click(object sender, RoutedEventArgs e)
     {
-        if (Tag is ViewModels.MainViewModel mainVm)
+        if (DataContext is ViewModels.EventLogFilterViewModel vm)
         {
-            mainVm.SaveEvents();
+            vm.SaveToFile();
+        }
+    }
+
+    private void BtnEventCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is ViewModels.EventLogFilterViewModel vm)
+        {
+            vm.CopyToClipboard();
         }
     }
 }
